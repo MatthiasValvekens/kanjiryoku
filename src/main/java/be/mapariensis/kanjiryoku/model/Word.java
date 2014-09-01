@@ -4,6 +4,9 @@ package be.mapariensis.kanjiryoku.model;
 public class Word {
 	public final String furigana;
 	public final String main;
+	public Word(String main) {
+		this(main,"");
+	}
 	public Word(String main,String furigana) {
 		this.furigana = furigana != null ? furigana : "";
 		if(main == null) throw new IllegalArgumentException("Main part must not be null");
@@ -38,6 +41,11 @@ public class Word {
 		} else if (!main.equals(other.main))
 			return false;
 		return true;
+	}
+	@Override
+	public String toString() {
+		return "<"+main+","+furigana+">";
+		
 	}
 	
 }
