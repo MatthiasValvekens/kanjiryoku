@@ -8,7 +8,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -78,36 +77,37 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				iter.remove();
 				SocketChannel ch = null;
 				try {
-					if(key.isAcceptable()) {
-						assert key.channel() == ssc;
-						ch = ssc.accept();
-						log.info("Accepted connection from peer {}",ch);
-						ch.configureBlocking(false);
-						ch.register(selector, SelectionKey.OP_READ);
-						queueMessage(ch, GREETING);
-					} else if(key.isReadable()) {
-						ch = (SocketChannel) key.channel();
-						NetworkMessage msg;
-						try {
-							msg = NetworkMessage.readRaw(ch, messageBuffer);
-						} catch(IOException ex) {  //FIXME : figure out a way to deal with forcefully closed connections, and then downgrade this to EOFException
-							log.info("Peer {} shut down.", ch.getRemoteAddress());
-							key.cancel();
-							User u;
-							if((u = store.getUser(ch))!= null) {
-								deregister(u);
-							}
-							continue;
-						} 
-						// schedule command interpretation
-						if(msg != null && !msg.isEmpty()) threadPool.execute(new CommandReceiver(ch, msg));
-					} else if(key.isWritable()) {
-						ch = (SocketChannel) key.channel();
-						// deregister write event
-						synchronized(key) {
+					synchronized(key) {
+						if(key.isAcceptable()) {
+							assert key.channel() == ssc;
+							ch = ssc.accept();
+							log.info("Accepted connection from peer {}",ch);
+							ch.configureBlocking(false);
+							ch.register(selector, SelectionKey.OP_READ);
+							queueMessage(ch, GREETING);
+						} else if(key.isReadable()) {
+							ch = (SocketChannel) key.channel();
+							NetworkMessage msg;
+							try {
+								msg = NetworkMessage.readRaw(ch, messageBuffer);
+							} catch(IOException ex) {  //FIXME : figure out a way to deal with forcefully closed connections, and then downgrade this to EOFException
+								log.info("Peer {} shut down.", ch.getRemoteAddress());
+								key.cancel();
+								User u;
+								if((u = store.getUser(ch))!= null) {
+									deregister(u);
+								}
+								continue;
+							} 
+							// schedule command interpretation
+							if(msg != null && !msg.isEmpty()) threadPool.execute(new CommandReceiver(ch, msg));
+						} else if(key.isWritable()) {
+							ch = (SocketChannel) key.channel();
+							// deregister write event
 							key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+							key.selector().wakeup();
+							threadPool.execute(ensureHandler(ch));
 						}
-						threadPool.execute(ensureHandler(ch));
 					}
 				} catch(Exception ex) {
 					log.warn("Error while processing {}. Ignoring.",ch != null ? ch : "(unknown address)",ex);
@@ -216,6 +216,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	public void deregister(User user) throws UserManagementException {
 		// TODO allow for disconnect handlers? 
 		if(user==null) throw new UserManagementException("null is not a user");
+		user.purgeResponseHandlers();
 		try {
 			sessman.removeUser(user);
 		} catch (SessionException e) {
@@ -259,7 +260,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	@Override
 	public void humanMessage(User user, String message) {
-		messageUser(user, new NetworkMessage(ClientCommand.SAY, Arrays.asList(message)));
+		messageUser(user, new NetworkMessage(ClientCommand.SAY, message));
 
 	}
 

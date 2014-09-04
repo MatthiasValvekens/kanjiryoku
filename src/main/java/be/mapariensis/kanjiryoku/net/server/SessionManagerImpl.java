@@ -42,7 +42,12 @@ public class SessionManagerImpl implements SessionManager {
 	}
 
 	@Override
-	public void destroySession(Session sess) throws SessionException {
+	public void destroySession(Session sess) {
+		try {
+			sess.stopGame();
+		} catch (ServerException e) {
+			log.warn("Error while stopping game",e);
+		}
 		synchronized(LOCK) {
 			sess.purgeMembers();
 			int id = sess.getId();
@@ -61,6 +66,7 @@ public class SessionManagerImpl implements SessionManager {
 				log.info("Last user removed, destroying session.");
 				int id = sess.getId();
 				sessions.set(id, null);
+				destroySession(sess);
 			}
 			return ret;
 		}

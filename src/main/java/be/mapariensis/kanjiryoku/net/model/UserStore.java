@@ -31,7 +31,7 @@ public final class UserStore {
 	
 	public User requireUser(String name) throws UserManagementException {
 		User u = getUser(name);
-		if(u == null) throw new UserManagementException("No such user.");
+		if(u == null) throw new UserManagementException(String.format("No user named %s",name));
 		return u;
 	}
 	public User requireUser(SocketChannel peer) throws UserManagementException {

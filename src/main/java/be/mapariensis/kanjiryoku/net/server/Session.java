@@ -1,18 +1,23 @@
 package be.mapariensis.kanjiryoku.net.server;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.cr.Dot;
+import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
+import be.mapariensis.kanjiryoku.net.model.ClientCommand;
+import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
+import be.mapariensis.kanjiryoku.util.GameListener;
 
 public class Session {
 	private static final Logger log = LoggerFactory.getLogger(Session.class);
@@ -34,14 +39,18 @@ public class Session {
 		this.manager = manager;
 		this.uman = uman;
 		this.game = game;
+		this.game.addProblemListener(new NetworkedGameListener());
 		synchronized(master.sessionLock()) {
 			master.joinSession(this); // session is locked until we're done. No threads can access our partially constructed session
 		}
 	}
-	public synchronized void start() throws GameFlowException {
+	public synchronized void start() throws GameFlowException, SessionException {
+		checkDestroyed();
 		game.startGame(users);
+		broadcastHumanMessage(null, "Game started");
 	}
 	public void addMember(User u) throws SessionException {
+		checkDestroyed();
 		if(game.running()) throw new SessionException("Not allowed while game is running");
 		synchronized(LOCK) {
 			if(u.getSession() == this) return;
@@ -53,6 +62,8 @@ public class Session {
 		}
 	}
 	public synchronized void stopGame() throws ServerException {
+		log.info("Stopping game...");
+		checkDestroyed();
 		game.close();
 	}
 	
@@ -84,24 +95,11 @@ public class Session {
 			}
 			return master;
 		}
-	}
-	/**
-	 * Get the members of this session
-	 * @param id
-	 */
-	public Set<User> getMembers() {
-		synchronized(LOCK) {
-			return Collections.unmodifiableSet(users);
-		}
-	}
+	}	
 	
-	public User getMaster() {
-		synchronized(LOCK) {
-			return master;
-		}
-	}
 	
 	public boolean isMaster(User u) {
+		if(destroyed) return false;
 		synchronized(LOCK) {
 			return master.equals(u);
 		}
@@ -112,7 +110,7 @@ public class Session {
 		synchronized(LOCK) {
 			if(kicked == caller || kicked == master || !isMember(kicked))
 				throw new SessionException("This user cannot be kicked from this session.");
-			else if(caller != getMaster())
+			else if(caller != master)
 				throw new SessionException("You do not have sufficient privilege to kick users.");
 			removeMember(kicked);
 		}
@@ -121,6 +119,17 @@ public class Session {
 		
 	}
 	public void broadcastMessage(User sender, String message) { // pass null for server message
+		if(destroyed) return;
+		synchronized(LOCK) {
+			for(User u : users) {
+				if(u.equals(sender)) continue;
+				uman.messageUser(u, message);
+			}
+		}
+	}
+	
+	public void broadcastMessage(User sender, NetworkMessage message) {
+		if(destroyed) return;
 		synchronized(LOCK) {
 			for(User u : users) {
 				if(u.equals(sender)) continue;
@@ -130,6 +139,7 @@ public class Session {
 	}
 	// sends a SAY type message to everyone except the sender
 	public void broadcastHumanMessage(User sender, String message) {
+		if(destroyed) return;
 		synchronized(LOCK) {
 			for(User u : users) {
 				if(u.equals(sender)) continue;
@@ -146,6 +156,7 @@ public class Session {
 	}
 	
 	public boolean isMember(User u) {
+		if(destroyed) return false;
 		synchronized(LOCK) {
 			return users.contains(u);
 		}
@@ -179,5 +190,36 @@ public class Session {
 	
 	public boolean isDestroyed() {
 		return destroyed;
+	}
+	private void checkDestroyed() throws SessionException {
+		if(destroyed) throw new SessionException("Session destroyed");
+	}
+	
+	private class NetworkedGameListener implements GameListener {
+
+		@Override
+		public void deliverProblem(Problem p, User to) {
+			broadcastMessage(null,new NetworkMessage(ClientCommand.PROBLEM,to.handle,p.toString()));
+		}
+
+		@Override
+		public void deliverAnswer(User submitter, boolean wasCorrect) {
+			broadcastMessage(null,new NetworkMessage(ClientCommand.ANSWER,submitter.handle,wasCorrect));
+		}
+
+		@Override
+		public void deliverStroke(User submitter, List<Dot> stroke) {
+			broadcastMessage(null,new NetworkMessage(ClientCommand.STROKE,submitter.handle,stroke));
+		}
+
+		@Override
+		public void clearStrokes() {
+			broadcastMessage(null, ClientCommand.CLEARSTROKES.toString());
+		}
+
+		@Override
+		public void finished() {
+			manager.destroySession(Session.this);
+		}		
 	}
 }

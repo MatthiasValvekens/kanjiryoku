@@ -13,7 +13,7 @@ public class ProtocolSyntaxException extends ServerException {
 	}
 
 	public ProtocolSyntaxException(Throwable cause) {
-		super("Syntax Error",cause, ERROR_SYNTAX);
+		super(cause.toString(),cause, ERROR_SYNTAX);
 	}
 
 }

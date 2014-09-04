@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -19,27 +20,25 @@ public class NetworkMessage implements Iterable<String> {
 	
 	
 	
-	private final List<String> args;
-	
-	public NetworkMessage(ServerCommand comm, List<String> args) {
-		ArrayList<String> fullArgs = new ArrayList<String>(args.size()+1);
-		fullArgs.add(comm.toString());
-		fullArgs.addAll(args);
-		this.args = fullArgs;
-	}
-	public NetworkMessage(ClientCommand comm, List<String> args) {
-		ArrayList<String> fullArgs = new ArrayList<String>(args.size()+1);
-		fullArgs.add(comm.toString());
-		fullArgs.addAll(args);
-		this.args = fullArgs;
+	private final List<?> args;
+	public NetworkMessage(Object obj, List<String> args) {
+		ArrayList<Object> objs = new ArrayList<Object>();
+		objs.add(obj);
+		objs.addAll(args);
+		this.args = objs;
 	}
 	public NetworkMessage(List<String> args) {
-		if(args == null) throw new IllegalArgumentException();
+		if(args == null) throw new NullPointerException();
 		this.args = args;
 	}
+
+	public NetworkMessage(Object... args) {
+		this.args = Arrays.asList(args);
+	}
+
 	
 	public String get(int ix) {
-		return args.get(ix);
+		return String.valueOf(args.get(ix));
 	}
 	
 	public static NetworkMessage readRaw(ReadableByteChannel sock, ByteBuffer buf) throws IOException, EOFException {
@@ -55,10 +54,10 @@ public class NetworkMessage implements Iterable<String> {
 		buf.clear();
 		int i;
 		for(i = 0; i<args.size()-1;i++) {
-			buf.put(escapedAtom(args.get(i)).getBytes(ENCODING));
+			buf.put(escapedAtom(get(i)).getBytes(ENCODING));
 			buf.put(String.valueOf(DELIMITER).getBytes(ENCODING));
 		}
-		buf.put(escapedAtom(args.get(i)).getBytes(ENCODING));
+		buf.put(escapedAtom(get(i)).getBytes(ENCODING));
 		buf.put((byte)0x0a);
 		buf.flip();
 		sock.write(buf);
@@ -69,10 +68,10 @@ public class NetworkMessage implements Iterable<String> {
 		StringBuilder sb = new StringBuilder();
 		int i;
 		for(i = 0; i<args.size()-1;i++) {
-			sb.append(escapedAtom(args.get(i)));
+			sb.append(escapedAtom(get(i)));
 			sb.append(String.valueOf(DELIMITER));
 		}
-		sb.append(escapedAtom(args.get(i)));
+		sb.append(escapedAtom(get(i)));
 		return sb.toString();
 	}
 	
@@ -122,7 +121,24 @@ public class NetworkMessage implements Iterable<String> {
 
 	@Override
 	public Iterator<String> iterator() {
-		return args.iterator();
+		return new Iterator<String>() {
+			Iterator<?> backend = args.iterator();
+			@Override
+			public boolean hasNext() {
+				return backend.hasNext();
+			}
+
+			@Override
+			public String next() {
+				return String.valueOf(backend.next());
+			}
+
+			@Override
+			public void remove() {
+				backend.remove();
+			}
+			
+		};
 	}
 
 	public int argCount() {

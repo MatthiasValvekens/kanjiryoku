@@ -21,6 +21,7 @@ import javax.swing.SwingUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.Constants;
 import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
 
@@ -32,7 +33,6 @@ public class DrawPanel extends JPanel {
 	private final KanjiGuesser engine;
 	private static final int BRUSH_RADIUS = 10;
 	private static final Stroke BRUSH_STROKE = new BasicStroke(BRUSH_RADIUS, BasicStroke.CAP_ROUND,BasicStroke.JOIN_MITER);
-	private static final char CANDIDATE_TOLERANCE = 5;
 	private final Dimension size;
 	private boolean locked = true, solvedProblem = false;
 	public DrawPanel(Dimension size, KanjiGuesser engine) {
@@ -64,7 +64,7 @@ public class DrawPanel extends JPanel {
 		return size;
 	}
 	public List<Character> getChars() {
-		return engine.guess(size.width, size.height,strokes, CANDIDATE_TOLERANCE);
+		return engine.guess(size.width, size.height,strokes, Constants.TOLERANCE);
 	}
 	
 	@Override

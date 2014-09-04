@@ -35,19 +35,21 @@ public class MessageHandler implements Runnable {
 	
 	@Override
 	public void run() { //only allow one sender per socket at a time
-		if(key.isValid() && key.isWritable()) {
-			try {
-				while(!messages.isEmpty()) {
-					ByteBuffer messageBuffer = ((NetworkThreadFactory.NetworkThread)Thread.currentThread()).getBuffer();
-					// FFT: check whether key.channel() == channel?
-					byte[] msg = messages.poll();
-					NetworkMessage.sendRaw((WritableByteChannel)key.channel(),messageBuffer,msg);
+		synchronized(key) {
+			if(key.isValid() && key.isWritable()) {
+				try {
+					while(!messages.isEmpty()) {
+						ByteBuffer messageBuffer = ((NetworkThreadFactory.NetworkThread)Thread.currentThread()).getBuffer();
+						// FFT: check whether key.channel() == channel?
+						byte[] msg = messages.poll();
+						NetworkMessage.sendRaw((WritableByteChannel)key.channel(),messageBuffer,msg);
+					}
+				} catch(IOException e) {
+					log.error("I/O failure while sending messages",e);
 				}
-			} catch(IOException e) {
-				log.error("I/O failure while sending messages",e);
+			} else {
+				log.error("Channel no longer available for writing.");
 			}
-		} else {
-			log.error("Channel no longer available for writing.");
 		}
 	}
 		

@@ -40,7 +40,7 @@ public class Kanjiryoku {
 	}
 	
 	
-	private static List<Problem> readLines(String filename) throws IOException {
+	public static List<Problem> readLines(String filename) throws IOException {
 		ArrayList<Problem> res = new ArrayList<Problem>();
 		BufferedReader r = new BufferedReader(new InputStreamReader(new FileInputStream(filename),"Shift-JIS"));
 		String line;

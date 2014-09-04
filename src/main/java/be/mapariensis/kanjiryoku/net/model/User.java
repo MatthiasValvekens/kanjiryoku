@@ -95,6 +95,12 @@ public class User {
 		rh.handle(this, msg); // don't mind if this takes long, rh's should be queued anyway
 	}
 	
+	public void purgeResponseHandlers() {
+		synchronized(activeResponseHandlers) {
+			activeResponseHandlers.clear();
+		}
+	}
+	
 	@Override
 	public void finalize() {
 		if(channel.isOpen()) {

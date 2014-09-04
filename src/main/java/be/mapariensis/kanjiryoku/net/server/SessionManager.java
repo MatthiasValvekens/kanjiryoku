@@ -16,7 +16,7 @@ public interface SessionManager {
 	
 	
 	
-	public void destroySession(Session sess) throws SessionException;
+	public void destroySession(Session sess);
 	
 	/**
 	 * Remove a user from its session. If the session master was removed and there are other users left in the pool, assign a new master.
