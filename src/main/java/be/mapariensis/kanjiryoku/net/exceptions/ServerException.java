@@ -12,6 +12,9 @@ public class ServerException extends Exception {
 	public static final int ERROR_IO = 3;
 	public static final int ERROR_SYNTAX = 4;
 	public static final int ERROR_QUEUE = 5;
+	public static final int ERROR_NOT_SUPPORTED = 6;
+	public static final int ERROR_BACKEND = 6;
+	public static final int ERROR_GAME_INTERNAL = 7;
 	
 	public final int errorCode;
 	public ServerException(String message, int errorCode) {

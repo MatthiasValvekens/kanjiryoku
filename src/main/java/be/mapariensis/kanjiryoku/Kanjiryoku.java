@@ -21,13 +21,16 @@ import be.mapariensis.kanjiryoku.providers.KanjiryokuShindanParser;
 
 public class Kanjiryoku {
 	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);
-	public static void main(String[] args) throws IOException, ParseException {
+	public static void loadDLLs() {
 		try {
 			System.loadLibrary("jzinnia-0.06-JAVA");
 		} catch (UnsatisfiedLinkError err) {
 			log.error("Failed to load Zinnia library.",err);
 			System.exit(1);
 		}
+	}
+	public static void main(String[] args) throws IOException, ParseException {
+		loadDLLs();
 		KanjiGuesser guesser = new ZinniaGuesser("data\\writingmodel\\handwriting-ja.model");
 		JFrame frame = new JFrame("Kanji");
 		frame.add(new GamePanel(guesser,readLines("data\\problems\\my_kaki_07.txt").iterator()));

@@ -10,7 +10,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import static be.mapariensis.kanjiryoku.net.Constants.*;
-import be.mapariensis.kanjiryoku.net.client.ClientCommand;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 
 public class NetworkMessage implements Iterable<String> {

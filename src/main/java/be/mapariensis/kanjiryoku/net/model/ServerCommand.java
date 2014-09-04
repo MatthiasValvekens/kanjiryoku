@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import be.mapariensis.kanjiryoku.net.client.ClientCommand;
+import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
+import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
+import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.server.Session;
 import be.mapariensis.kanjiryoku.net.server.SessionManager;
@@ -55,12 +57,21 @@ public enum ServerCommand {
 		@Override
 		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
 				throws ServerException {
+			//enforce arglen
+			if(message.argCount() < 2) throw new ProtocolSyntaxException("Too few arguments for STARTSESSION");
+			String gameName = message.get(1);
+			Game game;
+			try {
+				game = Game.valueOf(gameName);
+			} catch (RuntimeException ex) {
+				throw new UnsupportedGameException(gameName);
+			}
+			Session sess = sessman.startSession(client, game);
 			List<User> users = new ArrayList<User>(message.argCount());
 			users.add(client);
-			Session sess = sessman.startSession(client);
-			NetworkMessage invite = new NetworkMessage(ClientCommand.INVITE, Arrays.asList(String.valueOf(sess.getId())));
+			NetworkMessage invite = new NetworkMessage(ClientCommand.INVITE, Arrays.asList(gameName,String.valueOf(sess.getId())));
 			ResponseHandler rh = new SessionInvitationHandler(sess);
-			for(int i = 1; i<message.argCount();i++) {
+			for(int i = 2; i<message.argCount();i++) {
 				User u;
 				try {
 					u = userman.getUser(message.get(i));
@@ -72,9 +83,77 @@ public enum ServerCommand {
 				//dispatch invite
 				userman.messageUser(u,invite,rh);
 				
-			}
-			
+			}	
 		}		
+	}, KICK {
+
+		@Override
+		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
+			synchronized(client.sessionLock()) {
+				Session sess;
+				if((sess = client.getSession()) == null) throw new SessionException("You are not currently in a session.");
+				if(!sess.isMaster(client)) throw new SessionException("Only the session master can kick people.");
+				for(int i = 1; i<message.argCount();i++) {
+					User u;
+					try {
+						u = userman.getUser(message.get(i));
+						sess.kickUser(client,u);
+					} catch (UserManagementException | SessionException e) {
+						userman.messageUser(client,e.getMessage());
+						continue;
+					}
+				}
+			}
+		}		
+	}, WHOAMI {
+		@Override
+		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
+				throws ServerException {
+			ArrayList<String> args = new ArrayList<String>(3);
+			args.add(client.handle);
+			synchronized(client.sessionLock()) {
+				Session sess = client.getSession();
+				if(sess != null) {
+					args.add(String.valueOf(sess.getId()));
+					args.add(String.valueOf(sess.isMaster(client)));
+					args.add(sess.game.getGame().toString());
+				} else {
+					args.add("-1");
+					args.add("false");
+					args.add(Constants.NONE);
+				}
+			}
+			userman.messageUser(client, new NetworkMessage(ClientCommand.RESPOND,args));
+			
+			
+		}
+	}, SUBMIT {
+
+		@Override
+		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
+				throws ServerException {
+			synchronized(client.sessionLock()) {
+				Session sess = client.getSession();
+				if(sess == null || !sess.game.running()) throw new SessionException("No game running.");
+				sess.game.submit(message, client);
+			}
+		}
+		
+	}, KILLSESSION {
+
+		@Override
+		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
+				throws ServerException {
+			synchronized(client.sessionLock()) {
+				Session sess = client.getSession();
+				if(sess == null) throw new SessionException("No active session.");
+				if(!sess.isMaster(client)) throw new SessionException("Only the session master can kill sessions");
+				sessman.destroySession(sess);
+			}			
+		}
+		
 	};
+	
+	
 	public abstract void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException;
 }

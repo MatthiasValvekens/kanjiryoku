@@ -1,14 +1,17 @@
 package be.mapariensis.kanjiryoku.net.server;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
+import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
 import be.mapariensis.kanjiryoku.net.model.User;
 
 public class Session {
@@ -20,31 +23,47 @@ public class Session {
 	volatile boolean destroyed;
 	protected final Object LOCK = new Object();
 	private final UserManager uman;
-	public Session(SessionManager manager, int id, Set<User> users, User master, UserManager uman) throws ServerException {
-		if(users.isEmpty()) throw new IllegalArgumentException("No members");
+	public final GameServerInterface game;
+	
+	public Session(SessionManager manager, int id, User master, UserManager uman, GameServerInterface game) throws ServerException {
+		if(game == null) throw new UnsupportedGameException("null");
 		this.id = id;
-		this.users = users;
+		this.users = new HashSet<User>();
+		users.add(master);
 		this.master = master;
 		this.manager = manager;
 		this.uman = uman;
-		for(User u : users) {
-			u.joinSession(this); // FIXME : don't expose partially constructed object
+		this.game = game;
+		synchronized(master.sessionLock()) {
+			master.joinSession(this); // session is locked until we're done. No threads can access our partially constructed session
 		}
 	}
+	public synchronized void start() throws GameFlowException {
+		game.startGame(users);
+	}
 	public void addMember(User u) throws SessionException {
+		if(game.running()) throw new SessionException("Not allowed while game is running");
 		synchronized(LOCK) {
 			if(u.getSession() == this) return;
 			users.add(u);
 			if(u.getSession() != this) u.joinSession(this);
 			broadcastHumanMessage(u, String.format("User %s has joined the session.",u));
+			uman.humanMessage(u, "Joined session.");
 			return;
 		}
 	}
+	public synchronized void stopGame() throws ServerException {
+		game.close();
+	}
+	
+	//package private because calling this method by itself violates the contract between the session and the game server/users
 	
 	void purgeMembers() {
+		broadcastHumanMessage(null, "Received session kill signal");
 		synchronized(LOCK) {
 			for(User u : new LinkedList<User>(users)) {
-				removeMember(u);
+				users.remove(u);
+				if(u.getSession() != null) u.leaveSession();
 			}
 		}
 	}
@@ -58,10 +77,10 @@ public class Session {
 				master =  users.isEmpty() ? null : users.iterator().next();
 				
 			}
-			if(u.getSession() != null) u.leaveSession(); // make sure the order in which these methods are called doesn't matter
+			if(u.getSession() != null) u.leaveSession();
 			if(master != null && master != previousMaster) {
 				uman.humanMessage(master, "You are now the session master");
-				log.info("Promoted {} to session master",master);
+				log.info("Promoted {} to session master of session {}",master,id);
 			}
 			return master;
 		}
@@ -71,7 +90,9 @@ public class Session {
 	 * @param id
 	 */
 	public Set<User> getMembers() {
-		return Collections.unmodifiableSet(users);
+		synchronized(LOCK) {
+			return Collections.unmodifiableSet(users);
+		}
 	}
 	
 	public User getMaster() {
@@ -80,7 +101,14 @@ public class Session {
 		}
 	}
 	
+	public boolean isMaster(User u) {
+		synchronized(LOCK) {
+			return master.equals(u);
+		}
+	}
+	
 	public void kickUser(User caller, User kicked) throws SessionException {
+		if(game.running()) throw new SessionException("Not allowed while game is running");
 		synchronized(LOCK) {
 			if(kicked == caller || kicked == master || !isMember(kicked))
 				throw new SessionException("This user cannot be kicked from this session.");
@@ -88,7 +116,7 @@ public class Session {
 				throw new SessionException("You do not have sufficient privilege to kick users.");
 			removeMember(kicked);
 		}
-		uman.humanMessage(kicked, String.format("You have been kicked from session %05d",id));
+		uman.humanMessage(kicked, String.format("You have been kicked from session %d",id));
 		uman.humanMessage(caller, String.format("User %s has been kicked from the session",kicked.handle));
 		
 	}
@@ -113,7 +141,7 @@ public class Session {
 	/**
 	 * Returns the ID of this session. Sessions monitored by the same session manager must never have the same ID.
 	 */
-	public int getId() {
+	public final int getId() {
 		return id;
 	}
 	

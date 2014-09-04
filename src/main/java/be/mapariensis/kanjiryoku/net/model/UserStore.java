@@ -11,9 +11,9 @@ import be.mapariensis.kanjiryoku.net.server.MessageHandler;
 public final class UserStore {
 	private final Map<SocketChannel, User> userConnMap = new ConcurrentHashMap<SocketChannel, User>();
 	private final Map<String, User> userNameMap = new ConcurrentHashMap<String, User>();
-	private final Object MODIFY_LOCK = new Object();
+	private final Object LOCK = new Object();
 	public void addUser(User u) throws UserManagementException {
-		synchronized(MODIFY_LOCK) {
+		synchronized(LOCK) {
 			User other;
 			if((other = userConnMap.get(u.channel))!=null) throw new UserManagementException(String.format("Connection already bound to user \"%s\"",other.handle));
 			if(userNameMap.containsKey(u.handle)) throw new UserManagementException("User name taken.");
@@ -23,17 +23,10 @@ public final class UserStore {
 	}
 	public void removeUser(User u) {
 		if(u==null) return;
-		synchronized(MODIFY_LOCK) {
+		synchronized(LOCK) {
 			userConnMap.remove(u.channel);
 			userNameMap.remove(u.handle);
 		}
-	}
-	
-	public User verifyName(String name, SocketChannel peer){
-		User peered = userConnMap.get(peer);
-		User named = userNameMap.get(name);
-		if(peered == null || named == null) return null;
-		return peered.equals(named) ? peered : null;
 	}
 	
 	public User requireUser(String name) throws UserManagementException {

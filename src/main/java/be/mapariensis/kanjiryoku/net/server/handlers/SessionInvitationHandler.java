@@ -3,6 +3,7 @@ package be.mapariensis.kanjiryoku.net.server.handlers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
@@ -16,18 +17,23 @@ public class SessionInvitationHandler implements ResponseHandler {
 	public SessionInvitationHandler(Session sess) {
 		this.sess = sess;
 	}
+	private void rejectBroadcast(User user) {
+		sess.broadcastHumanMessage(user, String.format("User %s did not accept the invitation.",user.handle));
+	}
 	@Override
 	public void handle(User user, NetworkMessage msg) throws ProtocolSyntaxException, SessionException {
-		if(msg.argCount()!=3) throw new ProtocolSyntaxException("Session invitation response takes three arguments. Rejected");
-		if("OK".equalsIgnoreCase(msg.get(1)) && String.valueOf(sess.getId()).equals(msg.get(2))) {
+		if(msg.argCount()!=3) {
+			rejectBroadcast(user);
+			throw new ProtocolSyntaxException("Session invitation response takes three arguments. Rejected");
+		}
+		if(Constants.ACCEPTS.equalsIgnoreCase(msg.get(1)) && String.valueOf(sess.getId()).equals(msg.get(2))) {
 			if(sess.isDestroyed()) {
 				log.warn("Session {} is already destroyed.",sess);
 				return;
 			}
-			
 			sess.addMember(user);
 		} else {
-			sess.broadcastHumanMessage(user, String.format("User %s did not accept the invitation.",user.handle));
+			rejectBroadcast(user);
 		}
 	}
 }

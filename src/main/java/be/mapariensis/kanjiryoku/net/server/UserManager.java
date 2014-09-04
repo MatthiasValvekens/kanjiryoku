@@ -32,7 +32,7 @@ public interface UserManager {
 	 */
 	public User getUser(String handle) throws UserManagementException;
 	/**
-	 * Send a string to a user.
+	 * Non-blockingly queue a string to send to a user. The string will be sent as soon as the monitor thread detects a writable socket.
 	 * @param user
 	 * @param message
 	 * @throws UserManagementException 

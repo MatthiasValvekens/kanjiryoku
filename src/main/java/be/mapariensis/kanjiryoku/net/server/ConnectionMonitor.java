@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku.net.server;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -20,15 +21,16 @@ import org.slf4j.LoggerFactory;
 
 import static be.mapariensis.kanjiryoku.net.Constants.*;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
-import be.mapariensis.kanjiryoku.net.client.ClientCommand;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
+import be.mapariensis.kanjiryoku.net.model.ClientCommand;
 import be.mapariensis.kanjiryoku.net.model.ServerCommand;
 import be.mapariensis.kanjiryoku.net.model.ResponseHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
+import be.mapariensis.kanjiryoku.net.server.games.DefaultServerProvider;
 import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 import be.mapariensis.kanjiryoku.util.Filter;
 
@@ -40,15 +42,15 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final ServerSocketChannel ssc;
 	private final Selector selector;
 	private final UserStore store = new UserStore();
-	private final SessionManagerImpl sessman = new SessionManagerImpl(this);
+	private final SessionManagerImpl sessman = new SessionManagerImpl(this, new DefaultServerProvider());
 	// store message handlers for anonymous connections here until they register/identify
 	private final Map<SocketChannel,MessageHandler> strayHandlers = new ConcurrentHashMap<SocketChannel,MessageHandler>();
 
 	public ConnectionMonitor(ServerSocketChannel ssc) throws IOException {
+		super("ConnectionMonitor:"+((InetSocketAddress)ssc.getLocalAddress()).getPort());
 		this.ssc = ssc;
 		selector = Selector.open();
 	}
-
 	@Override
 	public void run() {
 		// main thread that dispatches workers als necessary
@@ -145,14 +147,15 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				} else {
 					User u = store.getUser(ch);
 					if(u == null) {
-						if(command == ServerCommand.BYE)
+						if(command == ServerCommand.BYE) {
+							log.info("Gracefully closing {} disconnected with BYE",ch);
 							closeQuietly(ch);
-						else throw new UserManagementException("You must register before using any command other than BYE or REGISTER");
+						} else throw new UserManagementException("You must register before using any command other than BYE or REGISTER");
 					}
 					else command.execute(msg, u,ConnectionMonitor.this, sessman);
 				}
-			} catch (ServerException ex) {
-				log.warn("Processing error",ex);
+			} catch (ServerException ex) {	
+				log.debug("Processing error",ex);
 				queueProcessingError(ch, ex);
 			} catch (Exception e) {
 				log.error("Failed to process command.",e);
@@ -205,12 +208,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		store.addUser(user);
 		strayHandlers.remove(user.channel); // ensure the user's outbox is removed from the stray handler list
 		// message behaviour for remaining messages in the old handler is undefined now, but this shouldn't really matter
-		messageUser(user,"Welcome");
+		humanMessage(user,"Welcome");
 		log.info("Registered user {}",user);
 	}
 
 	@Override
 	public void deregister(User user) throws UserManagementException {
+		// TODO allow for disconnect handlers? 
 		if(user==null) throw new UserManagementException("null is not a user");
 		try {
 			sessman.removeUser(user);
@@ -223,7 +227,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	}
 
 	private void closeQuietly(SocketChannel channel) {
-		log.info("Gracefully closing {} disconnected with BYE",channel);
 		SelectionKey key = channel.keyFor(selector);
 		if(key != null) key.cancel();
 		try {

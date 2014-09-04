@@ -1,23 +1,19 @@
 package be.mapariensis.kanjiryoku.net.server;
 
-import java.util.List;
-
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
+import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.User;
 
+/**
+ * An interface for managing sessions.
+ * NOTE: it is imperative that implementations of this interface not create their own worker threads,
+ * because they will almost certainly deadlock when trying to access a user's session information.
+ * @author Matthias Valvekens
+ * @version 1.0
+ */
 public interface SessionManager {
-	/**
-	 * Register a session.
-	 * @param users
-	 *  The users of a session. The initiator goes first.
-	 * @return
-	 *    A Session object
-	 * @throws SessionException
-	 *    When a selected user is already in a session, or if an ID could not be obtained.
-	 * @throws ServerException 
-	 */
-	public Session startSession(List<User> others) throws SessionException, ServerException;
+	
 	
 	
 	public void destroySession(Session sess) throws SessionException;
@@ -40,6 +36,16 @@ public interface SessionManager {
 	
 	public Session getSession(int id);
 
-
-	public Session startSession(User master) throws ServerException;
+	/**
+	 * Register a session with the given session leader.
+	 * @param users
+	 *  The users of a session. The initiator goes first.
+	 * @return
+	 *    A Session object
+	 * @throws SessionException
+	 *    When a selected user is already in a session, or if an ID could not be obtained.
+	 * @throws ServerException 
+	 */
+	
+	public Session startSession(User master, Game game) throws ServerException;
 }

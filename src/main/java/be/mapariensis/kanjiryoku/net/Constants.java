@@ -11,4 +11,6 @@ public class Constants {
 	
 	
 	public static final String RESPONSE_SUCCESS = "SUCCESS";
+	public static final String ACCEPTS = "ACCEPT";
+	public static final String NONE = "NONE";
 }

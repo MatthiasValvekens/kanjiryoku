@@ -1,7 +1,6 @@
 package be.mapariensis.kanjiryoku.net.server;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -9,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
+import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.User;
 
 public class SessionManagerImpl implements SessionManager {
@@ -16,28 +16,19 @@ public class SessionManagerImpl implements SessionManager {
 	private final List<Session> sessions = new ArrayList<Session>();
 	private final UserManager uman;
 	private final Object LOCK = new Object();
-	public SessionManagerImpl(UserManager uman) {
+	private final GameServerFactory prov;
+	public SessionManagerImpl(UserManager uman, GameServerFactory prov) {
 		this.uman = uman;
+		this.prov = prov;
 	}
 	@Override
-	public Session startSession(List<User> others) throws ServerException {
+	public Session startSession(User master, Game game) throws ServerException {
+		GameServerInterface host = prov.getServer(game);
 		synchronized(LOCK) {
-			if(others.isEmpty()) throw new SessionException("Sessions must have at least one member");
-			 Session res = new Session(this,freeSpot(), new HashSet<User>(others),others.get(0),uman);
-			 sessions.set(res.getId(),res);
-			 log.info("Established a session with id %05d, members are {} ",others);
-			 return res;
-		}
-	}
-	@Override
-	public Session startSession(User master) throws ServerException {
-		synchronized(LOCK) {
-			HashSet<User> hs = new HashSet<User>();
-			hs.add(master);
-			 Session res = new Session(this,freeSpot(), hs,master,uman);
-			 sessions.set(res.getId(),res);
-			 log.info("Established a session with id {}, master is {}", res.getId(),master);
-			 return res;
+			Session res = new Session(this,freeSpot(), master,uman,host);
+			sessions.set(res.getId(),res);
+			log.info("Established a session with id {}, master is {}", res.getId(),master);
+			return res;
 		}
 	}
 	

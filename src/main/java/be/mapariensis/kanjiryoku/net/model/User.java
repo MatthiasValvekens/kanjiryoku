@@ -56,6 +56,10 @@ public class User {
 			return session;
 		}
 	}
+	public Object sessionLock() {
+		return sessionLock;
+	}
+	
 	
 	public void joinSession(Session sess) throws SessionException {
 		synchronized(sessionLock) {
@@ -82,12 +86,13 @@ public class User {
 	}
 	
 	public void consumeActiveResponseHandler(NetworkMessage msg) throws ServerException {
+		ResponseHandler rh;
 		synchronized(activeResponseHandlers) {
-			ResponseHandler rh = activeResponseHandlers.poll();
+			rh = activeResponseHandlers.poll();
 			if(rh == null)
 				throw new CommandQueueingException("No commands in queue.");
-			rh.handle(this, msg);
 		}
+		rh.handle(this, msg); // don't mind if this takes long, rh's should be queued anyway
 	}
 	
 	@Override
