@@ -21,7 +21,7 @@ public class KakiRenderer extends ProblemRenderer<KakiProblem> {
 					solLength--;
 				}
 				assert solLength >= 0;
-				for(;solLength>=0;solLength--) {
+				for(;solLength>0;solLength--) {
 					sb.append(FILLER_CHAR);
 				}
 				newpos = TextRendering.renderWord(g,sb.toString(), w.furigana);

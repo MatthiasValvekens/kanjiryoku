@@ -6,24 +6,26 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import be.mapariensis.kanjiryoku.model.KakiProblem;
+import be.mapariensis.kanjiryoku.model.ProblemWithBlank;
 import be.mapariensis.kanjiryoku.model.Word;
-import be.mapariensis.kanjiryoku.model.YomiKakiProblem;
+import be.mapariensis.kanjiryoku.model.YomiProblem;
 
-public class KanjiryokuShindanParser implements ProblemProvider<YomiKakiProblem> {
+public class KanjiryokuShindanParser implements ProblemProvider<ProblemWithBlank> {
 	private static final char BLANK_DELIMITER = '（';
-	private final Collection<YomiKakiProblem> problems;
+	private final Collection<ProblemWithBlank> problems;
 	public KanjiryokuShindanParser(Collection<String> input) throws ParseException {
-		ArrayList<YomiKakiProblem> problems = new ArrayList<YomiKakiProblem>(input.size());
+		ArrayList<ProblemWithBlank> problems = new ArrayList<ProblemWithBlank>(input.size());
 		for(String s : input) {
 			problems.add(parseProblem(s));
 		}
 		this.problems = Collections.unmodifiableCollection(problems);
 	}
 	@Override
-	public Collection<YomiKakiProblem> getProblems() {
+	public Collection<ProblemWithBlank> getProblems() {
 		return problems;
 	}
-	public static YomiKakiProblem parseProblem(String input) throws ParseException {
+	public static ProblemWithBlank parseProblem(String input) throws ParseException {
 		int parserPos = 0;
 		int blankPos = -1;
 		int wordIx = 0;
@@ -74,7 +76,7 @@ public class KanjiryokuShindanParser implements ProblemProvider<YomiKakiProblem>
 			parserPos = nextItem;
 		}
 		if(blankPos == -1) throw new ParseException("No blank in problem",-1);
-		return new YomiKakiProblem(words, blankPos, yomi);
+		return yomi ? new YomiProblem(words, blankPos) : new KakiProblem(words, blankPos);
 	}
 	private static int findNext(String string, char c, int start) throws ParseException {
 		for(int i = start; i<string.length(); i++) {

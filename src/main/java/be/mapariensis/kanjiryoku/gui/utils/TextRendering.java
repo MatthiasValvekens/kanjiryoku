@@ -35,7 +35,7 @@ public class TextRendering {
 		
 		int rubyWidth = rubyMetrics.stringWidth(furigana);
 		int width = Math.max(rubyWidth, mainWidth)+5; //include a few pixels for padding
-		log.info("Widths: Ruby: {}, Normal: {}",rubyWidth, mainWidth);
+		log.debug("Widths: Ruby: {}, Normal: {}",rubyWidth, mainWidth);
 		if(mainWidth > rect.width)
 			log.warn("Clip too small to contain text ({} pixels short).",mainWidth-rect.width);
 		//make sure text is centered

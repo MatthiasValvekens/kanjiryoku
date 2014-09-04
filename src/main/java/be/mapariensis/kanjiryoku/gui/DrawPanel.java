@@ -34,6 +34,7 @@ public class DrawPanel extends JPanel {
 	private static final Stroke BRUSH_STROKE = new BasicStroke(BRUSH_RADIUS, BasicStroke.CAP_ROUND,BasicStroke.JOIN_MITER);
 	private static final char CANDIDATE_TOLERANCE = 5;
 	private final Dimension size;
+	private boolean locked = true, solvedProblem = false;
 	public DrawPanel(Dimension size, KanjiGuesser engine) {
 		this.engine = engine;
 		this.size = size;
@@ -42,6 +43,18 @@ public class DrawPanel extends JPanel {
 		addMouseMotionListener(listener);
 		clearStrokes();
 	}
+	public void newProblem() {
+		clearStrokes();
+		locked = false;
+		solvedProblem = false;
+	}
+	
+	public void endProblem() {
+		locked = true;
+		solvedProblem = true;
+		repaint();
+	}
+	
 	@Override
 	public Dimension getSize() {
 		return size;
@@ -50,16 +63,15 @@ public class DrawPanel extends JPanel {
 	public Dimension getPreferredSize() {
 		return size;
 	}
-	public boolean matches(char match) {
-		Dimension dim = getSize();
-		List<Character> results = engine.guess(dim.width, dim.height,strokes, CANDIDATE_TOLERANCE);
-		for(char c : results) {
-			if(c==match) return true;
-		}
-		return false;
+	public List<Character> getChars() {
+		return engine.guess(size.width, size.height,strokes, CANDIDATE_TOLERANCE);
 	}
+	
 	@Override
 	public void paintComponent(Graphics g) {
+		if(solvedProblem) {
+			
+		}
 		super.paintComponent(g);
 		Rectangle frame = g.getClipBounds();
 		if(!(g instanceof Graphics2D)) throw new IllegalArgumentException("Require Graphics2D");
@@ -96,11 +108,12 @@ public class DrawPanel extends JPanel {
 		repaint();
 	}
 	
+	
 	private class DrawingListener implements MouseMotionListener, MouseListener {
 
 		@Override
 		public void mouseDragged(MouseEvent e) {
-			if(SwingUtilities.isLeftMouseButton(e)) {
+			if(!locked || SwingUtilities.isLeftMouseButton(e)) {
 				currentStroke.add(new Dot(e.getX(),e.getY()));
 				repaint();
 			}
@@ -108,7 +121,7 @@ public class DrawPanel extends JPanel {
 
 		@Override
 		public void mouseClicked(MouseEvent e) {
-			if(SwingUtilities.isRightMouseButton(e)) {
+			if(!locked || SwingUtilities.isRightMouseButton(e)) {
 				clearStrokes();
 			}
 		}
@@ -118,7 +131,7 @@ public class DrawPanel extends JPanel {
 
 		@Override
 		public void mouseReleased(MouseEvent e) {
-			if(SwingUtilities.isLeftMouseButton(e)) {
+			if(!locked || SwingUtilities.isLeftMouseButton(e)) {
 				currentStroke.add(new Dot(e.getX(),e.getY()));
 				log.info("\nFinished stroke {}: {} ",strokes.size(), currentStroke);
 				currentStroke = new LinkedList<Dot>();
@@ -135,7 +148,6 @@ public class DrawPanel extends JPanel {
 
 		@Override
 		public void mouseMoved(MouseEvent e) {
-			
 		}		
 	}
 }
