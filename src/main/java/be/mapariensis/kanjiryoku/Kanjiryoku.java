@@ -4,39 +4,24 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JFrame;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
-import be.mapariensis.kanjiryoku.cr.ZinniaGuesser;
-import be.mapariensis.kanjiryoku.gui.GamePanel;
+import be.mapariensis.kanjiryoku.gui.MainWindow;
 import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.providers.KanjiryokuShindanParser;
+import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 public class Kanjiryoku {
-	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);
-	public static void loadDLLs() {
-		try {
-			System.loadLibrary("jzinnia-0.06-JAVA");
-		} catch (UnsatisfiedLinkError err) {
-			log.error("Failed to load Zinnia library.",err);
-			System.exit(1);
-		}
-	}
+
 	public static void main(String[] args) throws IOException, ParseException {
-		loadDLLs();
-		KanjiGuesser guesser = new ZinniaGuesser("data\\writingmodel\\handwriting-ja.model");
-		JFrame frame = new JFrame("Kanji");
-		frame.add(new GamePanel(guesser,readLines("data\\problems\\my_kaki_07.txt").iterator()));
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.pack();
+		JFrame frame = new MainWindow(InetAddress.getByName("localhost"), 1000, "test"+(System.currentTimeMillis()%10000));
 		frame.setVisible(true);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
 	
 	
@@ -44,9 +29,10 @@ public class Kanjiryoku {
 		ArrayList<Problem> res = new ArrayList<Problem>();
 		BufferedReader r = new BufferedReader(new InputStreamReader(new FileInputStream(filename),"Shift-JIS"));
 		String line;
+		ProblemParser<?> parser = new KanjiryokuShindanParser();
 		while((line = r.readLine())!=null) {
 			try {
-				res.add(KanjiryokuShindanParser.parseProblem(line));
+				res.add(parser.parseProblem(line));
 			} catch (ParseException e) {}
 		}
 		return res;

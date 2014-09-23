@@ -53,16 +53,11 @@ public abstract class ProblemRenderer<T extends Problem> extends JPanel {
 		drawProblem(g2d);
 		g2d.dispose();
 	}
-	public abstract void drawProblem(Graphics2D g);
-	
-	public boolean submitAnswer(List<Character> userInput) {
+	public abstract void drawProblem(Graphics2D g2d);
+	public void addCorrectCharacter() {
 		if(counter>actualSolution.length()) throw new IllegalStateException("Too many input submissions");
-		// check submission
-		if(problem.checkSolution(userInput, counter)) {
-			this.correctInputs.add(actualSolution.charAt(counter));
-			counter++;
-			repaint();
-			return true;
-		} else return false;
+		this.correctInputs.add(actualSolution.charAt(counter));
+		counter++;
+		repaint();
 	}
 }

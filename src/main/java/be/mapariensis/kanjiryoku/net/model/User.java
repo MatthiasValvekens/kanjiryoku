@@ -3,12 +3,13 @@ package be.mapariensis.kanjiryoku.net.model;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
-import java.util.Queue;
-
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.CommandQueueingException;
+import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.server.MessageHandler;
@@ -20,7 +21,7 @@ public class User {
 	public final SocketChannel channel;
 	protected final MessageHandler outbox;
 	private Session session;
-	private final Queue<ResponseHandler> activeResponseHandlers = new LinkedList<ResponseHandler>();
+	private final List<ClientResponseHandler> activeResponseHandlers = new LinkedList<ClientResponseHandler>();
 	private final Object sessionLock = new Object();
 	public User(String handle, SocketChannel channel, MessageHandler outbox) {
 		if(handle == null || outbox == null) throw new IllegalArgumentException();
@@ -79,20 +80,35 @@ public class User {
 			return !activeResponseHandlers.isEmpty();
 		}
 	}
-	public void enqueueActiveResponseHandler(ResponseHandler hand) {
+	public void enqueueActiveResponseHandler(ClientResponseHandler hand) {
 		synchronized(activeResponseHandlers) {
 			activeResponseHandlers.add(hand);
+
 		}
 	}
-	
+
 	public void consumeActiveResponseHandler(NetworkMessage msg) throws ServerException {
-		ResponseHandler rh;
-		synchronized(activeResponseHandlers) {
-			rh = activeResponseHandlers.poll();
-			if(rh == null)
-				throw new CommandQueueingException("No commands in queue.");
+		int passedId;
+		try {
+			passedId = Integer.valueOf(msg.get(1));
+		} catch (IndexOutOfBoundsException ex) {
+			// the servercommand class should check this, but an extra safety measure never hurts
+			throw new ArgumentCountException(ArgumentCountException.Type.TOO_FEW, ServerCommand.RESPOND);
+		} catch (RuntimeException ex) {
+			throw new ProtocolSyntaxException(ex);
 		}
-		rh.handle(this, msg); // don't mind if this takes long, rh's should be queued anyway
+		
+		// there should only be a handful of active rh's at any one time, so linear search is more than good enough
+		synchronized(activeResponseHandlers) {
+			for(ClientResponseHandler rh : activeResponseHandlers) {
+				if(rh.id == passedId) {
+					rh.handle(this, msg); // don't mind if this takes long, rh's should be queued anyway
+					activeResponseHandlers.remove(rh);
+					return;
+				}
+			}
+		}
+		throw new CommandQueueingException(String.format("No response handler with id %i", passedId));
 	}
 	
 	public void purgeResponseHandlers() {

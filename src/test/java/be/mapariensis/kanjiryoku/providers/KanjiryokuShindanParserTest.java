@@ -16,15 +16,17 @@ public class KanjiryokuShindanParserTest {
 	@Test
 	public void testParse1() throws ParseException {
 		String input = "［え］干［と］支は｛うし｝（丑）";
-		ProblemWithBlank problem = KanjiryokuShindanParser.parseProblem(input);
+		KanjiryokuShindanParser p = new KanjiryokuShindanParser();
+		ProblemWithBlank problem = p.parseProblem(input);
 		assertEquals(new Word("干","え"),problem.words.get(0));
 		assertEquals(3,problem.blankIndex);
 		assertTrue(problem instanceof KakiProblem);
 	}
 	@Test
 	public void testParse2() throws ParseException {
+		KanjiryokuShindanParser p = new KanjiryokuShindanParser();
 		String input = "（ひと）｛一｝つだけ［のこ］残る";
-		ProblemWithBlank problem = KanjiryokuShindanParser.parseProblem(input);
+		ProblemWithBlank problem = p.parseProblem(input);
 		assertEquals(problem.words.get(1),new Word("つだけ"));
 		assertEquals(new Word("一","ひと"),problem.words.get(0));
 		assertEquals(0,problem.blankIndex);

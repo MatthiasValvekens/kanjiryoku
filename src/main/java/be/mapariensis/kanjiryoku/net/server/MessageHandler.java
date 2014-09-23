@@ -26,23 +26,28 @@ public class MessageHandler implements Runnable {
 		enqueue(message.getBytes(Constants.ENCODING));
 	}
 	public void enqueue(byte[] bytes) {
-		messages.add(bytes);
 		synchronized(key) {
+			messages.add(bytes);
 			key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 			key.selector().wakeup();
 		}
 	}
-	
+	public boolean isEmpty() {
+		return messages.isEmpty();
+	}
 	@Override
 	public void run() { //only allow one sender per socket at a time
+		if(messages.isEmpty()) return;
 		synchronized(key) {
 			if(key.isValid() && key.isWritable()) {
+				
 				try {
 					while(!messages.isEmpty()) {
 						ByteBuffer messageBuffer = ((NetworkThreadFactory.NetworkThread)Thread.currentThread()).getBuffer();
 						// FFT: check whether key.channel() == channel?
 						byte[] msg = messages.poll();
 						NetworkMessage.sendRaw((WritableByteChannel)key.channel(),messageBuffer,msg);
+						key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 					}
 				} catch(IOException e) {
 					log.error("I/O failure while sending messages",e);
@@ -51,6 +56,7 @@ public class MessageHandler implements Runnable {
 				log.error("Channel no longer available for writing.");
 			}
 		}
+		key.selector().wakeup();
 	}
 		
 }

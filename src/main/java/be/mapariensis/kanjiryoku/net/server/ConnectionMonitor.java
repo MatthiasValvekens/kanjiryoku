@@ -9,6 +9,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,29 +27,32 @@ import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.ClientCommand;
 import be.mapariensis.kanjiryoku.net.model.ServerCommand;
-import be.mapariensis.kanjiryoku.net.model.ResponseHandler;
+import be.mapariensis.kanjiryoku.net.model.ClientResponseHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
-import be.mapariensis.kanjiryoku.net.server.games.DefaultServerProvider;
 import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 import be.mapariensis.kanjiryoku.util.Filter;
 
 public class ConnectionMonitor extends Thread implements UserManager, Closeable {
 	private static final Logger log = LoggerFactory.getLogger(ConnectionMonitor.class);
 	private static final int WORKER_THREADS = 10;
-	private final ExecutorService threadPool = Executors.newFixedThreadPool(WORKER_THREADS, new NetworkThreadFactory(BUFFER_MAX));
+	private static final long SELECT_TIMEOUT = 500;
+	private final ExecutorService threadPool;
 	private volatile boolean keepOn = true;
 	private final ServerSocketChannel ssc;
 	private final Selector selector;
 	private final UserStore store = new UserStore();
-	private final SessionManagerImpl sessman = new SessionManagerImpl(this, new DefaultServerProvider());
+	private final SessionManagerImpl sessman = new SessionManagerImpl(this);
 	// store message handlers for anonymous connections here until they register/identify
 	private final Map<SocketChannel,MessageHandler> strayHandlers = new ConcurrentHashMap<SocketChannel,MessageHandler>();
 
-	public ConnectionMonitor(ServerSocketChannel ssc) throws IOException {
-		super("ConnectionMonitor:"+((InetSocketAddress)ssc.getLocalAddress()).getPort());
-		this.ssc = ssc;
+	public ConnectionMonitor(int port) throws IOException {
+		super("ConnectionMonitor:"+port);
+		// get a socket
+		ssc = ServerSocketChannel.open();
+		ssc.bind(new InetSocketAddress(port));
 		selector = Selector.open();
+		threadPool = Executors.newFixedThreadPool(WORKER_THREADS, new NetworkThreadFactory(BUFFER_MAX,selector));
 	}
 	@Override
 	public void run() {
@@ -59,13 +63,16 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			log.info("Started listening for new connections.");
 		} catch (IOException e1) {
 			log.error("Failed to register socket.",e1);
+			try {
+				close();
+			} catch (IOException e) {}
 			return;
 		}
 		ByteBuffer messageBuffer = ByteBuffer.allocateDirect(BUFFER_MAX); // allocate one buffer for the monitor thread
 		while(keepOn) {
 			int readyCount;
 			try {
-				readyCount = selector.select();
+				readyCount = selector.select(SELECT_TIMEOUT);
 			} catch (IOException e) {
 				log.error("I/O error during selection",e);
 				break;
@@ -77,38 +84,38 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				iter.remove();
 				SocketChannel ch = null;
 				try {
-					synchronized(key) {
-						if(key.isAcceptable()) {
-							assert key.channel() == ssc;
-							ch = ssc.accept();
-							log.info("Accepted connection from peer {}",ch);
-							ch.configureBlocking(false);
-							ch.register(selector, SelectionKey.OP_READ);
-							queueMessage(ch, GREETING);
-						} else if(key.isReadable()) {
-							ch = (SocketChannel) key.channel();
-							NetworkMessage msg;
-							try {
-								msg = NetworkMessage.readRaw(ch, messageBuffer);
-							} catch(IOException ex) {  //FIXME : figure out a way to deal with forcefully closed connections, and then downgrade this to EOFException
-								log.info("Peer {} shut down.", ch.getRemoteAddress());
-								key.cancel();
-								User u;
-								if((u = store.getUser(ch))!= null) {
-									deregister(u);
-								}
-								continue;
-							} 
+					if(key.isAcceptable()) {
+						assert key.channel() == ssc;
+						ch = ssc.accept();
+						log.info("Accepted connection from peer {}",ch);
+						ch.configureBlocking(false);
+						ch.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+						queueMessage(ch, GREETING);
+					} else if(key.isReadable()) {
+						ch = (SocketChannel) key.channel();
+						List<NetworkMessage> msgs;
+						try {
+							msgs = NetworkMessage.readRaw(ch, messageBuffer);
+						} catch(IOException ex) {  //FIXME : figure out a way to deal with forcefully closed connections, and then downgrade this to EOFException
+							log.info("Peer {} shut down.", ch.getRemoteAddress());
+							key.cancel();
+							User u;
+							if((u = store.getUser(ch))!= null) {
+								deregister(u);
+							}
+							continue;
+						} 
+						for(NetworkMessage msg : msgs) {
 							// schedule command interpretation
-							if(msg != null && !msg.isEmpty()) threadPool.execute(new CommandReceiver(ch, msg));
-						} else if(key.isWritable()) {
-							ch = (SocketChannel) key.channel();
-							// deregister write event
-							key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-							key.selector().wakeup();
-							threadPool.execute(ensureHandler(ch));
+							if(!msg.isEmpty()) threadPool.execute(new CommandReceiver(ch, msg));
 						}
+					} else if(key.isWritable()) {
+						ch = (SocketChannel) key.channel();
+						// deregister write event
+						MessageHandler h = ensureHandler(ch);
+						threadPool.execute(h);
 					}
+
 				} catch(Exception ex) {
 					log.warn("Error while processing {}. Ignoring.",ch != null ? ch : "(unknown address)",ex);
 				}
@@ -155,7 +162,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					else command.execute(msg, u,ConnectionMonitor.this, sessman);
 				}
 			} catch (ServerException ex) {	
-				log.debug("Processing error",ex);
+				log.warn("Processing error",ex);
 				queueProcessingError(ch, ex);
 			} catch (Exception e) {
 				log.error("Failed to process command.",e);
@@ -208,7 +215,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		store.addUser(user);
 		strayHandlers.remove(user.channel); // ensure the user's outbox is removed from the stray handler list
 		// message behaviour for remaining messages in the old handler is undefined now, but this shouldn't really matter
-		humanMessage(user,"Welcome");
+		messageUser(user, new NetworkMessage(ClientCommand.WELCOME,user.handle));
 		log.info("Registered user {}",user);
 	}
 
@@ -243,7 +250,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		queueMessage(user.channel, message);
 	}
 	@Override
-	public void messageUser(User user, String message, ResponseHandler handler) {
+	public void messageUser(User user, String message, ClientResponseHandler handler) {
 		messageUser(user, message);
 		user.enqueueActiveResponseHandler(handler);
 	}
@@ -266,7 +273,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	@Override
 	public void messageUser(User user, NetworkMessage message,
-			ResponseHandler handler) {
+			ClientResponseHandler handler) {
 		messageUser(user, message.toString(),handler);		
 	}
 

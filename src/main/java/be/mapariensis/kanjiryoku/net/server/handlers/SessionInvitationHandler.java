@@ -5,11 +5,11 @@ import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
-import be.mapariensis.kanjiryoku.net.model.ResponseHandler;
+import be.mapariensis.kanjiryoku.net.model.ClientResponseHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.server.Session;
 
-public class SessionInvitationHandler implements ResponseHandler {
+public class SessionInvitationHandler extends ClientResponseHandler {
 	private final Session sess;
 	public SessionInvitationHandler(Session sess) {
 		this.sess = sess;
@@ -19,11 +19,14 @@ public class SessionInvitationHandler implements ResponseHandler {
 	}
 	@Override
 	public void handle(User user, NetworkMessage msg) throws ProtocolSyntaxException, SessionException {
-		if(msg.argCount()!=3) {
+		if(msg.argCount() == 3 && msg.get(2).equals(Constants.REJECTS)) {
+			rejectBroadcast(user);
+		}
+		if(msg.argCount()!=4) {
 			rejectBroadcast(user);
 			throw new ArgumentCountException(ArgumentCountException.Type.UNEQUAL, Constants.ACCEPTS);
 		}
-		if(Constants.ACCEPTS.equalsIgnoreCase(msg.get(1)) && String.valueOf(sess.getId()).equals(msg.get(2))) {
+		if(Constants.ACCEPTS.equalsIgnoreCase(msg.get(2)) && String.valueOf(sess.getId()).equals(msg.get(3))) {
 			sess.addMember(user);
 		} else {
 			rejectBroadcast(user);

@@ -12,9 +12,11 @@ public class Constants {
 			".\nVersion "+be.mapariensis.kanjiryoku.Constants.version();
 	
 	public static final String COMMAND_REGISTER = "REGISTER";
+	public static final String WELCOME = "Welcome";
 	
 	
 	public static final String RESPONSE_SUCCESS = "SUCCESS";
 	public static final String ACCEPTS = "ACCEPT";
+	public static final String REJECTS = "REJECT";
 	public static final String NONE = "NONE";
 }

@@ -1,6 +1,7 @@
 package be.mapariensis.kanjiryoku.net.util;
 
 import java.nio.ByteBuffer;
+import java.nio.channels.Selector;
 import java.util.concurrent.ThreadFactory;
 /**
  * Allows for worker threads with persistent pre-allocated buffers.
@@ -12,9 +13,12 @@ public class NetworkThreadFactory implements ThreadFactory {
 	private volatile int thisFactoryId;
 	private volatile int threadCounter = 0;
 	private final int bufsize;
-	public NetworkThreadFactory(int bufsize) {
+	private final Selector selector;
+	
+	public NetworkThreadFactory(int bufsize, Selector selector) {
 		this.bufsize = bufsize;
 		thisFactoryId = factoryCounter++;
+		this.selector = selector;
 	}
 	public class NetworkThread extends Thread {
 		private final ByteBuffer buffer = ByteBuffer.allocate(bufsize);
@@ -29,6 +33,7 @@ public class NetworkThreadFactory implements ThreadFactory {
 			buffer.clear();
 			job.run();
 			buffer.clear();
+			selector.wakeup();
 		}
 		public ByteBuffer getBuffer() {
 			return buffer;

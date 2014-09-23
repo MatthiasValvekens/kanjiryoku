@@ -6,6 +6,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import be.mapariensis.kanjiryoku.Constants;
 import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
@@ -18,9 +21,12 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.ServerCommand;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.server.GameServerInterface;
+import be.mapariensis.kanjiryoku.util.Filter;
 import be.mapariensis.kanjiryoku.util.GameListener;
+import be.mapariensis.kanjiryoku.util.ParsingUtils;
 
 public class TakingTurnsServer implements GameServerInterface {
+	private static final Logger log = LoggerFactory.getLogger(TakingTurnsServer.class);
 	private static class TurnIterator  {
 		private int ix = 0;
 		private final List<User> players;
@@ -65,12 +71,26 @@ public class TakingTurnsServer implements GameServerInterface {
 					boolean answer = currentProblem.checkSolution(chars, problemPosition);
 					synchronized(listeners) {
 						for(GameListener l : listeners) {
-							l.deliverAnswer(source, answer);
+							char res;
+							if(answer) {
+								res = currentProblem.getFullSolution().charAt(problemPosition);
+							} else {
+								Filter<Character> allowedChars = currentProblem.allowedChars();
+								res = '?';
+								for(char c : chars) {
+									if(allowedChars.accepts(c)) {
+										res = c;
+										break;
+									}
+								}
+								
+							}
+							l.deliverAnswer(source, answer, res);
 						}
 					}
 					// move on to next position in problem
 					if(answer) {
-						if(currentProblem.getFullSolution().length() == problemPosition) {
+						if(currentProblem.getFullSolution().length() == ++problemPosition) {
 							if(problemSource.hasNext()) {
 								nextProblem();
 							} else {
@@ -82,12 +102,11 @@ public class TakingTurnsServer implements GameServerInterface {
 								}
 							}
 						}
-						else problemPosition++;
 					}
 					strokes.clear();
 					synchronized(listeners) {
 						for(GameListener l : listeners) {
-							l.clearStrokes();
+							l.clearStrokes(null);
 						}
 					}
 					
@@ -95,7 +114,7 @@ public class TakingTurnsServer implements GameServerInterface {
 				// submit one stroke
 				// SUBMIT [list_of_dots]
 				else if(msg.argCount() == 2) {
-					List<Dot> stroke = parseDots(msg.get(1));
+					List<Dot> stroke = ParsingUtils.parseDots(msg.get(1));
 					synchronized(listeners) {
 						for(GameListener l : listeners) {
 							l.deliverStroke(source, stroke);
@@ -108,18 +127,7 @@ public class TakingTurnsServer implements GameServerInterface {
 			}
 		}
 	}
-	// don't use pure Pattern here, input strings might be very long
-	private static List<Dot> parseDots(String in) {
-		in = in.replaceAll("(\\[<|>\\])", "");
-		String[] dots = in.split(">,\\s*<");
-		List<Dot> res = new LinkedList<Dot>();
-		for(String dotstring : dots) {
-			String[] vals = dotstring.split(",\\s*");
-			if(vals.length != 2) throw new NumberFormatException("Too many values in dot");
-			res.add(new Dot(Integer.parseInt(vals[0]),Integer.parseInt(vals[1])));
-		}
-		return res;
-	}
+
 	@Override
 	public boolean canPlay(User u) {
 		return started && u == currentPlayer;
@@ -153,12 +161,25 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 	}
 	private void nextProblem() {
+		log.info("Next problem");
+		problemPosition = 0;
 		currentProblem = problemSource.next();
 		currentPlayer = ti.next(); // if this guy's thread barges in right now during submit, it'll still block higher up
 		// hence this should be safe
 		synchronized(listeners) {
 			for(GameListener l : listeners) {
 				l.deliverProblem(currentProblem,currentPlayer);
+			}
+		}
+	}
+	@Override
+	public void clearInput(User submitter) throws GameFlowException {
+		if(submitter != null && !submitter.equals(currentPlayer)) throw new GameFlowException("Only the current player can clear the screen.");
+		log.info("Clearing input.");
+		strokes.clear();
+		synchronized(listeners) {
+			for(GameListener l : listeners) {
+				l.clearStrokes(submitter);
 			}
 		}
 	}

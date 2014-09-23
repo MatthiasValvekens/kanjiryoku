@@ -2,8 +2,6 @@ package be.mapariensis.kanjiryoku.providers;
 
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import be.mapariensis.kanjiryoku.model.KakiProblem;
@@ -11,21 +9,12 @@ import be.mapariensis.kanjiryoku.model.ProblemWithBlank;
 import be.mapariensis.kanjiryoku.model.Word;
 import be.mapariensis.kanjiryoku.model.YomiProblem;
 
-public class KanjiryokuShindanParser implements ProblemProvider<ProblemWithBlank> {
+public class KanjiryokuShindanParser implements ProblemParser<ProblemWithBlank> {
 	private static final char BLANK_DELIMITER = '（';
-	private final Collection<ProblemWithBlank> problems;
-	public KanjiryokuShindanParser(Collection<String> input) throws ParseException {
-		ArrayList<ProblemWithBlank> problems = new ArrayList<ProblemWithBlank>(input.size());
-		for(String s : input) {
-			problems.add(parseProblem(s));
-		}
-		this.problems = Collections.unmodifiableCollection(problems);
-	}
+	
+	
 	@Override
-	public Collection<ProblemWithBlank> getProblems() {
-		return problems;
-	}
-	public static ProblemWithBlank parseProblem(String input) throws ParseException {
+	public ProblemWithBlank parseProblem(String input) throws ParseException {
 		int parserPos = 0;
 		int blankPos = -1;
 		int wordIx = 0;

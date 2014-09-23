@@ -21,36 +21,31 @@ import javax.swing.SwingUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import be.mapariensis.kanjiryoku.Constants;
 import be.mapariensis.kanjiryoku.cr.Dot;
-import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
+import be.mapariensis.kanjiryoku.net.client.DrawingPanelInterface;
+import be.mapariensis.kanjiryoku.net.client.GameClientInterface;
 
 
-public class DrawPanel extends JPanel {
+public class DrawPanel extends JPanel implements DrawingPanelInterface {
 	private static final Logger log = LoggerFactory.getLogger(DrawPanel.class);
 	private final List<List<Dot>> strokes = new LinkedList<List<Dot>>();
 	private List<Dot> currentStroke;
-	private final KanjiGuesser engine;
+	private final GameClientInterface server;
 	private static final int BRUSH_RADIUS = 10;
 	private static final Stroke BRUSH_STROKE = new BasicStroke(BRUSH_RADIUS, BasicStroke.CAP_ROUND,BasicStroke.JOIN_MITER);
 	private final Dimension size;
 	private boolean locked = true, solvedProblem = false;
-	public DrawPanel(Dimension size, KanjiGuesser engine) {
-		this.engine = engine;
+	public DrawPanel(Dimension size, GameClientInterface server) {
+		this.server = server;
 		this.size = size;
 		DrawingListener listener = new DrawingListener();
 		addMouseListener(listener);
 		addMouseMotionListener(listener);
 		clearStrokes();
 	}
-	public void newProblem() {
-		clearStrokes();
-		locked = false;
-		solvedProblem = false;
-	}
 	
 	public void endProblem() {
-		locked = true;
+		setLock(true);
 		solvedProblem = true;
 		repaint();
 	}
@@ -63,16 +58,17 @@ public class DrawPanel extends JPanel {
 	public Dimension getPreferredSize() {
 		return size;
 	}
-	public List<Character> getChars() {
-		return engine.guess(size.width, size.height,strokes, Constants.TOLERANCE);
-	}
+//	public List<Character> getChars() {
+//		//return server.guess(size.width, size.height,strokes, Constants.TOLERANCE);
+//		
+//	}
 	
 	@Override
 	public void paintComponent(Graphics g) {
-		if(solvedProblem) {
-			
-		}
 		super.paintComponent(g);
+		if(solvedProblem) {
+			// TODO: do something nice here
+		}
 		Rectangle frame = g.getClipBounds();
 		if(!(g instanceof Graphics2D)) throw new IllegalArgumentException("Require Graphics2D");
 		Graphics2D g2d = (Graphics2D) g.create(frame.x, frame.y, frame.width, frame.height); //normalize graphics to current clip
@@ -100,6 +96,7 @@ public class DrawPanel extends JPanel {
 		g2d.dispose();
 	}
 	
+	@Override
 	public void clearStrokes() {
 		strokes.clear();
 		currentStroke = new LinkedList<Dot>();
@@ -113,7 +110,7 @@ public class DrawPanel extends JPanel {
 
 		@Override
 		public void mouseDragged(MouseEvent e) {
-			if(!locked || SwingUtilities.isLeftMouseButton(e)) {
+			if(!locked && SwingUtilities.isLeftMouseButton(e)) {
 				currentStroke.add(new Dot(e.getX(),e.getY()));
 				repaint();
 			}
@@ -121,8 +118,9 @@ public class DrawPanel extends JPanel {
 
 		@Override
 		public void mouseClicked(MouseEvent e) {
-			if(!locked || SwingUtilities.isRightMouseButton(e)) {
+			if(!locked && SwingUtilities.isRightMouseButton(e)) {
 				clearStrokes();
+				server.clearInput();
 			}
 		}
 
@@ -131,9 +129,11 @@ public class DrawPanel extends JPanel {
 
 		@Override
 		public void mouseReleased(MouseEvent e) {
-			if(!locked || SwingUtilities.isLeftMouseButton(e)) {
+			if(!locked && SwingUtilities.isLeftMouseButton(e)) {
 				currentStroke.add(new Dot(e.getX(),e.getY()));
 				log.info("\nFinished stroke {}: {} ",strokes.size(), currentStroke);
+				server.sendStroke(currentStroke);
+				
 				currentStroke = new LinkedList<Dot>();
 				strokes.add(currentStroke);
 				repaint();
@@ -149,5 +149,18 @@ public class DrawPanel extends JPanel {
 		@Override
 		public void mouseMoved(MouseEvent e) {
 		}		
+	}
+
+
+	@Override
+	public synchronized void drawStroke(List<Dot> dots) {
+		// don't check lock status here
+		strokes.add(dots);
+		repaint();
+	}
+	@Override
+	public void setLock(boolean locked) {
+		log.info("Panel lock set to {}", locked ? "locked" : "released");
+		this.locked = locked;
 	}
 }

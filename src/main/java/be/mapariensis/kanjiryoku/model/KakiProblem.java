@@ -1,6 +1,10 @@
 package be.mapariensis.kanjiryoku.model;
 
+import java.lang.Character.UnicodeBlock;
 import java.util.List;
+
+import be.mapariensis.kanjiryoku.util.Filter;
+import be.mapariensis.kanjiryoku.util.UnicodeBlockFilter;
 
 public final class KakiProblem extends ProblemWithBlank {
 
@@ -23,4 +27,9 @@ public final class KakiProblem extends ProblemWithBlank {
 		}
 		return sb.toString();
 	}
+	@Override
+	public Filter<Character> allowedChars() {
+		return new UnicodeBlockFilter(UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS);
+	}
+
 }

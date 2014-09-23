@@ -1,6 +1,10 @@
 package be.mapariensis.kanjiryoku.model;
 
+import java.lang.Character.UnicodeBlock;
 import java.util.List;
+
+import be.mapariensis.kanjiryoku.util.Filter;
+import be.mapariensis.kanjiryoku.util.UnicodeBlockFilter;
 
 public final class YomiProblem extends ProblemWithBlank {
 	public YomiProblem(List<Word> words, int blankIndex) {
@@ -23,4 +27,11 @@ public final class YomiProblem extends ProblemWithBlank {
 		}
 		return sb.toString();
 	}
+
+	@Override
+	public Filter<Character> allowedChars() {
+		return new UnicodeBlockFilter(UnicodeBlock.HIRAGANA);
+	}
+	
+	
 }

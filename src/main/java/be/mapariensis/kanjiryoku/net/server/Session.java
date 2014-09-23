@@ -122,8 +122,8 @@ public class Session {
 		if(destroyed) return;
 		synchronized(LOCK) {
 			for(User u : users) {
-				if(u.equals(sender)) continue;
-				uman.messageUser(u, message);
+				if(!u.equals(sender))
+					uman.messageUser(u, message);
 			}
 		}
 	}
@@ -132,8 +132,8 @@ public class Session {
 		if(destroyed) return;
 		synchronized(LOCK) {
 			for(User u : users) {
-				if(u.equals(sender)) continue;
-				uman.messageUser(u, message);
+				if(!u.equals(sender))
+					uman.messageUser(u, message);
 			}
 		}
 	}
@@ -142,8 +142,8 @@ public class Session {
 		if(destroyed) return;
 		synchronized(LOCK) {
 			for(User u : users) {
-				if(u.equals(sender)) continue;
-				uman.humanMessage(u, message);
+				if(!u.equals(sender))
+					uman.humanMessage(u, message);
 			}
 		}
 	}
@@ -203,18 +203,18 @@ public class Session {
 		}
 
 		@Override
-		public void deliverAnswer(User submitter, boolean wasCorrect) {
-			broadcastMessage(null,new NetworkMessage(ClientCommand.ANSWER,submitter.handle,wasCorrect));
+		public void deliverAnswer(User submitter, boolean wasCorrect,char input) {
+			broadcastMessage(null,new NetworkMessage(ClientCommand.ANSWER,submitter.handle,wasCorrect,input));
 		}
 
 		@Override
 		public void deliverStroke(User submitter, List<Dot> stroke) {
-			broadcastMessage(null,new NetworkMessage(ClientCommand.STROKE,submitter.handle,stroke));
+			broadcastMessage(submitter,new NetworkMessage(ClientCommand.STROKE,submitter.handle,stroke));
 		}
 
 		@Override
-		public void clearStrokes() {
-			broadcastMessage(null, ClientCommand.CLEARSTROKES.toString());
+		public void clearStrokes(User submitter) {
+			broadcastMessage(submitter, new NetworkMessage(ClientCommand.CLEARSTROKES));
 		}
 
 		@Override

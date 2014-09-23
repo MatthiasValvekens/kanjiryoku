@@ -5,6 +5,7 @@ import java.util.List;
 
 import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
+import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
@@ -26,6 +27,7 @@ public enum ServerCommand {
 		@Override
 		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
 			throw new UnsupportedOperationException();
+			// Register is a special case
 		}
 		
 	}, MESSAGE {
@@ -34,22 +36,35 @@ public enum ServerCommand {
 		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
 			try {
 				String handle = message.get(1);
-				String pm = String.format("FROM %s %s",client.handle,NetworkMessage.escapedAtom(message.get(2)));
+				NetworkMessage pm = new NetworkMessage(ClientCommand.FROM,client.handle,message.get(2));
 				User other = userman.getUser(handle);
 				userman.messageUser(other, pm);
 			} catch (IndexOutOfBoundsException ex) {
 				throw new ProtocolSyntaxException(ex);
 			}
 		}
-	}, RESPOND {
+	}, SESSIONMESSAGE {
 		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			NetworkMessage msg;
 			try {
-				if(message.argCount()<2) throw new ArgumentCountException(ArgumentCountException.Type.TOO_FEW,RESPOND);
-				client.consumeActiveResponseHandler(message);
+				msg = new NetworkMessage(ClientCommand.FROM,client.handle,message.get(1));
 			} catch (IndexOutOfBoundsException ex) {
 				throw new ProtocolSyntaxException(ex);
 			}
+			synchronized(client.sessionLock()) {
+				Session sess;
+				if((sess = client.getSession()) == null) throw new SessionException("You are not currently in a session.");
+				sess.broadcastMessage(client, msg);
+			}
+		}
+	}, RESPOND {
+		@Override
+		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
+			if(message.argCount()<2) throw new ArgumentCountException(ArgumentCountException.Type.TOO_FEW,RESPOND);
+			client.consumeActiveResponseHandler(message);
 		}
 		
 	}, STARTSESSION {
@@ -67,14 +82,18 @@ public enum ServerCommand {
 				throw new UnsupportedGameException(gameName);
 			}
 			Session sess = sessman.startSession(client, game);
+			userman.humanMessage(client, "Started session.");
+			
 			List<User> users = new ArrayList<User>(message.argCount());
 			users.add(client);
-			NetworkMessage invite = new NetworkMessage(ClientCommand.INVITE, gameName,String.valueOf(sess.getId()));
-			ResponseHandler rh = new SessionInvitationHandler(sess);
+			ClientResponseHandler rh = new SessionInvitationHandler(sess);
+			NetworkMessage invite = new NetworkMessage(ClientCommand.INVITE, rh.id, gameName,String.valueOf(sess.getId()), client.handle);
+			
 			for(int i = 2; i<message.argCount();i++) {
 				User u;
 				try {
 					u = userman.getUser(message.get(i));
+					if(u.equals(client)) continue; // self-invites are pretty useless
 				} catch (UserManagementException e) {
 					userman.messageUser(client,e.getMessage());
 					continue;
@@ -93,12 +112,13 @@ public enum ServerCommand {
 				Session sess;
 				if((sess = client.getSession()) == null) throw new SessionException("You are not currently in a session.");
 				if(!sess.isMaster(client)) throw new SessionException("Only the session master can invite people.");
-				NetworkMessage invite = new NetworkMessage(ClientCommand.INVITE, sess.game.getGame(),String.valueOf(sess.getId()));
-				ResponseHandler rh = new SessionInvitationHandler(sess);
+				ClientResponseHandler rh = new SessionInvitationHandler(sess);
+				NetworkMessage invite = new NetworkMessage(ClientCommand.INVITE, rh.id,sess.game.getGame(),String.valueOf(sess.getId()), client.handle);
 				for(int i = 1; i<message.argCount();i++) {
 					User u;
 					try {
 						u = userman.getUser(message.get(i));
+						if(u.equals(client)) continue; // self-invites are pretty useless
 						userman.messageUser(u, invite, rh);
 					} catch (UserManagementException e) {
 						userman.messageUser(client,e.getMessage());
@@ -132,7 +152,12 @@ public enum ServerCommand {
 		@Override
 		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
 				throws ServerException {
-			ArrayList<String> args = new ArrayList<String>(3);
+			if(message.argCount() > 2) throw new ArgumentCountException(Type.TOO_MANY,WHOAMI);
+			if(message.argCount() == 1) {
+				message = message.concatenate(ResponseHandler.DEFAULT_HANDLER_ID);
+			}
+			ArrayList<String> args = new ArrayList<String>(4);
+			args.add(message.get(1)); // we don't really care what the ID is, as long as it is passed back to the client
 			args.add(client.handle);
 			synchronized(client.sessionLock()) {
 				Session sess = client.getSession();
@@ -162,6 +187,17 @@ public enum ServerCommand {
 			}
 		}
 		
+	}, CLEAR {
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			synchronized(client.sessionLock()) {
+				Session sess = client.getSession();
+				if(sess == null || !sess.game.running()) throw new SessionException("No game running.");
+				sess.game.clearInput(client);
+			}
+		}
 	}, KILLSESSION {
 
 		@Override
@@ -185,10 +221,8 @@ public enum ServerCommand {
 				if(!sess.isMaster(client)) throw new SessionException("Only the session master can start the game");
 				sess.start();
 			}
-		}
-		
+		}	
 	};
-	
 	
 	public abstract void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException;
 }

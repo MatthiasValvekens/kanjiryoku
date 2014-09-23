@@ -4,6 +4,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 
+import be.mapariensis.kanjiryoku.util.Filter;
+
 
 
 public abstract class Problem implements Iterable<Word>{
@@ -27,8 +29,16 @@ public abstract class Problem implements Iterable<Word>{
 	public final boolean checkSolution(List<Character> sol, int pos) {
 		String s = getFullSolution();
 		char relevantChar = s.charAt(pos);
-		return sol.contains(relevantChar);
+		
+		if(relevantChar == 'ょ' || relevantChar=='ゅ' || relevantChar=='ゃ' || relevantChar=='っ') {
+			char alternativeChar = (char)(relevantChar+1);
+			return sol.contains(alternativeChar) || sol.contains(relevantChar); // most OCR engines don't distinguish between small and large kana
+		} else {
+			return sol.contains(relevantChar);
+		}
 	}
 	
 	public abstract String getFullSolution();
+	
+	public abstract Filter<Character> allowedChars();
 }

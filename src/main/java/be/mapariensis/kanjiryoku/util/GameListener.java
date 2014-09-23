@@ -8,8 +8,8 @@ import be.mapariensis.kanjiryoku.net.model.User;
 
 public interface GameListener {
 	public void deliverProblem(Problem p, User to);
-	public void deliverAnswer(User submitter, boolean wasCorrect);
+	public void deliverAnswer(User submitter, boolean wasCorrect, char resultChar);
 	public void deliverStroke(User submitter, List<Dot> stroke);
-	public void clearStrokes(); 
+	public void clearStrokes(User submitter); 
 	public void finished();
 }

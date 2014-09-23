@@ -16,14 +16,12 @@ public class SessionManagerImpl implements SessionManager {
 	private final List<Session> sessions = new ArrayList<Session>();
 	private final UserManager uman;
 	private final Object LOCK = new Object();
-	private final GameServerFactory prov;
-	public SessionManagerImpl(UserManager uman, GameServerFactory prov) {
+	public SessionManagerImpl(UserManager uman) {
 		this.uman = uman;
-		this.prov = prov;
 	}
 	@Override
 	public Session startSession(User master, Game game) throws ServerException {
-		GameServerInterface host = prov.getServer(game);
+		GameServerInterface host = game.getServer();
 		synchronized(LOCK) {
 			Session res = new Session(this,freeSpot(), master,uman,host);
 			sessions.set(res.getId(),res);
