@@ -8,4 +8,4 @@ The Zinnia repository on SourceForge does not provide 64-bit DLL, so you will ha
 
 The input files for SWIG are included with the Zinnia source.
 
-(The software is not in any usable state as of now, unless you like talking to servers through netcat)
+(The game is technically playable now, but hardly interesting)

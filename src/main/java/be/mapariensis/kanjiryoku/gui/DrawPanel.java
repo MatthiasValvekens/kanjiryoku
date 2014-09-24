@@ -158,9 +158,7 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 		strokes.add(dots);
 		repaint();
 	}
-	@Override
 	public void setLock(boolean locked) {
-		log.info("Panel lock set to {}", locked ? "locked" : "released");
 		this.locked = locked;
 	}
 }

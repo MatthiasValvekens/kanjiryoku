@@ -31,6 +31,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	private final DrawPanel pane;
 	private final GUIBridge bridge;
 	private final ProblemParser<?> parser;
+	private final JButton submitButton;
 	private static final Dimension size = new Dimension(300, 400);
 	
 	private int inputCounter = 0; // keeps track of the current position in the problem for convenience
@@ -45,7 +46,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		pane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
 		add(cont,BorderLayout.NORTH);
 		add(pane, BorderLayout.CENTER);
-		final JButton button = new JButton(new AbstractAction("Submit") {
+		submitButton = new JButton(new AbstractAction("Submit") {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -55,7 +56,8 @@ public class GamePanel extends JPanel implements GameClientInterface {
 				
 			}
 		});
-		add(button,BorderLayout.SOUTH);
+		add(submitButton,BorderLayout.SOUTH);
+		setLock(true);
 	}
 	@Override
 	public void sendStroke(List<Dot> dots) {
@@ -124,13 +126,20 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	public String getUsername() {
 		return bridge.getUplink().getUsername();
 	}
-	@Override
-	public DrawingPanelInterface getCanvas() {
-		return pane;
-	}
+	
 	@Override
 	public void clearInput() {
 		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.CLEAR));
+	}
+	@Override
+	public void setLock(boolean locked) {
+		log.info("Panel lock set to {}", locked ? "locked" : "released");
+		pane.setLock(locked);
+		submitButton.setEnabled(!locked);
+	}
+	@Override
+	public DrawingPanelInterface getCanvas() {
+		return pane;
 	}
 
 }

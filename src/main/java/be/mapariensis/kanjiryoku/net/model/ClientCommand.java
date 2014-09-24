@@ -77,7 +77,7 @@ public enum ClientCommand {
 				throw new ServerCommunicationException("Unparseable problem passed: "+problemString);
 			}
 			// unlock panel as appropriate
-			bridge.getClient().getCanvas().setLock(!name.equals(bridge.getClient().getUsername()));
+			bridge.getClient().setLock(!name.equals(bridge.getClient().getUsername()));
 		}
 	}, ANSWER {
 		@Override
@@ -88,7 +88,6 @@ public enum ClientCommand {
 			boolean wasCorrect = Boolean.valueOf(msg.get(2));
 			char inputChar = msg.get(3).charAt(0);
 			int responseCode = Integer.valueOf(msg.get(4));
-			System.out.println(responseCode);
 			bridge.getChat().displayServerMessage(String.format("User %s answered %s, which is %s", name, inputChar, wasCorrect ? "correct" : "unfortunately not the right answer"));
 			bridge.getClient().deliverAnswer(wasCorrect, inputChar);
 			bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.RESPOND,responseCode));

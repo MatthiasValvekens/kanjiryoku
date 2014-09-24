@@ -11,6 +11,7 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public interface GameClientInterface {
 	public String getUsername();
+	public void setLock(boolean locked);
 	public DrawingPanelInterface getCanvas();
 	public void sendStroke(List<Dot> dots);
 	public void clearInput();
