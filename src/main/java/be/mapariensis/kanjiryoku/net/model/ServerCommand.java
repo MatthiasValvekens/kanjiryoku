@@ -3,6 +3,9 @@ package be.mapariensis.kanjiryoku.net.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
@@ -222,6 +225,34 @@ public enum ServerCommand {
 				sess.start();
 			}
 		}	
+	}, LISTGAMES {
+
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			if(message.argCount() > 2) throw new ArgumentCountException(Type.TOO_MANY,LISTGAMES);
+			if(message.argCount() == 1) {
+				message = message.concatenate(ResponseHandler.DEFAULT_HANDLER_ID);
+			}
+			int responseCode;
+			try {
+				responseCode = Integer.parseInt(message.get(1));
+			} catch(RuntimeException ex) {
+				throw new ProtocolSyntaxException(ex);
+			}
+			//send the list of games as a JSON list
+			JSONArray arr = new JSONArray();
+			for(Game g : Game.values()) {
+				JSONObject wrapper = new JSONObject();
+				wrapper.put("name", g.name());
+				wrapper.put("humanName", g.toString());
+				arr.put(wrapper);
+			}
+			
+			userman.messageUser(client, new NetworkMessage(ClientCommand.RESPOND,responseCode,arr));
+		}
+		
 	};
 	
 	public abstract void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException;

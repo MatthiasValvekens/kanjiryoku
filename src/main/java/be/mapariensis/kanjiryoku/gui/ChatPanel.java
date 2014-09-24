@@ -25,7 +25,7 @@ public class ChatPanel extends JPanel implements ChatInterface {
 
 		@Override
 		public void handle(NetworkMessage msg)	throws ClientException {
-			displayServerMessage(msg.toString(1));
+			displayServerMessage(msg.toString(2));
 		}
 		
 	};

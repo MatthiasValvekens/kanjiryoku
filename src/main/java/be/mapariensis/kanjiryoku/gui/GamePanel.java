@@ -71,8 +71,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 			if(inputChar != added) {
 				log.warn("Added char differs from input char! %s <> %s",added,inputChar);
 			}
-			inputCounter++;
-			if(inputCounter == cont.getSolution().length()) {
+			if(++inputCounter == cont.getSolution().length()-1) {
 				try {
 					Thread.sleep(500); // TODO : animation
 				} catch (InterruptedException e1) {
@@ -88,7 +87,6 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	}
 	@Override
 	public void setProblem(Problem p) {
-		log.info("Setting problem to {}",p.getFullSolution());
 		pane.endProblem();
 		cont.setProblem(p);
 	}

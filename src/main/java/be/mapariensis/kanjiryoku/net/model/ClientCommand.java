@@ -85,9 +85,16 @@ public enum ClientCommand {
 				throws ServerCommunicationException {
 			if(msg.argCount() != 5) throw new ServerCommunicationException(msg);
 			String name = msg.get(1);
-			boolean wasCorrect = Boolean.valueOf(msg.get(2));
-			char inputChar = msg.get(3).charAt(0);
-			int responseCode = Integer.valueOf(msg.get(4));
+			boolean wasCorrect;
+			char inputChar;
+			int responseCode;
+			try {
+				wasCorrect = Boolean.parseBoolean(msg.get(2));
+				inputChar = msg.get(3).charAt(0);
+				responseCode = Integer.parseInt(msg.get(4));
+			} catch(RuntimeException ex) {
+				throw new ServerCommunicationException(ex);
+			}
 			bridge.getChat().displayServerMessage(String.format("User %s answered %s, which is %s", name, inputChar, wasCorrect ? "correct" : "unfortunately not the right answer"));
 			bridge.getClient().deliverAnswer(wasCorrect, inputChar);
 			bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.RESPOND,responseCode));
@@ -102,7 +109,6 @@ public enum ClientCommand {
 				log.warn("Stroke echo for "+name);
 				return;
 			}
-			log.info("Receiving stroke from "+name);
 			List<Dot> stroke = ParsingUtils.parseDots(msg.get(2));
 			bridge.getClient().getCanvas().drawStroke(stroke);
 		}
@@ -113,6 +119,17 @@ public enum ClientCommand {
 			log.info("Clearing drawing panel");
 			bridge.getClient().getCanvas().clearStrokes();
 		}
+	}, RESETUI {
+
+		@Override
+		public void execute(NetworkMessage msg, GUIBridge bridge)
+				throws ClientException {
+			log.info("Resetting UI");
+			bridge.getClient().getCanvas().clearStrokes();
+			bridge.getClient().setLock(true);
+			bridge.getClient().setProblem(null);
+		}
+		
 	};
 	private static final Logger log = LoggerFactory.getLogger(ClientCommand.class);
 	public abstract void execute(NetworkMessage msg, GUIBridge bridge) throws ClientException;

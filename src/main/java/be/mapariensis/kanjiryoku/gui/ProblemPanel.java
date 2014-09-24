@@ -60,7 +60,7 @@ public class ProblemPanel extends JPanel{
 		this.problem = problem;
 		correctInputs.clear();
 		counter = 0;
-		actualSolution = problem.getFullSolution();
+		actualSolution = problem != null ? problem.getFullSolution() : null;
 		repaint();
 	}
 	protected int getCounter() {

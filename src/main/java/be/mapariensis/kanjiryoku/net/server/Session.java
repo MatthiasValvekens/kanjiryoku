@@ -72,11 +72,12 @@ public class Session {
 	//package private because calling this method by itself violates the contract between the session and the game server/users
 	
 	void purgeMembers() {
-		broadcastHumanMessage(null, "Received session kill signal");
+		broadcastHumanMessage(null, "Session end");
 		synchronized(LOCK) {
 			for(User u : new LinkedList<User>(users)) {
 				users.remove(u);
-				if(u.getSession() != null) u.leaveSession();
+				if(u.getSession() != null)
+					u.leaveSession();
 			}
 		}
 	}

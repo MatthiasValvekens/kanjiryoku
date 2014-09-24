@@ -30,5 +30,15 @@
     	<artifactId>slf4j-simple</artifactId>
     	<version>1.7.7</version>
     </dependency>
+    <dependency>
+    	<groupId>org.apache.commons</groupId>
+    	<artifactId>commons-collections4</artifactId>
+    	<version>4.0</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.json</groupId>
+    	<artifactId>json</artifactId>
+    	<version>20140107</version>
+    </dependency>
   </dependencies>
 </project>

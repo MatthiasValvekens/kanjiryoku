@@ -71,6 +71,7 @@ public class User {
 		}
 	}
 	public void leaveSession() {
+		outbox.enqueue(new NetworkMessage(ClientCommand.RESETUI));
 		synchronized(sessionLock) {
 			session = null;
 		}
