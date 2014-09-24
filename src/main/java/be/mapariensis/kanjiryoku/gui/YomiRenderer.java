@@ -1,22 +1,24 @@
 package be.mapariensis.kanjiryoku.gui;
 
 import java.awt.Graphics2D;
+import java.util.List;
 
 import be.mapariensis.kanjiryoku.gui.utils.TextRendering;
+import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.model.Word;
 import be.mapariensis.kanjiryoku.model.YomiProblem;
 
-public class YomiRenderer extends ProblemRenderer<YomiProblem> {
+public class YomiRenderer implements ProblemRenderer {
 	@Override
-	public void drawProblem(Graphics2D g) {
-		YomiProblem problem = getProblem();
+	public void drawProblem(Graphics2D g, List<Character> correctInputs, Problem p) {
+		YomiProblem problem =(YomiProblem) p;
 		for(Word w : problem) {
 			int newpos;
 			if(problem.isBlank(w)) {
 				// figure out how much filler we need
 				StringBuilder sb = new StringBuilder();
-				int solLength = getSolution().length();
-				for(char c : getCorrectInputs()) {
+				int solLength = problem.getFullSolution().length();
+				for(char c : correctInputs) {
 					sb.append(c);
 					solLength--;
 				}
@@ -30,5 +32,10 @@ public class YomiRenderer extends ProblemRenderer<YomiProblem> {
 			}
 			g.translate(newpos,0);
 		}
+	}
+
+	@Override
+	public Class<YomiProblem> getProblemClass() {
+		return YomiProblem.class;
 	}
 }

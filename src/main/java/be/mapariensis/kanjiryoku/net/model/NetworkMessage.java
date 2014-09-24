@@ -13,7 +13,7 @@ import java.util.List;
 import static be.mapariensis.kanjiryoku.net.Constants.*;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 
-public class NetworkMessage implements Iterable<String> {
+public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessage> {
 	public static final char ATOMIZER = '"'; 
 	public static final char DELIMITER = ' ';
 	public static final char ESCAPE_CHAR = '\\';
@@ -56,7 +56,7 @@ public class NetworkMessage implements Iterable<String> {
 		String[] lines = msgString.split(EOMSTR);
 		ArrayList<NetworkMessage> result = new ArrayList<NetworkMessage>(lines.length);
 		for(String line : lines) {
-			result.add(new NetworkMessage(buildArgs(line)));
+			result.add(buildArgs(line));
 		}
 		return result;	
 	}
@@ -115,7 +115,7 @@ public class NetworkMessage implements Iterable<String> {
 	}
 
 	// TODO unit tests
-	public static List<String> buildArgs(final String in) {
+	public static NetworkMessage buildArgs(final String in) {
 		List<String> result = new ArrayList<String>();
 		boolean ignoreDelims = false, escape = false;
 		StringBuilder sb = new StringBuilder(BUFFER_MAX);
@@ -136,10 +136,10 @@ public class NetworkMessage implements Iterable<String> {
 		}
 		String last = sb.toString();
 		if(!last.isEmpty()) result.add(last.trim());
-		return result;
+		return new NetworkMessage(result);
 	}
 
-
+	
 	@Override
 	public Iterator<String> iterator() {
 		return new Iterator<String>() {
@@ -187,6 +187,12 @@ public class NetworkMessage implements Iterable<String> {
 		ArrayList<Object> newargs = new ArrayList<Object>(this.args);
 		newargs.addAll(Arrays.asList(args));
 		return new NetworkMessage(newargs);
+	}
+	@Override
+	public int compareTo(NetworkMessage o) {
+		if(o.timestamp == timestamp) return toString().compareTo(o.toString());
+		long diff = timestamp - o.timestamp;
+		return diff < 0 ? -1 : 1;
 	}
 	
 }

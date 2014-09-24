@@ -15,8 +15,10 @@ import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
 import be.mapariensis.kanjiryoku.net.model.ClientCommand;
+import be.mapariensis.kanjiryoku.net.model.ClientResponseHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
+import be.mapariensis.kanjiryoku.net.server.handlers.AnswerFeedbackHandler;
 import be.mapariensis.kanjiryoku.util.GameListener;
 
 public class Session {
@@ -118,7 +120,8 @@ public class Session {
 		uman.humanMessage(caller, String.format("User %s has been kicked from the session",kicked.handle));
 		
 	}
-	public void broadcastMessage(User sender, String message) { // pass null for server message
+	
+	public void broadcastMessage(User sender, NetworkMessage message) {
 		if(destroyed) return;
 		synchronized(LOCK) {
 			for(User u : users) {
@@ -127,13 +130,12 @@ public class Session {
 			}
 		}
 	}
-	
-	public void broadcastMessage(User sender, NetworkMessage message) {
+	public void broadcastMessage(User sender, NetworkMessage message, ClientResponseHandler rh) {
 		if(destroyed) return;
 		synchronized(LOCK) {
 			for(User u : users) {
 				if(!u.equals(sender))
-					uman.messageUser(u, message);
+					uman.messageUser(u, message,rh);
 			}
 		}
 	}
@@ -203,8 +205,8 @@ public class Session {
 		}
 
 		@Override
-		public void deliverAnswer(User submitter, boolean wasCorrect,char input) {
-			broadcastMessage(null,new NetworkMessage(ClientCommand.ANSWER,submitter.handle,wasCorrect,input));
+		public void deliverAnswer(User submitter, boolean wasCorrect,char input, AnswerFeedbackHandler rh) {
+			broadcastMessage(null,new NetworkMessage(ClientCommand.ANSWER,submitter.handle,wasCorrect,input, rh != null ? rh.id : -1),rh);
 		}
 
 		@Override

@@ -74,7 +74,7 @@ public enum ServerCommand {
 				throws ServerException {
 			//enforce arglen
 			if(message.argCount() < 2) throw new ArgumentCountException(ArgumentCountException.Type.TOO_FEW, STARTSESSION);
-			String gameName = message.get(1);
+			String gameName = message.get(1).toUpperCase();
 			Game game;
 			try {
 				game = Game.valueOf(gameName);
@@ -82,7 +82,7 @@ public enum ServerCommand {
 				throw new UnsupportedGameException(gameName);
 			}
 			Session sess = sessman.startSession(client, game);
-			userman.humanMessage(client, "Started session.");
+			userman.humanMessage(client, String.format("Started session of %s.",game.toString()));
 			
 			List<User> users = new ArrayList<User>(message.argCount());
 			users.add(client);
@@ -95,7 +95,7 @@ public enum ServerCommand {
 					u = userman.getUser(message.get(i));
 					if(u.equals(client)) continue; // self-invites are pretty useless
 				} catch (UserManagementException e) {
-					userman.messageUser(client,e.getMessage());
+					userman.messageUser(client,e.protocolMessage);
 					continue;
 				}
 				users.add(u);
@@ -121,7 +121,7 @@ public enum ServerCommand {
 						if(u.equals(client)) continue; // self-invites are pretty useless
 						userman.messageUser(u, invite, rh);
 					} catch (UserManagementException e) {
-						userman.messageUser(client,e.getMessage());
+						userman.messageUser(client,e.protocolMessage);
 						continue;
 					}
 				}
@@ -142,7 +142,7 @@ public enum ServerCommand {
 						u = userman.getUser(message.get(i));
 						sess.kickUser(client,u);
 					} catch (UserManagementException | SessionException e) {
-						userman.messageUser(client,e.getMessage());
+						userman.messageUser(client,e.protocolMessage);
 						continue;
 					}
 				}

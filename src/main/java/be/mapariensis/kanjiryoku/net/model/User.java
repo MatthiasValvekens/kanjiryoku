@@ -97,7 +97,7 @@ public class User {
 		} catch (RuntimeException ex) {
 			throw new ProtocolSyntaxException(ex);
 		}
-		
+		if(passedId == -1) return;
 		// there should only be a handful of active rh's at any one time, so linear search is more than good enough
 		synchronized(activeResponseHandlers) {
 			for(ClientResponseHandler rh : activeResponseHandlers) {

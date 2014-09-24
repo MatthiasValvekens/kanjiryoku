@@ -122,7 +122,7 @@ public class ServerUplink extends Thread implements Closeable {
 
 			if(key.isWritable()) {
 				if(!registerAttempted) {
-					enqueueMessage(ServerCommand.REGISTER,username);
+					enqueueMessage(new NetworkMessage(ServerCommand.REGISTER,username));
 					registerAttempted = true;
 				}
 				threadPool.execute(messageHandler);
@@ -153,7 +153,7 @@ public class ServerUplink extends Thread implements Closeable {
 				return;
 			}
 			try {
-				command.execute(msg, bridge.getClient(), bridge.getChat()); // FIXME get gci from somewhere
+				command.execute(msg, bridge);
 			} catch (ClientException e) {
 				serverError(e);
 			}
@@ -164,14 +164,8 @@ public class ServerUplink extends Thread implements Closeable {
 		bridge.getChat().displayErrorMessage(ex.errorCode, ex.getMessage());
 		log.error("Error while parsing server message",ex);
 	}
-	public void enqueueMessage(String message) {
-		messageHandler.enqueue(message);
-	}
-	public void enqueueMessage(Object... args) {
-		messageHandler.enqueue(new NetworkMessage(args).toString());
-	}
 	public void enqueueMessage(NetworkMessage msg) {
-		enqueueMessage(msg.toString());
+		messageHandler.enqueue(msg);
 	}
 	@Override
 	public void close() throws IOException {

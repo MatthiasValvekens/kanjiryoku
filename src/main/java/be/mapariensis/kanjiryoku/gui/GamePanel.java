@@ -5,11 +5,8 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.text.ParseException;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -31,44 +28,15 @@ import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 public class GamePanel extends JPanel implements GameClientInterface {
 	private static final Logger log = LoggerFactory.getLogger(GamePanel.class);
-	private static final Map<Class<? extends Problem>, ProblemRenderer<?>> renderers;
 	private final DrawPanel pane;
 	private final GUIBridge bridge;
 	private final ProblemParser<?> parser;
 	private static final Dimension size = new Dimension(300, 400);
 	
 	private int inputCounter = 0; // keeps track of the current position in the problem for convenience
-	
-	private class RendererContainer extends JPanel {
-		ProblemRenderer<?> renderer;
-		Problem problem;
-		private void setProblem(Problem problem) {
-			this.problem = problem;
-			if(this.renderer != null) remove(this.renderer);
-			this.renderer = getRenderer(problem); // TODO : make this part more smooth, it's a little hackish now
-			add(this.renderer);
-		}
-	}
-	private final RendererContainer cont = new RendererContainer();
-	static {
-		renderers = new HashMap<Class<? extends Problem>, ProblemRenderer<?>>();
-		renderers.put(KakiProblem.class, new KakiRenderer());
-		renderers.put(YomiProblem.class, new YomiRenderer());
-	}
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T extends Problem> ProblemRenderer<T> getRenderer(T problem) {
-		if(problem == null) return null;
-		for(Class<?> cls : renderers.keySet()) {
-			if(cls.isInstance(problem)) {
-				ProblemRenderer<T> renderer = (ProblemRenderer<T>) renderers.get(cls);
-				renderer.setProblem(problem);
-				renderer.setPreferredSize(new Dimension(300,120));
-				return renderer;
-			}
-		}
-		throw new IllegalArgumentException("No renderer available.");
-	}
+	private final ProblemPanel cont = new ProblemPanel();
+
+
 	public GamePanel(final GUIBridge bridge, ProblemParser<?> parser) {
 		this.parser = parser;
 		this.bridge = bridge;
@@ -81,7 +49,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				bridge.getUplink().enqueueMessage(ServerCommand.SUBMIT, pane.getWidth(),pane.getHeight());
+				bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.SUBMIT, pane.getWidth(),pane.getHeight()));
 
 				pane.clearStrokes();
 				
@@ -91,15 +59,18 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	}
 	@Override
 	public void sendStroke(List<Dot> dots) {
-		bridge.getUplink().enqueueMessage(ServerCommand.SUBMIT,dots);
+		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.SUBMIT,dots));
 	}
 	@Override
 	public void deliverAnswer(boolean correct, char inputChar) {
 		
 		if(correct) {
-			cont.renderer.addCorrectCharacter();
+			char added = cont.addCorrectCharacter();
+			if(inputChar != added) {
+				log.warn("Added char differs from input char! %s <> %s",added,inputChar);
+			}
 			inputCounter++;
-			if(inputCounter == cont.problem.getFullSolution().length()) {
+			if(inputCounter == cont.getSolution().length()) {
 				try {
 					Thread.sleep(500); // TODO : animation
 				} catch (InterruptedException e1) {
@@ -118,7 +89,6 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		log.info("Setting problem to {}",p.getFullSolution());
 		pane.endProblem();
 		cont.setProblem(p);
-		bridge.pack();
 	}
 	
 	private final List<ServerResponseHandler> activeResponseHandlers = new LinkedList<ServerResponseHandler>();
@@ -160,7 +130,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	}
 	@Override
 	public void clearInput() {
-		bridge.getUplink().enqueueMessage(ServerCommand.CLEAR);
+		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.CLEAR));
 	}
 
 }

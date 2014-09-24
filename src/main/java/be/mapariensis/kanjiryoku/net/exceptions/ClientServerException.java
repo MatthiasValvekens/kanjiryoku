@@ -18,6 +18,7 @@ public class ClientServerException extends Exception {
 	public static final int ERROR_SERVER_COMM = 8;
 	
 	public final int errorCode;
+	public final NetworkMessage protocolMessage;
 	public ClientServerException(String message, int errorCode) {
 		this(message,null,errorCode);
 	}
@@ -27,12 +28,12 @@ public class ClientServerException extends Exception {
 	}
 
 	public ClientServerException(String message, Throwable cause, int errorCode) {
-		super(wrap(message,errorCode), cause);
-		this.errorCode = errorCode;
+		this(new NetworkMessage(formatErrorCode(errorCode),message),cause,errorCode);
 	}
-	// make sure the message is protocol-compliant
-	private static String wrap(String message, int errorCode) {
-		return new StringBuilder().append(formatErrorCode(errorCode)).append(" ").append(NetworkMessage.escapedAtom(message)).toString();
+	private ClientServerException(NetworkMessage message, Throwable cause, int errorCode) {
+		super(message.toString(), cause);
+		this.errorCode = errorCode;
+		this.protocolMessage = message;
 	}
 	
 	public static String formatErrorCode(int errorCode) {

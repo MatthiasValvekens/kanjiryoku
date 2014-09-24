@@ -131,7 +131,7 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 		public void mouseReleased(MouseEvent e) {
 			if(!locked && SwingUtilities.isLeftMouseButton(e)) {
 				currentStroke.add(new Dot(e.getX(),e.getY()));
-				log.info("\nFinished stroke {}: {} ",strokes.size(), currentStroke);
+				log.debug("\nFinished stroke {}: {} ",strokes.size(), currentStroke);
 				server.sendStroke(currentStroke);
 				
 				currentStroke = new LinkedList<Dot>();

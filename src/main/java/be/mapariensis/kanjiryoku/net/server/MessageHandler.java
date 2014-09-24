@@ -22,10 +22,10 @@ public class MessageHandler implements Runnable {
 		if(key==null) throw new IllegalArgumentException();
 		this.key = key;
 	}
-	public void enqueue(String message) {
-		enqueue(message.getBytes(Constants.ENCODING));
+	public void enqueue(NetworkMessage message) {
+		enqueue(message.toString().getBytes(Constants.ENCODING));
 	}
-	public void enqueue(byte[] bytes) {
+	protected void enqueue(byte[] bytes) {
 		synchronized(key) {
 			messages.add(bytes);
 			key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);

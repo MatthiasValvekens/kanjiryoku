@@ -16,11 +16,13 @@ import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.ServerCommand;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.server.GameServerInterface;
+import be.mapariensis.kanjiryoku.net.server.handlers.AnswerFeedbackHandler;
 import be.mapariensis.kanjiryoku.util.Filter;
 import be.mapariensis.kanjiryoku.util.GameListener;
 import be.mapariensis.kanjiryoku.util.ParsingUtils;
@@ -69,30 +71,28 @@ public class TakingTurnsServer implements GameServerInterface {
 					List<Character> chars =guess.guess(width, height, strokes, Constants.TOLERANCE);
 					
 					boolean answer = currentProblem.checkSolution(chars, problemPosition);
-					synchronized(listeners) {
-						for(GameListener l : listeners) {
-							char res;
-							if(answer) {
-								res = currentProblem.getFullSolution().charAt(problemPosition);
-							} else {
-								Filter<Character> allowedChars = currentProblem.allowedChars();
-								res = '?';
-								for(char c : chars) {
-									if(allowedChars.accepts(c)) {
-										res = c;
-										break;
-									}
-								}
-								
+					// build answer packet
+					char res;
+					if(answer) {
+						res = currentProblem.getFullSolution().charAt(problemPosition);
+					} else {
+						Filter<Character> allowedChars = currentProblem.allowedChars();
+						res = '?';
+						for(char c : chars) {
+							if(allowedChars.accepts(c)) {
+								res = c;
+								break;
 							}
-							l.deliverAnswer(source, answer, res);
 						}
+						
 					}
+
+					AnswerFeedbackHandler rh = null;
 					// move on to next position in problem
 					if(answer) {
 						if(currentProblem.getFullSolution().length() == ++problemPosition) {
 							if(problemSource.hasNext()) {
-								nextProblem();
+								rh = new NextTurnHandler();
 							} else {
 								synchronized(listeners) {
 									for(GameListener l : listeners) {
@@ -106,10 +106,11 @@ public class TakingTurnsServer implements GameServerInterface {
 					strokes.clear();
 					synchronized(listeners) {
 						for(GameListener l : listeners) {
+							log.info("Delivering answer "+res);
+							l.deliverAnswer(source, answer, res,rh);
 							l.clearStrokes(null);
 						}
-					}
-					
+					}					
 				}
 				// submit one stroke
 				// SUBMIT [list_of_dots]
@@ -164,7 +165,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		log.info("Next problem");
 		problemPosition = 0;
 		currentProblem = problemSource.next();
-		currentPlayer = ti.next(); // if this guy's thread barges in right now during submit, it'll still block higher up
+		currentPlayer = ti.next();
 		// hence this should be safe
 		synchronized(listeners) {
 			for(GameListener l : listeners) {
@@ -183,7 +184,19 @@ public class TakingTurnsServer implements GameServerInterface {
 			}
 		}
 	}
-	
+	private class NextTurnHandler extends AnswerFeedbackHandler {
+		NextTurnHandler() {
+			super(ti.players);
+		}
+		@Override
+		public void afterAnswer() throws ServerException {
+			log.info("Received ACK from all users. Proceeding.");
+			synchronized(submitLock) {
+				nextProblem();
+			}
+		}
+
+	}
 	
 
 }

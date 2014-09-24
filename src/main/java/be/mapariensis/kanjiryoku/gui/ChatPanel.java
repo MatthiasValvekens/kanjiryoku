@@ -1,6 +1,7 @@
 package be.mapariensis.kanjiryoku.gui;
 
 import javax.swing.*;
+import javax.swing.text.DefaultCaret;
 
 import be.mapariensis.kanjiryoku.net.client.ChatInterface;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
@@ -36,6 +37,8 @@ public class ChatPanel extends JPanel implements ChatInterface {
 		textpanel.setEditable(false);
 		textpanel.setLineWrap(true);
 		textpanel.setFont(new Font("Serif",Font.PLAIN,13));
+		DefaultCaret caret = (DefaultCaret)textpanel.getCaret();
+		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 		add(new JScrollPane(textpanel),BorderLayout.CENTER);
 		add(new JLabel("Chat"),BorderLayout.NORTH);
 		JPanel controls = new JPanel();
@@ -48,12 +51,12 @@ public class ChatPanel extends JPanel implements ChatInterface {
 				String msg = input.getText();
 				if(msg.isEmpty()) return;
 				if(msg.charAt(0)==':') {
-					bridge.getUplink().enqueueMessage(msg.substring(1)); // interpret the rest as a command
+					bridge.getUplink().enqueueMessage(NetworkMessage.buildArgs(msg.substring(1))); // interpret the rest as a command
 					input.setText("");
 					return;
 				}
 				displayUserMessage(bridge.getUplink().getUsername(),msg);
-				bridge.getUplink().enqueueMessage(ServerCommand.SESSIONMESSAGE, msg);
+				bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.SESSIONMESSAGE, msg));
 				input.setText("");
 			}
 		});

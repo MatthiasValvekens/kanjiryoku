@@ -31,7 +31,6 @@ import be.mapariensis.kanjiryoku.net.model.ClientResponseHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
 import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
-import be.mapariensis.kanjiryoku.util.Filter;
 
 public class ConnectionMonitor extends Thread implements UserManager, Closeable {
 	private static final Logger log = LoggerFactory.getLogger(ConnectionMonitor.class);
@@ -90,7 +89,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						log.info("Accepted connection from peer {}",ch);
 						ch.configureBlocking(false);
 						ch.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-						queueMessage(ch, GREETING);
+						queueMessage(ch, new NetworkMessage(GREETING));
 					} else if(key.isReadable()) {
 						ch = (SocketChannel) key.channel();
 						List<NetworkMessage> msgs;
@@ -145,7 +144,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				try {
 					command = ServerCommand.valueOf(msg.get(0).toUpperCase());
 				} catch (IllegalArgumentException ex) {
-					throw new ProtocolSyntaxException();
+					throw new ProtocolSyntaxException(String.format("Unknown command %s",msg.get(0)));
 				}
 				// check for REGISTER command (which gets special treatment)
 				if(command == ServerCommand.REGISTER) {
@@ -184,12 +183,12 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 		return h;
 	}
-	private void queueMessage(SocketChannel ch, String message) {
+	private void queueMessage(SocketChannel ch, NetworkMessage message) {
 		ensureHandler(ch).enqueue(message);
 	}
 
 	private void queueProcessingError(SocketChannel ch,	ServerException ex) {
-		queueMessage(ch,ex.getMessage());
+		queueMessage(ch,ex.protocolMessage);
 	}
 	@Override
 	public void close() throws IOException {
@@ -245,25 +244,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	public User getUser(String handle) throws UserManagementException {
 		return store.requireUser(handle);
 	}
-	@Override
-	public void messageUser(User user, String message) {
-		queueMessage(user.channel, message);
-	}
-	@Override
-	public void messageUser(User user, String message, ClientResponseHandler handler) {
-		messageUser(user, message);
-		user.enqueueActiveResponseHandler(handler);
-	}
-	@Override
-	public void broadcastMessage(String message) {
-		// TODO Auto-generated method stub
-
-	}
-	@Override
-	public void broadcastMessage(String message, Filter<User> filter) {
-		// TODO Auto-generated method stub
-
-	}
 
 	@Override
 	public void humanMessage(User user, String message) {
@@ -274,13 +254,14 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	@Override
 	public void messageUser(User user, NetworkMessage message,
 			ClientResponseHandler handler) {
-		messageUser(user, message.toString(),handler);		
+		messageUser(user, message);
+		if(handler != null)
+			user.enqueueActiveResponseHandler(handler);
 	}
 
 	@Override
 	public void messageUser(User user, NetworkMessage message) {
-		messageUser(user, message.toString());
-
+		queueMessage(user.channel, message);
 	}
 
 

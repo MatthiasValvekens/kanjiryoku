@@ -8,5 +8,4 @@ public interface GUIBridge {
 	public ServerUplink getUplink();
 	public GameClientInterface getClient();
 	public ChatInterface getChat();
-	public void pack(); // TODO this really shouldn't be necessary...
 }
