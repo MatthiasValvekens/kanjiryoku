@@ -1,6 +1,7 @@
 package be.mapariensis.kanjiryoku.net.model;
 
 import java.io.IOException;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.List;
@@ -71,7 +72,9 @@ public class User {
 		}
 	}
 	public void leaveSession() {
-		outbox.enqueue(new NetworkMessage(ClientCommand.RESETUI));
+		try {
+			outbox.enqueue(new NetworkMessage(ClientCommand.RESETUI));
+		} catch(CancelledKeyException e) {}
 		synchronized(sessionLock) {
 			session = null;
 		}

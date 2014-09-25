@@ -64,9 +64,7 @@ public class ServerUplink extends Thread implements Closeable {
 			messageHandler = new MessageHandler(key);
 		} catch (IOException e) {
 			log.error("Failed to connect.",e);
-			try {
-				close();
-			} catch (IOException e1) {}
+			close();
 			bridge.getChat().displaySystemMessage("Could not connect to server.");
 			return;
 		}
@@ -168,9 +166,20 @@ public class ServerUplink extends Thread implements Closeable {
 		messageHandler.enqueue(msg);
 	}
 	@Override
-	public void close() throws IOException {
-		selector.close();
-		channel.close();
+	public void close() {
+		log.info("Shutting down server uplink.");
+		keepOn = false;
+		suppress(messageHandler);
+		suppress(selector);
+		suppress(channel);
+	}
+	private static void suppress(Closeable c) {
+		if(c==null) return;
+		try {
+			c.close();
+		} catch(Exception e) {
+			log.warn("Error while closing {}.",c,e);
+		}
 	}
 	public String getUsername(){
 		return username;

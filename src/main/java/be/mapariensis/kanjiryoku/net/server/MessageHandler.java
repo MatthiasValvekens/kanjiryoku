@@ -1,5 +1,6 @@
 package be.mapariensis.kanjiryoku.net.server;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -12,12 +13,15 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
+import be.mapariensis.kanjiryoku.net.model.ServerCommand;
 import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 
-public class MessageHandler implements Runnable {
+public class MessageHandler implements Runnable, Closeable {
 	private static final Logger log = LoggerFactory.getLogger(MessageHandler.class);
-	private final Queue<byte[]> messages = new ConcurrentLinkedQueue<byte[]>(); 
+	private final Queue<byte[]> messages = new ConcurrentLinkedQueue<byte[]>();
+	private volatile boolean sendingNow = false;
 	private final SelectionKey key;
+	private static final byte[] GOODBYE = ServerCommand.BYE.toString().getBytes();
 	public MessageHandler(SelectionKey key) {
 		if(key==null) throw new IllegalArgumentException();
 		this.key = key;
@@ -37,20 +41,21 @@ public class MessageHandler implements Runnable {
 	}
 	@Override
 	public void run() { //only allow one sender per socket at a time
-		if(messages.isEmpty()) return;
+		if(messages.isEmpty() || sendingNow) return;
 		synchronized(key) {
+			sendingNow = true;
 			if(key.isValid() && key.isWritable()) {
-				
 				try {
+					ByteBuffer messageBuffer = ((NetworkThreadFactory.NetworkThread)Thread.currentThread()).getBuffer();
 					while(!messages.isEmpty()) {
-						ByteBuffer messageBuffer = ((NetworkThreadFactory.NetworkThread)Thread.currentThread()).getBuffer();
-						// FFT: check whether key.channel() == channel?
 						byte[] msg = messages.poll();
-						NetworkMessage.sendRaw((WritableByteChannel)key.channel(),messageBuffer,msg);
-						key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+						sendMessageNow(msg, messageBuffer);
 					}
 				} catch(IOException e) {
 					log.error("I/O failure while sending messages",e);
+				} finally {
+					sendingNow = false;
+					key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 				}
 			} else {
 				log.error("Channel no longer available for writing.");
@@ -58,5 +63,13 @@ public class MessageHandler implements Runnable {
 		}
 		key.selector().wakeup();
 	}
-		
+	private void sendMessageNow(byte[] msg,ByteBuffer messageBuffer) throws IOException {
+		NetworkMessage.sendRaw((WritableByteChannel)key.channel(),messageBuffer,msg);
+	}
+	@Override
+	public void close() throws IOException {
+		synchronized(key) {
+			sendMessageNow(GOODBYE,ByteBuffer.allocate(GOODBYE.length+1));
+		}
+	}
 }

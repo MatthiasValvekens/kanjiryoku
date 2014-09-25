@@ -9,18 +9,26 @@ import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.ServerCommand;
 import be.mapariensis.kanjiryoku.net.model.ServerResponseHandler;
+import be.mapariensis.kanjiryoku.util.History;
+import be.mapariensis.kanjiryoku.util.StandardHistoryImpl;
+
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 // TODO enforce timestamp ordering
 public class ChatPanel extends JPanel implements ChatInterface {
 	private final JTextArea textpanel = new JTextArea();
+	private static final String HISTORY_BACK = "history_back";
+	private static final String HISTORY_FORWARD = "history_forward";
+	public static final int HISTORY_SIZE=5;
 	private final Executor promptThreads = Executors.newSingleThreadExecutor(); // ensure only one prompt can exist at a time
 	private final GUIBridge bridge;
+	private final History history = new StandardHistoryImpl(HISTORY_SIZE);
 	private final ServerResponseHandler dumpToChat = new ServerResponseHandler() {
 
 		@Override
@@ -49,6 +57,7 @@ public class ChatPanel extends JPanel implements ChatInterface {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String msg = input.getText();
+				history.add(msg);
 				if(msg.isEmpty()) return;
 				if(msg.charAt(0)==':') {
 					bridge.getUplink().enqueueMessage(NetworkMessage.buildArgs(msg.substring(1))); // interpret the rest as a command
@@ -60,7 +69,25 @@ public class ChatPanel extends JPanel implements ChatInterface {
 				input.setText("");
 			}
 		});
-		add(controls,BorderLayout.SOUTH);
+		input.getActionMap().put(HISTORY_BACK, new AbstractAction(HISTORY_BACK) {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				input.setText(history.back());
+			}
+			
+		});
+		input.getActionMap().put(HISTORY_FORWARD,new AbstractAction(HISTORY_FORWARD) {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				input.setText(history.forward());
+			}
+			
+		});
+		input.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), HISTORY_BACK);
+		input.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), HISTORY_FORWARD);
+		add(controls,BorderLayout.SOUTH);	
 	}
 
 	@Override

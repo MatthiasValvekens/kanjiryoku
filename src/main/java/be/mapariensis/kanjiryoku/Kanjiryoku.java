@@ -21,7 +21,6 @@ public class Kanjiryoku {
 	public static void main(String[] args) throws IOException, ParseException {
 		JFrame frame = new MainWindow(InetAddress.getByName("localhost"), 1000, "test"+(System.currentTimeMillis()%10000));
 		frame.setVisible(true);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
 	
 	

@@ -1,6 +1,8 @@
 package be.mapariensis.kanjiryoku.gui;
 
 import java.awt.FlowLayout;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.net.InetAddress;
 
@@ -26,6 +28,14 @@ public class MainWindow extends JFrame implements GUIBridge {
 		serv.start();
 		setResizable(false);
 		pack();
+		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+		addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				serv.close();
+				System.exit(0);
+			}
+		});
 	}
 
 	@Override
