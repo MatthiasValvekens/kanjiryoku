@@ -25,7 +25,7 @@ public class ChatPanel extends JPanel implements ChatInterface {
 	private final JTextArea textpanel = new JTextArea();
 	private static final String HISTORY_BACK = "history_back";
 	private static final String HISTORY_FORWARD = "history_forward";
-	public static final int HISTORY_SIZE=5;
+	public static final int HISTORY_SIZE=20;
 	private final Executor promptThreads = Executors.newSingleThreadExecutor(); // ensure only one prompt can exist at a time
 	private final GUIBridge bridge;
 	private final History history = new StandardHistoryImpl(HISTORY_SIZE);

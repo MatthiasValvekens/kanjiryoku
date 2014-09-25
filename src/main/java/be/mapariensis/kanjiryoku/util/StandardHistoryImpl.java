@@ -53,6 +53,7 @@ public class StandardHistoryImpl implements History {
 	public void add(String command) {
 		synchronized(LOCK) {
 			resetPointer();
+			if(!contents.isEmpty() && contents.peek().equals(command)) return;
 			if(entryCount==size) {
 				contents.pollLast(); // remove element from tail
 			} else {
