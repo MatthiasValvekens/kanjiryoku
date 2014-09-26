@@ -6,7 +6,7 @@ import be.mapariensis.kanjiryoku.net.model.ServerCommand;
 
 public class Constants {
 	public static final Charset ENCODING = Charset.forName("UTF-8");
-	public static final int BUFFER_MAX = 1024;
+	public static final int BUFFER_MAX = 2048;
 	public static final String GREETING = "Kanjiryoku server says hello.\n" +
 			"Registration command is "+ServerCommand.REGISTER+". Disconnect command is "+ServerCommand.BYE +
 			".\nVersion "+be.mapariensis.kanjiryoku.Constants.version();

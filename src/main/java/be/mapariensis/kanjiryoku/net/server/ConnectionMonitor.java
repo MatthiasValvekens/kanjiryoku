@@ -141,10 +141,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		public void run() {
 			try {
 				ServerCommand command;
+				String commandString = msg.get(0).toUpperCase();
 				try {
-					command = ServerCommand.valueOf(msg.get(0).toUpperCase());
+					command = ServerCommand.valueOf(commandString);
 				} catch (IllegalArgumentException ex) {
-					throw new ProtocolSyntaxException(String.format("Unknown command %s",msg.get(0)));
+					throw new ProtocolSyntaxException(String.format("Unknown command %s",commandString));
 				}
 				// check for REGISTER command (which gets special treatment)
 				if(command == ServerCommand.REGISTER) {

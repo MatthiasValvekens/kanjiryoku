@@ -51,7 +51,7 @@ public enum ClientCommand {
 			NetworkMessage ifYes = new NetworkMessage(ServerCommand.RESPOND,msg.get(1),Constants.ACCEPTS,msg.get(3));
 			NetworkMessage ifNo = new NetworkMessage(ServerCommand.RESPOND,msg.get(1),Constants.REJECTS);
 			try {
-				bridge.getChat().yesNoPrompt(String.format("Received an invite from user [%s] for %s. Do you accept?",msg.get(4),Game.valueOf(msg.get(2)).toString()), ifYes, ifNo);
+				bridge.getChat().yesNoPrompt(String.format("Received an invite from user [%s] for %s. Do you accept?",msg.get(4),msg.get(2)), ifYes, ifNo);
 			} catch(IllegalArgumentException ex) {
 				throw new ServerCommunicationException(ex);
 			}

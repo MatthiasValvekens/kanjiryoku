@@ -90,7 +90,7 @@ public enum ServerCommand {
 			List<User> users = new ArrayList<User>(message.argCount());
 			users.add(client);
 			ClientResponseHandler rh = new SessionInvitationHandler(sess);
-			NetworkMessage invite = new NetworkMessage(ClientCommand.INVITE, rh.id, gameName,String.valueOf(sess.getId()), client.handle);
+			NetworkMessage invite = new NetworkMessage(ClientCommand.INVITE, rh.id, game,String.valueOf(sess.getId()), client.handle);
 			
 			for(int i = 2; i<message.argCount();i++) {
 				User u;
