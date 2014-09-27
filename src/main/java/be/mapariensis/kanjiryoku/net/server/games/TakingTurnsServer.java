@@ -37,7 +37,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 		// iterate through players circularly
 		public synchronized User next() {
-			return ix == players.size() ? players.get(ix = 0) : players.get(ix++);
+			return ++ix == players.size() ? players.get(ix = 0) : players.get(ix);
 		}
 	}
 	
