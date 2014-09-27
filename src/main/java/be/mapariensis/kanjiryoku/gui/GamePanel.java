@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.ParseException;
 import java.util.List;
 import javax.swing.AbstractAction;
@@ -52,6 +54,18 @@ public class GamePanel extends JPanel implements GameClientInterface {
 			}
 		});
 		add(submitButton,BorderLayout.SOUTH);
+		
+		// add double-click listener to problem panel
+		// for skipping problems
+		
+		cont.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent ev) {
+				if(ev.getClickCount() == 2) {
+					bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.SKIPPROBLEM));
+				}
+			}
+		});
 		setLock(true);
 	}
 	@Override
@@ -105,6 +119,10 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	@Override
 	public DrawingPanelInterface getCanvas() {
 		return pane;
+	}
+	@Override
+	public Problem getProblem() {
+		return cont.getProblem();
 	}
 
 }

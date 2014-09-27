@@ -41,7 +41,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 	}
 	
-	private volatile boolean started = false;
+	private volatile boolean gameRunning = false;
 	private final Object submitLock = new Object();
 	private volatile User currentPlayer;
 	private int problemPosition;
@@ -89,19 +89,9 @@ public class TakingTurnsServer implements GameServerInterface {
 
 					AnswerFeedbackHandler rh = null;
 					// move on to next position in problem
-					if(answer) {
-						if(currentProblem.getFullSolution().length() == ++problemPosition) {
-							if(problemSource.hasNext()) {
-								rh = new NextTurnHandler();
-							} else {
-								synchronized(listeners) {
-									for(GameListener l : listeners) {
-										l.finished();
-										started = false;
-									}
-								}
-							}
-						}
+					if(answer && currentProblem.getFullSolution().length() == ++problemPosition) {
+						rh = new NextTurnHandler();
+						gameRunning = problemSource.hasNext();
 					}
 					strokes.clear();
 					synchronized(listeners) {
@@ -131,22 +121,22 @@ public class TakingTurnsServer implements GameServerInterface {
 
 	@Override
 	public boolean canPlay(User u) {
-		return started && u == currentPlayer;
+		return gameRunning && u == currentPlayer;
 	}
 	@Override
 	public boolean running() {
-		return started;
+		return gameRunning;
 	}
 	@Override
 	public void startGame(Set<User> participants) throws GameFlowException {
-		if(started) throw new GameFlowException("Game already running.");
-		started = true;
+		if(gameRunning) throw new GameFlowException("Game already running.");
+		gameRunning = true;
 		this.ti = new TurnIterator(participants);
 		nextProblem();
 	}
 	@Override
 	public void close() {
-		started = false;
+		gameRunning = false;
 		currentPlayer = null;
 	}
 	@Override
@@ -190,12 +180,31 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 		@Override
 		public void afterAnswer() throws ServerException {
-			log.info("Received ACK from all users. Proceeding.");
-			synchronized(submitLock) {
-				nextProblem();
+			if(problemSource.hasNext()) {
+				synchronized(submitLock) {
+					nextProblem();
+				}
+			} else {
+				synchronized(listeners) {
+					for(GameListener l : listeners) {
+						l.finished();
+					}
+				}
 			}
 		}
 
+	}
+
+	@Override
+	public void skipProblem(User submitter) throws GameFlowException {
+		if(submitter != null && !submitter.equals(currentPlayer)) throw new GameFlowException("Only the current player can decide to skip a problem.");
+		log.info("Skipping problem.");
+		synchronized(listeners) {
+			AnswerFeedbackHandler rh = new NextTurnHandler();
+			for(GameListener l : listeners) {
+				l.problemSkipped(submitter,rh);
+			}
+		}
 	}
 	
 

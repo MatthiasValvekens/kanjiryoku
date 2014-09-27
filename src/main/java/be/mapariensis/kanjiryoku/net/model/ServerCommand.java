@@ -188,8 +188,6 @@ public enum ServerCommand {
 				}
 			}
 			userman.messageUser(client, new NetworkMessage(ClientCommand.RESPOND,args));
-			
-			
 		}
 	}, SUBMIT {
 
@@ -200,6 +198,19 @@ public enum ServerCommand {
 				Session sess = client.getSession();
 				if(sess == null || !sess.game.running()) throw new SessionException("No game running.");
 				sess.game.submit(message, client);
+			}
+		}
+		
+	}, SKIPPROBLEM {
+
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			synchronized(client.sessionLock()) {
+				Session sess = client.getSession();
+				if(sess == null || !sess.game.running()) throw new SessionException("No game running.");
+				sess.game.skipProblem(client);
 			}
 		}
 		

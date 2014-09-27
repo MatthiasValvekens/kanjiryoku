@@ -16,4 +16,5 @@ public interface GameClientInterface {
 	public void deliverAnswer(boolean correct, char displayChar);
 	public Problem parseProblem(String s) throws ParseException;
 	public void setProblem(Problem p);
+	public Problem getProblem();
 }

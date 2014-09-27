@@ -223,6 +223,11 @@ public class Session {
 		@Override
 		public void finished() {
 			manager.destroySession(Session.this);
+		}
+
+		@Override
+		public void problemSkipped(User submitter, AnswerFeedbackHandler rh) {
+			broadcastMessage(null,new NetworkMessage(ClientCommand.PROBLEMSKIPPED,submitter.handle,rh.id),rh);
 		}		
 	}
 }

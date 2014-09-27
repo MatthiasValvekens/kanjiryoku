@@ -21,4 +21,5 @@ public interface GameServerInterface extends AutoCloseable {
 	public void addProblemListener(GameListener p);
 	public void removeProblemListener(GameListener p);
 	public void clearInput(User submitter) throws GameFlowException;
+	public void skipProblem(User submitter) throws GameFlowException;
 }

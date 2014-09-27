@@ -97,9 +97,23 @@ public enum ClientCommand {
 			}
 			bridge.getChat().displayServerMessage(String.format("User %s answered %s, which is %s", name, inputChar, wasCorrect ? "correct" : "unfortunately not the right answer"));
 			bridge.getClient().deliverAnswer(wasCorrect, inputChar);
+			bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.RESPOND,responseCode)); // acknowledge 
+		}
+	}, PROBLEMSKIPPED {
+		@Override
+		public void execute(NetworkMessage msg, GUIBridge bridge)
+				throws ClientException {
+			if(msg.argCount() != 3) throw new ServerCommunicationException(msg);
+			int responseCode;
+			try {
+				responseCode = Integer.parseInt(msg.get(2));
+			} catch(RuntimeException ex) {
+				throw new ServerCommunicationException(ex);
+			}
+			bridge.getChat().displayServerMessage(String.format("User %s skipped the problem. The full solution was %s.",msg.get(1),bridge.getClient().getProblem().getFullSolution()));
 			bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.RESPOND,responseCode));
 		}
-	}, STROKE {
+	},STROKE {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
