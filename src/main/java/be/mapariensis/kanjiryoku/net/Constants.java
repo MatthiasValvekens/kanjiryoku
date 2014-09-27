@@ -19,4 +19,8 @@ public class Constants {
 	public static final String ACCEPTS = "ACCEPT";
 	public static final String REJECTS = "REJECT";
 	public static final String NONE = "NONE";
+	public static final int STANDARD_MACRO_TIMEOUT = 10000;
+	
+	public static final String GAMELIST_JSON_NAME = "name";
+	public static final String GAMELIST_JSON_HUMANNAME = "humanName";
 }

@@ -62,12 +62,9 @@ public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessa
 	}
 	public void sendRaw(WritableByteChannel sock, ByteBuffer buf) throws IOException {
 		buf.clear();
-		int i;
-		for(i = 0; i<args.size()-1;i++) {
-			buf.put(escapedAtom(get(i)).getBytes(ENCODING));
-			buf.put(String.valueOf(DELIMITER).getBytes(ENCODING));
-		}
-		buf.put(escapedAtom(get(i)).getBytes(ENCODING));
+		String message = toString();
+		if(message.contains(EOMSTR)) throw new IOException("EOM byte is illegal in messages.");
+		buf.put(message.getBytes());
 		buf.put(EOM);
 		buf.flip();
 		synchronized(sock) {
@@ -96,9 +93,13 @@ public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessa
 	}
 	
 	public static void sendRaw(WritableByteChannel sock, ByteBuffer buf, String message) throws IOException {
+		if(message.contains(EOMSTR)) throw new IOException("EOM byte is illegal in messages.");
 		sendRaw(sock, buf, message.getBytes(ENCODING));
 	}
 	public static void sendRaw(WritableByteChannel sock, ByteBuffer buf, byte[] message) throws IOException {
+		for(byte b : message) {
+			if(b==EOM) throw new IOException("EOM byte is illegal in messages.");
+		}
 		buf.clear();
 		buf.put(message);
 		buf.put(EOM);
@@ -184,8 +185,11 @@ public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessa
 		return atomize(escapeSpecial(string));
 	}
 	public NetworkMessage concatenate(Object... args) {
+		return concatenate(Arrays.asList(args));
+	}
+	public NetworkMessage concatenate(List<?> args) {
 		ArrayList<Object> newargs = new ArrayList<Object>(this.args);
-		newargs.addAll(Arrays.asList(args));
+		newargs.addAll(args);
 		return new NetworkMessage(newargs);
 	}
 	@Override

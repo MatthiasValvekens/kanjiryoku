@@ -60,7 +60,7 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge) throws ClientException {
 			if(msg.argCount()<2) throw new ServerCommunicationException(msg);
-			bridge.getClient().consumeActiveResponseHandler(msg);
+			bridge.getUplink().consumeActiveResponseHandler(msg);
 		}
 		
 	}, PROBLEM {

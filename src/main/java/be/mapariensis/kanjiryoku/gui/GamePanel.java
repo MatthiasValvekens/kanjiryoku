@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.text.ParseException;
-import java.util.LinkedList;
 import java.util.List;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
@@ -18,12 +17,8 @@ import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.model.*;
 import be.mapariensis.kanjiryoku.net.client.DrawingPanelInterface;
 import be.mapariensis.kanjiryoku.net.client.GameClientInterface;
-import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
-import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
-import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.ServerCommand;
-import be.mapariensis.kanjiryoku.net.model.ServerResponseHandler;
 import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 public class GamePanel extends JPanel implements GameClientInterface {
@@ -91,35 +86,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		cont.setProblem(p);
 	}
 	
-	private final List<ServerResponseHandler> activeResponseHandlers = new LinkedList<ServerResponseHandler>();
-	
-	@Override
-	public void consumeActiveResponseHandler(NetworkMessage msg) throws ClientException {
-		int passedId;
-		try {
-			passedId = Integer.valueOf(msg.get(1));
-		} catch (IndexOutOfBoundsException ex) {
-			// the servercommand class should check this, but an extra safety measure never hurts
-			throw new ServerCommunicationException("Too few arguments for RESPOND");
-		} catch (RuntimeException ex) {
-			throw new ServerCommunicationException(ex);
-		}
-		if(passedId==-1) {
-			bridge.getChat().getDefaultResponseHandler().handle(msg);
-			return;
-		}
-		// there should only be a handful of active rh's at any one time, so linear search is more than good enough
-		synchronized(activeResponseHandlers) {
-			for(ServerResponseHandler rh : activeResponseHandlers) {
-				if(rh.id == passedId) {
-					rh.handle(null, msg); // don't mind if this takes long, rh's should be queued anyway
-					activeResponseHandlers.remove(rh);
-					return;
-				}
-			}
-		}
-		throw new ClientException(String.format("No response handler with id %s", passedId),ClientServerException.ERROR_QUEUE);
-	}
+
 	@Override
 	public String getUsername() {
 		return bridge.getUplink().getUsername();

@@ -21,15 +21,7 @@ public class KanjiServer {
 	}
 	public static void main(String[] args) throws IOException {
 		loadDLLs();
-		try(ConnectionMonitor s = new ConnectionMonitor(1000)) {
-			s.start();
-			while(s.isAlive()) {
-				try {
-					Thread.sleep(100000000000L);
-				} catch (InterruptedException e) {
-					
-				}
-			}
-		}
+		ConnectionMonitor s = new ConnectionMonitor(1000);
+		s.start();
 	}
 }

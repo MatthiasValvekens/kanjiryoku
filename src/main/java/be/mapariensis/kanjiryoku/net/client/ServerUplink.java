@@ -11,6 +11,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.text.ParseException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,12 +19,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.gui.GUIBridge;
+import be.mapariensis.kanjiryoku.net.client.handlers.WaitingResponseHandler;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
+import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.model.ClientCommand;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.ServerCommand;
+import be.mapariensis.kanjiryoku.net.model.ServerResponseHandler;
 import be.mapariensis.kanjiryoku.net.server.MessageHandler;
 import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 
@@ -165,6 +169,22 @@ public class ServerUplink extends Thread implements Closeable {
 	public void enqueueMessage(NetworkMessage msg) {
 		messageHandler.enqueue(msg);
 	}
+	public void enqueueMessage(NetworkMessage msg, ServerResponseHandler rh) {
+		activeResponseHandlers.add(rh);
+		messageHandler.enqueue(msg);
+	}
+	public static final int BLOCK_SLEEP_DELAY = 200;
+	public NetworkMessage blockUntilResponse(NetworkMessage msg, WaitingResponseHandler wrh, long timeout) {
+		enqueueMessage(msg,wrh);
+		NetworkMessage result;
+		long startTime = System.currentTimeMillis();
+		while((result = wrh.getMessage()) == null && (timeout <= 0 || (System.currentTimeMillis()-startTime)<=timeout)) {
+			try {
+				Thread.sleep(BLOCK_SLEEP_DELAY);
+			} catch (InterruptedException e) {}
+		}
+		return result;
+	}
 	@Override
 	public void close() {
 		log.info("Shutting down server uplink.");
@@ -187,5 +207,33 @@ public class ServerUplink extends Thread implements Closeable {
 	void stopListening() {
 		log.info("Received listener shutdown request.");
 		keepOn = false;
+	}
+	private final List<ServerResponseHandler> activeResponseHandlers = new LinkedList<ServerResponseHandler>();
+	
+	public void consumeActiveResponseHandler(NetworkMessage msg) throws ClientException {
+		int passedId;
+		try {
+			passedId = Integer.valueOf(msg.get(1));
+		} catch (IndexOutOfBoundsException ex) {
+			// the servercommand class should check this, but an extra safety measure never hurts
+			throw new ServerCommunicationException("Too few arguments for RESPOND");
+		} catch (RuntimeException ex) {
+			throw new ServerCommunicationException(ex);
+		}
+		if(passedId==-1) {
+			bridge.getChat().getDefaultResponseHandler().handle(msg);
+			return;
+		}
+		// there should only be a handful of active rh's at any one time, so linear search is more than good enough
+		synchronized(activeResponseHandlers) {
+			for(ServerResponseHandler rh : activeResponseHandlers) {
+				if(rh.id == passedId) {
+					rh.handle(null, msg); // don't mind if this takes long, rh's should be queued anyway
+					activeResponseHandlers.remove(rh);
+					return;
+				}
+			}
+		}
+		throw new ClientException(String.format("No response handler with id %s", passedId),ClientServerException.ERROR_QUEUE);
 	}
 }

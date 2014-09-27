@@ -151,6 +151,19 @@ public enum ServerCommand {
 				}
 			}
 		}		
+	}, LEAVE {
+
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			synchronized(client.sessionLock()) {
+				if(client.getSession() == null) throw new SessionException("You are not currently in a session.");
+				sessman.removeUser(client);
+				userman.humanMessage(client, "You have left the session.");
+			}
+		}
+		
 	}, WHOAMI {
 		@Override
 		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
@@ -245,8 +258,8 @@ public enum ServerCommand {
 			JSONArray arr = new JSONArray();
 			for(Game g : Game.values()) {
 				JSONObject wrapper = new JSONObject();
-				wrapper.put("name", g.name());
-				wrapper.put("humanName", g.toString());
+				wrapper.put(Constants.GAMELIST_JSON_NAME, g.name());
+				wrapper.put(Constants.GAMELIST_JSON_HUMANNAME, g.toString());
 				arr.put(wrapper);
 			}
 			
