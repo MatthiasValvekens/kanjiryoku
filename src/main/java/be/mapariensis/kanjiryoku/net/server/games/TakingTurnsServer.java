@@ -1,11 +1,13 @@
 package be.mapariensis.kanjiryoku.net.server.games;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,12 +31,22 @@ import be.mapariensis.kanjiryoku.util.ParsingUtils;
 
 public class TakingTurnsServer implements GameServerInterface {
 	private static final Logger log = LoggerFactory.getLogger(TakingTurnsServer.class);
+	private static class Statistics {
+		int correct, skipped;
+	}
 	private static class TurnIterator  {
 		private int ix = 0;
 		private final List<User> players;
+		private final List<Statistics> stats;
 		public TurnIterator(Collection<User> players) {
 			this.players = new LinkedList<User>(players);
+			this.stats = new ArrayList<Statistics>(players.size());
+			for(int i = 0; i<players.size();i++) stats.add(new Statistics());
 		}
+		public Statistics currentUserStats() {
+			return stats.get(ix);
+		}
+		
 		// iterate through players circularly
 		public synchronized User next() {
 			return ++ix == players.size() ? players.get(ix = 0) : players.get(ix);
@@ -91,7 +103,7 @@ public class TakingTurnsServer implements GameServerInterface {
 					// move on to next position in problem
 					if(answer && currentProblem.getFullSolution().length() == ++problemPosition) {
 						rh = new NextTurnHandler();
-						gameRunning = problemSource.hasNext();
+						ti.currentUserStats().correct++;
 					}
 					strokes.clear();
 					synchronized(listeners) {
@@ -185,9 +197,12 @@ public class TakingTurnsServer implements GameServerInterface {
 					nextProblem();
 				}
 			} else {
+				log.info("No problems left");
+				gameRunning = false;
 				synchronized(listeners) {
+					JSONObject stats = stats();
 					for(GameListener l : listeners) {
-						l.finished();
+						l.finished(stats);
 					}
 				}
 			}
@@ -199,12 +214,26 @@ public class TakingTurnsServer implements GameServerInterface {
 	public void skipProblem(User submitter) throws GameFlowException {
 		if(submitter != null && !submitter.equals(currentPlayer)) throw new GameFlowException("Only the current player can decide to skip a problem.");
 		log.info("Skipping problem.");
+		ti.currentUserStats().skipped++;
 		synchronized(listeners) {
 			AnswerFeedbackHandler rh = new NextTurnHandler();
 			for(GameListener l : listeners) {
 				l.problemSkipped(submitter,rh);
 			}
 		}
+	}
+	
+	private JSONObject stats() {
+		JSONObject res = new JSONObject();
+		for(int i = 0;i<ti.players.size();i++) {
+			String uname = ti.players.get(i).handle;
+			Statistics stats = ti.stats.get(i);
+			JSONObject o = new JSONObject();
+			o.put("Correct answers", stats.correct);
+			o.put("Skipped problems", stats.skipped);
+			res.put(uname,o);
+		}
+		return res;
 	}
 	
 

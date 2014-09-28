@@ -5,6 +5,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -221,7 +222,8 @@ public class Session {
 		}
 
 		@Override
-		public void finished() {
+		public void finished(JSONObject statistics) {
+			if(statistics != null) broadcastMessage(null, new NetworkMessage(ClientCommand.STATISTICS,statistics));
 			manager.destroySession(Session.this);
 		}
 

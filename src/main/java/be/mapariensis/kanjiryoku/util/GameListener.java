@@ -2,6 +2,8 @@ package be.mapariensis.kanjiryoku.util;
 
 import java.util.List;
 
+import org.json.JSONObject;
+
 import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.net.model.User;
@@ -13,5 +15,5 @@ public interface GameListener {
 	public void problemSkipped(User submitter, AnswerFeedbackHandler rh);
 	public void deliverStroke(User submitter, List<Dot> stroke);
 	public void clearStrokes(User submitter); 
-	public void finished();
+	public void finished(JSONObject statistics);
 }

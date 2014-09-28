@@ -59,6 +59,10 @@ public class SessionManagerImpl implements SessionManager {
 		synchronized(LOCK) {
 			Session sess = u.getSession();
 			if(sess == null) return null;
+			if(sess.game.running()) {
+				destroySession(sess); // FIXME : Add support for leaving/joining running games
+				return null;
+			}
 			User ret = sess.removeMember(u);
 			if(ret == null) {
 				log.info("Last user removed, destroying session.");

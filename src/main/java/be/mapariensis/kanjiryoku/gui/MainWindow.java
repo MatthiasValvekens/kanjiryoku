@@ -28,7 +28,7 @@ public class MainWindow extends JFrame implements GUIBridge {
 	private final ChatPanel chat;
 	private final GamePanel gci;
 	public MainWindow(InetAddress addr, int port, String username) throws IOException {
-		super("Kanji");
+		super(String.format("Kanjiryoku - %s (%s:%s)",username,addr,port));
 		setLayout(new FlowLayout());
 		chat = new ChatPanel(this);
 		add(chat);

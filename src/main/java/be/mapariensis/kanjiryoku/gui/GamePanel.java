@@ -34,7 +34,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	private int inputCounter = 0; // keeps track of the current position in the problem for convenience
 	private final ProblemPanel cont = new ProblemPanel();
 
-
+	private volatile boolean locked;
 	public GamePanel(final GUIBridge bridge, ProblemParser<?> parser) {
 		this.parser = parser;
 		this.bridge = bridge;
@@ -61,7 +61,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		cont.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent ev) {
-				if(ev.getClickCount() == 2) {
+				if(!locked && ev.getClickCount() == 2) {
 					bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommand.SKIPPROBLEM));
 				}
 			}
@@ -113,6 +113,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	@Override
 	public void setLock(boolean locked) {
 		log.info("Panel lock set to {}", locked ? "locked" : "released");
+		this.locked = locked;
 		pane.setLock(locked);
 		submitButton.setEnabled(!locked);
 	}

@@ -1,8 +1,13 @@
 package be.mapariensis.kanjiryoku.net.model;
 
 import java.text.ParseException;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,15 +25,41 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
-			if(msg.argCount() != 2) throw new ServerCommunicationException(msg);
+			checkArgs(msg,2);
 			bridge.getChat().displayServerMessage(msg.get(1));
 		}
-	},WELCOME {
+	}, STATISTICS {
+		@SuppressWarnings("unchecked")
+		@Override
+		public void execute(NetworkMessage msg, GUIBridge bridge)
+				throws ClientException {
+			checkArgs(msg,2);
+			StringBuilder sb = new StringBuilder("Statistics:");
+			try {
+				JSONObject json = new JSONObject(msg.get(1));
+				
+				// iterate through users
+				Iterator<String> keys = json.keys();
+				while(keys.hasNext()) {
+					String username = keys.next();
+					sb.append("\nUser ").append(username).append(":");
+					JSONObject data = json.getJSONObject(username);
+					//sort data keys alphabetically
+					Set<String> dataKeys = new TreeSet<String>(data.keySet());
+					for(String key : dataKeys)
+						sb.append("\n\t").append(key).append(": ").append(data.get(key));
+				}
+			} catch(JSONException ex) {
+				throw new ServerCommunicationException(ex);
+			}
+			bridge.getChat().displayServerMessage(sb.toString());
+		}
+	}, WELCOME {
 
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
-			if(msg.argCount() != 2) throw new ServerCommunicationException(msg);
+			checkArgs(msg,2);
 			bridge.getChat().displayServerMessage(String.format("Welcome %s",msg.get(1)));
 		}
 		
@@ -37,7 +68,7 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
-			if(msg.argCount()!=3) throw new ServerCommunicationException(msg);
+			checkArgs(msg,3);
 			bridge.getChat().displayUserMessage(msg.get(1),msg.get(2));
 		}
 		
@@ -46,7 +77,7 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
-			if(msg.argCount()!=5) throw new ServerCommunicationException(msg);
+			checkArgs(msg,5);
 			 // TODO : behaviour is undefined when invitations for multiple sessions are sent
 			NetworkMessage ifYes = new NetworkMessage(ServerCommand.RESPOND,msg.get(1),Constants.ACCEPTS,msg.get(3));
 			NetworkMessage ifNo = new NetworkMessage(ServerCommand.RESPOND,msg.get(1),Constants.REJECTS);
@@ -67,7 +98,7 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
-			if(msg.argCount() != 3) throw new ServerCommunicationException(msg);
+			checkArgs(msg,3);
 			String name = msg.get(1);
 			bridge.getChat().displayServerMessage(String.format("Question for %s" + (name.equals(bridge.getClient().getUsername()) ? " (You)" : ""),name));
 			String problemString = msg.get(2);
@@ -83,7 +114,7 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
-			if(msg.argCount() != 5) throw new ServerCommunicationException(msg);
+			checkArgs(msg,5);
 			String name = msg.get(1);
 			boolean wasCorrect;
 			char inputChar;
@@ -103,7 +134,7 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ClientException {
-			if(msg.argCount() != 3) throw new ServerCommunicationException(msg);
+			checkArgs(msg,3);
 			int responseCode;
 			try {
 				responseCode = Integer.parseInt(msg.get(2));
@@ -117,7 +148,7 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
-			if(msg.argCount() != 3) throw new ServerCommunicationException(msg);
+			checkArgs(msg,3);
 			String name = msg.get(1);
 			if(name.equals(bridge.getClient().getUsername())) { //FIXME : get rid of echo
 				log.warn("Stroke echo for "+name);
@@ -147,4 +178,7 @@ public enum ClientCommand {
 	};
 	private static final Logger log = LoggerFactory.getLogger(ClientCommand.class);
 	public abstract void execute(NetworkMessage msg, GUIBridge bridge) throws ClientException;
+	private static void checkArgs(NetworkMessage msg, int args) throws ServerCommunicationException {
+		if(msg.argCount() != args) throw new ServerCommunicationException(msg);
+	}
 }
