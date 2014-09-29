@@ -5,7 +5,7 @@
   <groupId>be.mapariensis</groupId>
   <artifactId>kanjiryoku</artifactId>
   <version>0.1-SNAPSHOT</version>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
 
   <name>kanjiryoku</name>
   <url>http://maven.apache.org</url>
@@ -41,4 +41,9 @@
     	<version>20140107</version>
     </dependency>
   </dependencies>
+  <modules>
+    <module>common</module>
+    <module>server</module>
+    <module>client</module>
+  </modules>
 </project>

@@ -1,0 +1,38 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>be.mapariensis</groupId>
+    <artifactId>kanjiryoku</artifactId>
+    <version>0.1-SNAPSHOT</version>
+  </parent>
+  <name>server</name>
+  <artifactId>server</artifactId>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+  <dependencies>
+    <dependency>
+    	<groupId>org.slf4j</groupId>
+    	<artifactId>slf4j-simple</artifactId>
+    	<version>1.7.7</version>
+    </dependency>
+	<dependency>
+    	<groupId>org.chasen.crfpp</groupId>
+    	<artifactId>zinnia</artifactId>
+    	<version>0.06-JAVA</version>
+    </dependency>
+    <dependency>
+    	<groupId>org.json</groupId>
+    	<artifactId>json</artifactId>
+    	<version>20140107</version>
+    </dependency>
+	<dependency>
+    	<groupId>be.mapariensis</groupId>
+    	<artifactId>common</artifactId>
+    	<version>0.1-SNAPSHOT</version>
+    </dependency>
+  </dependencies>
+</project>
