@@ -116,7 +116,8 @@ public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessa
 	}
 
 	// TODO unit tests
-	public static NetworkMessage buildArgs(final String in) {
+	public static NetworkMessage buildArgs(String in) {
+		in = in.trim();
 		List<String> result = new ArrayList<String>();
 		boolean ignoreDelims = false, escape = false;
 		StringBuilder sb = new StringBuilder(BUFFER_MAX);

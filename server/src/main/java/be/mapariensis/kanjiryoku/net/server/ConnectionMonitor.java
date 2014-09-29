@@ -161,8 +161,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					else command.execute(msg, u,ConnectionMonitor.this, sessman);
 				}
 			} catch (ServerException ex) {	
-				log.warn("Processing error",ex);
+				log.debug("Processing error",ex);
 				queueProcessingError(ch, ex);
+			} catch (IndexOutOfBoundsException ex){
+				log.debug("Badly formed command.");
+				queueProcessingError(ch, new ProtocolSyntaxException("Badly formed command",ex));
 			} catch (Exception e) {
 				log.error("Failed to process command.",e);
 				try {

@@ -1,39 +1,32 @@
 package be.mapariensis.kanjiryoku;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.swing.JFrame;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import be.mapariensis.kanjiryoku.gui.InitWindow;
 import be.mapariensis.kanjiryoku.gui.MainWindow;
-import be.mapariensis.kanjiryoku.model.Problem;
-import be.mapariensis.kanjiryoku.providers.KanjiryokuShindanParser;
-import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 public class Kanjiryoku {
-
-	public static void main(String[] args) throws IOException, ParseException {
-		JFrame frame = new MainWindow(InetAddress.getByName("localhost"), 1000, "test"+(System.currentTimeMillis()%10000));
-		frame.setVisible(true);
-	}
-	
-	
-	public static List<Problem> readLines(String filename) throws IOException {
-		ArrayList<Problem> res = new ArrayList<Problem>();
-		BufferedReader r = new BufferedReader(new InputStreamReader(new FileInputStream(filename),"Shift-JIS"));
-		String line;
-		ProblemParser<?> parser = new KanjiryokuShindanParser();
-		while((line = r.readLine())!=null) {
+	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);
+	private static final boolean SKIP_CONNECT_SCREEN = false; // for testing purposes
+	// TODO : allow 
+	public static void main(String[] args) {
+		if(SKIP_CONNECT_SCREEN) {
+			JFrame frame;
 			try {
-				res.add(parser.parseProblem(line));
-			} catch (ParseException e) {}
+				frame = new MainWindow(InetAddress.getByName("localhost"), 1000, "test"+(System.currentTimeMillis()%10000));
+			} catch (IOException e) {
+				log.error("I/O error while setting up main window",e);
+				return;
+			}
+			frame.setVisible(true);
+		} else {
+			InitWindow.show();
 		}
-		return res;
+		
 	}
 }
