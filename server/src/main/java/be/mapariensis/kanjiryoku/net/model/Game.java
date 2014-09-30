@@ -41,7 +41,7 @@ public enum Game {
 		public GameServerInterface getServer()
 				throws UnsupportedGameException, ServerBackendException {
 			try {
-				return new TakingTurnsServer(problems.iterator(),new ZinniaGuesser("data\\writingmodel\\handwriting-ja.model"));
+				return new TakingTurnsServer(ProblemCollectionUtils.fromIterator(problems.iterator()),new ZinniaGuesser("data\\writingmodel\\handwriting-ja.model"));
 			} catch (IOException e) {
 				throw new ServerBackendException(e);
 			}

@@ -2,7 +2,6 @@ package be.mapariensis.kanjiryoku.net.server.games;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -21,6 +20,7 @@ import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
+import be.mapariensis.kanjiryoku.net.model.ProblemOrganizer;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.server.GameListener;
 import be.mapariensis.kanjiryoku.net.server.GameServerInterface;
@@ -60,9 +60,9 @@ public class TakingTurnsServer implements GameServerInterface {
 	private Problem currentProblem;
 	private TurnIterator ti;
 	private final KanjiGuesser guess;
-	private final Iterator<Problem> problemSource;
+	private final ProblemOrganizer problemSource;
 	private final Collection<GameListener> listeners = new LinkedList<GameListener>();
-	public TakingTurnsServer(Iterator<Problem> problems, KanjiGuesser guess) {
+	public TakingTurnsServer(ProblemOrganizer problems, KanjiGuesser guess) {
 		this.guess = guess;
 		this.problemSource = problems;
 	}
@@ -102,7 +102,7 @@ public class TakingTurnsServer implements GameServerInterface {
 					AnswerFeedbackHandler rh = null;
 					// move on to next position in problem
 					if(answer && currentProblem.getFullSolution().length() == ++problemPosition) {
-						rh = new NextTurnHandler();
+						rh = new NextTurnHandler(true);
 						ti.currentUserStats().correct++;
 					}
 					strokes.clear();
@@ -144,7 +144,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		if(gameRunning) throw new GameFlowException("Game already running.");
 		gameRunning = true;
 		this.ti = new TurnIterator(participants);
-		nextProblem();
+		nextProblem(true);
 	}
 	@Override
 	public void close() {
@@ -163,10 +163,10 @@ public class TakingTurnsServer implements GameServerInterface {
 			listeners.remove(p);
 		}
 	}
-	private void nextProblem() {
+	private void nextProblem(boolean answer) {
 		log.info("Next problem");
 		problemPosition = 0;
-		currentProblem = problemSource.next();
+		currentProblem = problemSource.next(answer);
 		currentPlayer = ti.next();
 		// hence this should be safe
 		synchronized(listeners) {
@@ -187,14 +187,16 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 	}
 	private class NextTurnHandler extends AnswerFeedbackHandler {
-		NextTurnHandler() {
+		final boolean answer;
+		NextTurnHandler(boolean answer) {
 			super(ti.players);
+			this.answer = answer;
 		}
 		@Override
 		public void afterAnswer() throws ServerException {
 			if(problemSource.hasNext()) {
 				synchronized(submitLock) {
-					nextProblem();
+					nextProblem(answer);
 				}
 			} else {
 				log.info("No problems left");
@@ -216,7 +218,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		log.info("Skipping problem.");
 		ti.currentUserStats().skipped++;
 		synchronized(listeners) {
-			AnswerFeedbackHandler rh = new NextTurnHandler();
+			AnswerFeedbackHandler rh = new NextTurnHandler(false);
 			for(GameListener l : listeners) {
 				l.problemSkipped(submitter,rh);
 			}
