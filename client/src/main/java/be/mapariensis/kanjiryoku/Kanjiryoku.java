@@ -12,7 +12,7 @@ import be.mapariensis.kanjiryoku.gui.MainWindow;
 
 public class Kanjiryoku {
 	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);
-	private static final boolean SKIP_CONNECT_SCREEN = false; // for testing purposes
+	private static final boolean SKIP_CONNECT_SCREEN = true; // for testing purposes
 	// TODO : allow 
 	public static void main(String[] args) {
 		if(SKIP_CONNECT_SCREEN) {

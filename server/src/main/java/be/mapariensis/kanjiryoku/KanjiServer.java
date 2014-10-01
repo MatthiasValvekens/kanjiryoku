@@ -1,27 +1,29 @@
 package be.mapariensis.kanjiryoku;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import be.mapariensis.kanjiryoku.config.ConfigFields;
+import be.mapariensis.kanjiryoku.config.IProperties;
+import be.mapariensis.kanjiryoku.config.IPropertiesImpl;
+import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.server.ConnectionMonitor;
 
 
 
 public class KanjiServer {
-	private static final Logger log = LoggerFactory.getLogger(KanjiServer.class);
-	public static void loadDLLs() {
+	public static void main(String[] args) throws IOException, BadConfigurationException {
+		IProperties props;
+		String config;
 		try {
-			System.loadLibrary("jzinnia-0.06-JAVA");
-		} catch (UnsatisfiedLinkError err) {
-			log.error("Failed to load Zinnia library.",err);
-			System.exit(1);
+			config = new String(Files.readAllBytes(Paths.get(ConfigFields.CONFIG_FILE_NAME)));
+		} catch(Exception ex) {
+			throw new IOException("Failed to read configuration file "+ConfigFields.CONFIG_FILE_NAME,ex);
 		}
-	}
-	public static void main(String[] args) throws IOException {
-		loadDLLs();
-		ConnectionMonitor s = new ConnectionMonitor(1000);
+		//load configuration
+		props= new IPropertiesImpl(config);
+		ConnectionMonitor s = new ConnectionMonitor(props);
 		s.start();
 	}
 }

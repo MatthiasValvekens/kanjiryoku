@@ -1,7 +1,5 @@
 package be.mapariensis.kanjiryoku.net.client;
 
-import static be.mapariensis.kanjiryoku.net.Constants.BUFFER_MAX;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -24,7 +22,6 @@ import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
-import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.model.MessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
@@ -33,6 +30,7 @@ public class ServerUplink extends Thread implements Closeable {
 	private static final Logger log = LoggerFactory.getLogger(ServerUplink.class);
 	private static final int WORKER_THREADS = 10;
 	private static final long SELECT_TIMEOUT = 500;
+	private static final int BUFFER_MAX = 2048;
 	private final ExecutorService threadPool;
 	private final SocketChannel channel;
 	private volatile boolean keepOn = true;
@@ -143,9 +141,9 @@ public class ServerUplink extends Thread implements Closeable {
 		public void run() {
 			if(msg.argCount()==0) return;
 			String cmdstring = msg.get(0);
-			if(ServerException.isError(cmdstring)) {
+			if(ClientServerException.isError(cmdstring)) {
 				try {
-					bridge.getChat().displayErrorMessage(ServerException.parseErrorCode(cmdstring), msg.get(1));// TODO better exception handling
+					bridge.getChat().displayErrorMessage(ClientServerException.parseErrorCode(cmdstring), msg.get(1));// TODO better exception handling
 				} catch (ParseException e) {
 				}
 				return;

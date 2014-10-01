@@ -8,20 +8,26 @@ import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.problemsets.ProblemOrganizer;
 import be.mapariensis.kanjiryoku.problemsets.RatedProblem;
 import be.mapariensis.kanjiryoku.problemsets.RatedProblemList;
-import static be.mapariensis.kanjiryoku.problemsets.RatedProblem.*;
 
 public class CategoryOrganizer implements ProblemOrganizer {
 	public final List<RatedProblemList> cats;
+	
 	public final int perCategory;
 	private int curCatIx = 0;
 	private int problemsSet = 0;
-	private int difficulty = 1;
+	private int difficulty;
+	private final boolean resetDifficulty;
 	private final Random rng;
+	private final int minDifficulty,maxDifficulty;
 	public CategoryOrganizer(List<RatedProblemList> cats,
-			int perCategory, Random rng) {
+			int perCategory, Random rng, boolean resetDifficulty, int minDifficulty, int maxDifficulty) {
 		this.cats = cats;
 		this.perCategory = perCategory;
 		this.rng = rng;
+		this.resetDifficulty = resetDifficulty;
+		this.minDifficulty = minDifficulty;
+		this.maxDifficulty = maxDifficulty;
+		this.difficulty = minDifficulty;
 	}
 	@Override
 	public boolean hasNext() {
@@ -31,7 +37,7 @@ public class CategoryOrganizer implements ProblemOrganizer {
 	}
 	@Override
 	public Problem next(boolean lastAnswer) {
-		difficulty = restrict(difficulty+ (lastAnswer ? 1 : -1), MIN_DIFFICULTY, MAX_DIFFICULTY);
+		difficulty = restrict(difficulty+ (lastAnswer ? 1 : -1), minDifficulty, maxDifficulty);
 		if(!hasNext()) throw new IllegalStateException();
 		if(problemsSet < Math.min(perCategory,cats.get(curCatIx).size())) {
 			// next problem in category
@@ -40,16 +46,18 @@ public class CategoryOrganizer implements ProblemOrganizer {
 			// hasNext returned true, so this will work
 			curCatIx++; // move to next category
 			problemsSet = 0;
+			if(resetDifficulty) difficulty=minDifficulty;
 		}
 		// find a problem of the appropriate difficulty
 		RatedProblemList scope = cats.get(curCatIx);
-		Iterator<Integer> iter = new IntegerSpiral(difficulty,MIN_DIFFICULTY,MAX_DIFFICULTY);
+		Iterator<Integer> iter = new IntegerSpiral(difficulty,minDifficulty,maxDifficulty);
 		List<RatedProblem> restrictedScope;
 		// iterate through possible difficulty levels
 		do {
 			int difficulty = iter.next();
 			restrictedScope = scope.extractDifficulty(difficulty);
 		} while(iter.hasNext() && restrictedScope.isEmpty());
+		// restrictedScope now contains all problems of suitable difficulty
 		if(restrictedScope.isEmpty()) throw new IllegalStateException();
 		return restrictedScope.remove(rng.nextInt(restrictedScope.size())).problem; // return a problem and remove it from the set of candidates
 	}

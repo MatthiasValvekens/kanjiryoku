@@ -16,6 +16,7 @@ public class ClientServerException extends Exception {
 	public static final int ERROR_BACKEND = 6;
 	public static final int ERROR_GAME_INTERNAL = 7;
 	public static final int ERROR_SERVER_COMM = 8;
+	public static final int ERROR_SERVER_CONFIG = 9;
 	
 	public final int errorCode;
 	public final NetworkMessage protocolMessage;

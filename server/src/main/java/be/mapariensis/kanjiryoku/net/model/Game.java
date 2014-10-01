@@ -2,28 +2,41 @@ package be.mapariensis.kanjiryoku.net.model;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.List;
 import java.util.Random;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import be.mapariensis.kanjiryoku.cr.ZinniaGuesser;
+
+import static be.mapariensis.kanjiryoku.config.ConfigFields.*;
+import be.mapariensis.kanjiryoku.config.IProperties;
+import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
+import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
 import be.mapariensis.kanjiryoku.net.server.GameServerInterface;
 import be.mapariensis.kanjiryoku.net.server.games.TakingTurnsServer;
-import be.mapariensis.kanjiryoku.util.ProblemCollectionUtils;;
+import be.mapariensis.kanjiryoku.problemsets.ProblemOrganizer;
+import be.mapariensis.kanjiryoku.util.ProblemCollectionUtils;
 public enum Game {
-	//FIXME : move file names to configuration
 	TAKINGTURNS {
-
 		@Override
-		public GameServerInterface getServer()
-				throws UnsupportedGameException, ServerBackendException {
+		public GameServerInterface getServer(IProperties config, KanjiGuesser guesser)
+				throws UnsupportedGameException, ServerBackendException, BadConfigurationException {
 			try {
 				int seed=(int)(System.currentTimeMillis()%10000);
 				log.info("Starting game with seed {}",seed);
-				return new TakingTurnsServer(ProblemCollectionUtils.buildKanjiryokuShindanOrganizer(5, new Random(seed)),new ZinniaGuesser("data\\writingmodel\\handwriting-ja.model"));
+				int problemsPerCategory = config.getTyped(PROBLEMS_PER_CATEGORY, Integer.class,PROBLEMS_PER_CATEGORY_DEFAULT);
+				String digitFormat = config.getTyped(FILE_NAME_DIFFICULTY_FORMAT, String.class,FILE_NAME_DIFFICULTY_FORMAT_DEFAULT);
+				String fileNameFormat = config.getRequired(FILE_NAME_FORMAT, String.class);
+				int minDiff = config.getTyped(MIN_DIFFICULTY, Integer.class, MIN_DIFFICULTY_DEFAULT);
+				int maxDiff = config.getTyped(MAX_DIFFICULTY, Integer.class, MAX_DIFFICULTY_DEFAULT);
+				@SuppressWarnings("unchecked")
+				List<String> categoryNames = config.getRequired(CATEGORY_LIST,List.class);
+				boolean resetDifficulty = config.getTyped(RESET_AFTER_CATEGORY_SWITCH,Boolean.class,true);
+				ProblemOrganizer org = ProblemCollectionUtils.buildKanjiryokuShindanOrganizer(fileNameFormat,categoryNames,digitFormat,problemsPerCategory,minDiff,maxDiff, resetDifficulty,new Random(seed));
+				return new TakingTurnsServer(org,guesser);
 			} catch (IOException | ParseException e) {
 				throw new ServerBackendException(e);
 			}
@@ -35,5 +48,5 @@ public enum Game {
 		}
 	};
 	private static final Logger log = LoggerFactory.getLogger(Game.class);
-	public abstract GameServerInterface getServer() throws UnsupportedGameException, ServerBackendException;
+	public abstract GameServerInterface getServer(IProperties config, KanjiGuesser guesser) throws UnsupportedGameException, ServerBackendException, BadConfigurationException;
 }

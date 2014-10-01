@@ -11,7 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import static be.mapariensis.kanjiryoku.net.Constants.*;
-import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
+import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 
 public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessage> {
 	public static final char ATOMIZER = '"'; 
@@ -108,10 +108,10 @@ public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessa
 			sock.write(buf);
 		}
 	}
-	public static void signalProcessingError(WritableByteChannel sock, ServerException ex) throws IOException {
+	public static void signalProcessingError(WritableByteChannel sock, ClientServerException ex) throws IOException {
 		signalProcessingError(sock, ByteBuffer.allocate(ex.getMessage().length()),ex);
 	}
-	public static void signalProcessingError(WritableByteChannel sock, ByteBuffer buf, ServerException ex) throws IOException {
+	public static void signalProcessingError(WritableByteChannel sock, ByteBuffer buf, ClientServerException ex) throws IOException {
 		sendRaw(sock,buf,ex.getMessage()); // these exception messages are protocol compliant
 	}
 
@@ -120,7 +120,7 @@ public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessa
 		in = in.trim();
 		List<String> result = new ArrayList<String>();
 		boolean ignoreDelims = false, escape = false;
-		StringBuilder sb = new StringBuilder(BUFFER_MAX);
+		StringBuilder sb = new StringBuilder(in.length());
 		for(int i = 0; i<in.length(); i++) {
 			char cur = in.charAt(i);
 			if(cur == ESCAPE_CHAR) {

@@ -20,8 +20,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static be.mapariensis.kanjiryoku.net.Constants.*;
+import be.mapariensis.kanjiryoku.config.ConfigFields;
+import be.mapariensis.kanjiryoku.config.IProperties;
+import be.mapariensis.kanjiryoku.cr.KanjiGuesserFactory;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
+import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
@@ -34,24 +38,40 @@ import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 
 public class ConnectionMonitor extends Thread implements UserManager, Closeable {
 	private static final Logger log = LoggerFactory.getLogger(ConnectionMonitor.class);
-	private static final int WORKER_THREADS = 10;
 	private static final long SELECT_TIMEOUT = 500;
 	private final ExecutorService threadPool;
 	private volatile boolean keepOn = true;
 	private final ServerSocketChannel ssc;
 	private final Selector selector;
 	private final UserStore store = new UserStore();
-	private final SessionManagerImpl sessman = new SessionManagerImpl(this);
+	private final SessionManagerImpl sessman;
+	private final int bufferMax;
+	
 	// store message handlers for anonymous connections here until they register/identify
 	private final Map<SocketChannel,MessageHandler> strayHandlers = new ConcurrentHashMap<SocketChannel,MessageHandler>();
 
-	public ConnectionMonitor(int port) throws IOException {
-		super("ConnectionMonitor:"+port);
+	public ConnectionMonitor(IProperties config) throws IOException, BadConfigurationException {
+		int port = config.getRequired(ConfigFields.PORT,Integer.class);
 		// get a socket
 		ssc = ServerSocketChannel.open();
 		ssc.bind(new InetSocketAddress(port));
 		selector = Selector.open();
-		threadPool = Executors.newFixedThreadPool(WORKER_THREADS, new NetworkThreadFactory(BUFFER_MAX,selector));
+		int workerThreads = config.getTyped(ConfigFields.WORKER_THREADS, Integer.class,ConfigFields.WORKER_THREADS_DEFAULT);
+		bufferMax = config.getTyped(ConfigFields.WORKER_BUFFER_SIZE, Integer.class,ConfigFields.WORKER_BUFFER_SIZE_DEFAULT);
+		threadPool = Executors.newFixedThreadPool(workerThreads, new NetworkThreadFactory(bufferMax,selector));
+		
+		// load guesser factory
+		IProperties crSettings = config.getRequired(ConfigFields.CR_SETTINGS_HEADER,IProperties.class);
+		KanjiGuesserFactory factory;
+		String className = crSettings.getRequired(ConfigFields.GUESSER_FACTORY_CLASS, String.class);
+		try {
+			log.info("Loading guesser factory {}",className);
+			factory = (KanjiGuesserFactory) ConnectionMonitor.class.getClassLoader().loadClass(className).newInstance();
+		} catch (Exception ex) {
+			throw new BadConfigurationException("Failed to instantiate guesser factory.",ex);
+		}
+		sessman = new SessionManagerImpl(config,this,factory);
+		setName("ConnectionMonitor:"+port);
 	}
 	@Override
 	public void run() {
@@ -67,7 +87,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			} catch (IOException e) {}
 			return;
 		}
-		ByteBuffer messageBuffer = ByteBuffer.allocateDirect(BUFFER_MAX); // allocate one buffer for the monitor thread
+		ByteBuffer messageBuffer = ByteBuffer.allocateDirect(bufferMax); // allocate one buffer for the monitor thread
 		while(keepOn) {
 			int readyCount;
 			try {
@@ -265,6 +285,4 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	public void messageUser(User user, NetworkMessage message) {
 		queueMessage(user.channel, message);
 	}
-
-
 }
