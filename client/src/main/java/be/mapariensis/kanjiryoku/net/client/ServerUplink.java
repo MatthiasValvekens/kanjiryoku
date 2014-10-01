@@ -96,7 +96,9 @@ public class ServerUplink extends Thread implements Closeable {
 				} catch(IOException ex) {  //FIXME : figure out a way to deal with forcefully closed connections, and then downgrade this to EOFException
 					key.cancel();
 					try {
-						log.info("Peer {} shut down.", channel.getRemoteAddress());							
+						log.info("Peer {} shut down.", channel.getRemoteAddress());
+						bridge.getChat().displaySystemMessage("Peer connection lost. This is most likely a network or a server error.");
+						bridge.getClient().setLock(true);
 						close();
 						break;
 					} catch(IOException e) {

@@ -3,6 +3,10 @@ package be.mapariensis.kanjiryoku.net.model;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.Random;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import be.mapariensis.kanjiryoku.cr.ZinniaGuesser;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
@@ -17,7 +21,9 @@ public enum Game {
 		public GameServerInterface getServer()
 				throws UnsupportedGameException, ServerBackendException {
 			try {
-				return new TakingTurnsServer(ProblemCollectionUtils.buildKanjiryokuShindanOrganizer(5, new Random(3)),new ZinniaGuesser("data\\writingmodel\\handwriting-ja.model"));
+				int seed=(int)(System.currentTimeMillis()%10000);
+				log.info("Starting game with seed {}",seed);
+				return new TakingTurnsServer(ProblemCollectionUtils.buildKanjiryokuShindanOrganizer(5, new Random(seed)),new ZinniaGuesser("data\\writingmodel\\handwriting-ja.model"));
 			} catch (IOException | ParseException e) {
 				throw new ServerBackendException(e);
 			}
@@ -28,5 +34,6 @@ public enum Game {
 			return "Turn-based Guessing"; 
 		}
 	};
+	private static final Logger log = LoggerFactory.getLogger(Game.class);
 	public abstract GameServerInterface getServer() throws UnsupportedGameException, ServerBackendException;
 }

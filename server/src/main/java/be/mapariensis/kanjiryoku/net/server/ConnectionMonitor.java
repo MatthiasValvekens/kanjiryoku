@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import static be.mapariensis.kanjiryoku.net.Constants.*;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
@@ -168,9 +169,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				queueProcessingError(ch, new ProtocolSyntaxException("Badly formed command",ex));
 			} catch (Exception e) {
 				log.error("Failed to process command.",e);
-				try {
-					ch.close();
-				} catch (IOException e1) { }
+				queueProcessingError(ch, new ServerBackendException(e));
 			}
 		}
 
