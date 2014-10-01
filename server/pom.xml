@@ -4,7 +4,7 @@
   <parent>
     <groupId>be.mapariensis</groupId>
     <artifactId>kanjiryoku</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>${currentVersion}</version>
   </parent>
   <name>server</name>
   <artifactId>server</artifactId>
@@ -32,7 +32,7 @@
 	<dependency>
     	<groupId>be.mapariensis</groupId>
     	<artifactId>common</artifactId>
-    	<version>0.1-SNAPSHOT</version>
+    	<version>${currentVersion}</version>
     </dependency>
 	<dependency>
 		<groupId>org.apache.commons</groupId>

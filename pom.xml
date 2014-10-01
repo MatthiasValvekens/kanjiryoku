@@ -4,7 +4,7 @@
 
   <groupId>be.mapariensis</groupId>
   <artifactId>kanjiryoku</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <version>${currentVersion}</version>
   <packaging>pom</packaging>
 
   <name>kanjiryoku</name>
@@ -12,6 +12,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	<currentVersion>0.1-SNAPSHOT</currentVersion>
   </properties>
   <dependencies>
     <dependency>
