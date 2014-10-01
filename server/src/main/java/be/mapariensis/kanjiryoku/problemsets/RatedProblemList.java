@@ -1,4 +1,4 @@
-package be.mapariensis.kanjiryoku.net.model;
+package be.mapariensis.kanjiryoku.problemsets;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -144,9 +144,8 @@ public class RatedProblemList implements List<RatedProblem> {
 		int lower = indexedBinarySearch(difficulty);
 		if(lower < 0) return Collections.emptyList();
 		int upper = indexedBinarySearch(difficulty+1);
-		
-		if(upper <= lower) throw new IllegalStateException();
 		if(upper < 0) upper = backend.size();
+		if(upper <= lower) throw new IllegalStateException();
 		return backend.subList(lower, upper);
 	}
 	

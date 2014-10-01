@@ -1,4 +1,4 @@
-package be.mapariensis.kanjiryoku.net.model;
+package be.mapariensis.kanjiryoku.problemsets;
 
 import be.mapariensis.kanjiryoku.model.Problem;
 

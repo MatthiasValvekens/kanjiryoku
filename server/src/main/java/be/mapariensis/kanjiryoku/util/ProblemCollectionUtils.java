@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -15,7 +16,13 @@ import java.util.Set;
 import org.apache.commons.collections4.list.SetUniqueList;
 
 import be.mapariensis.kanjiryoku.model.Problem;
-import be.mapariensis.kanjiryoku.net.model.ProblemOrganizer;
+import be.mapariensis.kanjiryoku.model.ProblemWithBlank;
+import be.mapariensis.kanjiryoku.problemsets.ProblemOrganizer;
+import be.mapariensis.kanjiryoku.problemsets.RatedProblem;
+import be.mapariensis.kanjiryoku.problemsets.RatedProblemList;
+import be.mapariensis.kanjiryoku.problemsets.organizers.CategoryOrganizer;
+import be.mapariensis.kanjiryoku.providers.KanjiryokuShindanParser;
+import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 public class ProblemCollectionUtils {
 	// convenience method, use only on sets of relatively small files
@@ -48,5 +55,33 @@ public class ProblemCollectionUtils {
 				return iter.hasNext();
 			}
 		};
+	}
+	
+	private static final String format = "data\\problems\\my_%s_%02d.txt";
+	private static final int difficultyLevels=11;
+	public static ProblemOrganizer buildKanjiryokuShindanOrganizer(int problemsPerCategory, Random rng) throws IOException, ParseException {
+		ProblemParser<ProblemWithBlank> parser = new KanjiryokuShindanParser();
+		List<RatedProblem> kaki = new ArrayList<RatedProblem>();
+		List<RatedProblem> yomi = new ArrayList<RatedProblem>();
+		for(int i = 1;i<=difficultyLevels;i++){
+			// read kaki
+			String fname=String.format(format,"kaki",i);
+			List<String> strings = Files.readAllLines(Paths.get(fname), Charset.forName("Shift-JIS"));
+			for(String s : strings) {
+				if(!s.startsWith("//"))
+					kaki.add(new RatedProblem(parser.parseProblem(s), i));
+			}
+			// read yomi
+			fname=String.format(format,"yomi",i);
+			strings = Files.readAllLines(Paths.get(fname), Charset.forName("Shift-JIS"));
+			for(String s : strings) {
+				if(!s.startsWith("//"))
+					yomi.add(new RatedProblem(parser.parseProblem(s), i));
+			}
+		}
+		List<RatedProblemList> cats = new ArrayList<RatedProblemList>(2);
+		cats.add(new RatedProblemList(yomi));
+		cats.add(new RatedProblemList(kaki));
+		return new CategoryOrganizer(cats, problemsPerCategory, rng);
 	}
 }

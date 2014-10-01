@@ -1,14 +1,14 @@
-package be.mapariensis.kanjiryoku.net.server.organizers;
+package be.mapariensis.kanjiryoku.problemsets.organizers;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
 import be.mapariensis.kanjiryoku.model.Problem;
-import be.mapariensis.kanjiryoku.net.model.ProblemOrganizer;
-import be.mapariensis.kanjiryoku.net.model.RatedProblem;
-import be.mapariensis.kanjiryoku.net.model.RatedProblemList;
-import static be.mapariensis.kanjiryoku.net.model.RatedProblem.*;
+import be.mapariensis.kanjiryoku.problemsets.ProblemOrganizer;
+import be.mapariensis.kanjiryoku.problemsets.RatedProblem;
+import be.mapariensis.kanjiryoku.problemsets.RatedProblemList;
+import static be.mapariensis.kanjiryoku.problemsets.RatedProblem.*;
 
 public class CategoryOrganizer implements ProblemOrganizer {
 	public final List<RatedProblemList> cats;
@@ -39,6 +39,7 @@ public class CategoryOrganizer implements ProblemOrganizer {
 		} else {
 			// hasNext returned true, so this will work
 			curCatIx++; // move to next category
+			problemsSet = 0;
 		}
 		// find a problem of the appropriate difficulty
 		RatedProblemList scope = cats.get(curCatIx);
