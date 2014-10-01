@@ -4,12 +4,16 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import be.mapariensis.kanjiryoku.model.KakiProblem;
 import be.mapariensis.kanjiryoku.model.ProblemWithBlank;
 import be.mapariensis.kanjiryoku.model.Word;
 import be.mapariensis.kanjiryoku.model.YomiProblem;
 
 public class KanjiryokuShindanParser implements ProblemParser<ProblemWithBlank> {
+	private static final Logger log = LoggerFactory.getLogger(KanjiryokuShindanParser.class);
 	private static final char BLANK_DELIMITER = '（';
 	
 	
@@ -64,7 +68,10 @@ public class KanjiryokuShindanParser implements ProblemParser<ProblemWithBlank> 
 			main = !main;
 			parserPos = nextItem;
 		}
-		if(blankPos == -1) throw new ParseException("No blank in problem",-1);
+		if(blankPos == -1) {
+			log.error("No blank in problem {}",input);
+			throw new ParseException("No blank in problem",-1);
+		}
 		return yomi ? new YomiProblem(words, blankPos) : new KakiProblem(words, blankPos);
 	}
 	private static int findNext(String string, char c, int start) throws ParseException {
