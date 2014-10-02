@@ -10,7 +10,6 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import be.mapariensis.kanjiryoku.Constants;
 import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
 import be.mapariensis.kanjiryoku.model.Problem;
@@ -80,7 +79,7 @@ public class TakingTurnsServer implements GameServerInterface {
 					// submit all strokes
 					int width = Integer.parseInt(msg.get(1));
 					int height = Integer.parseInt(msg.get(2));
-					List<Character> chars =guess.guess(width, height, strokes, Constants.TOLERANCE);
+					List<Character> chars =guess.guess(width, height, strokes);
 					
 					boolean answer = currentProblem.checkSolution(chars, problemPosition);
 					// build answer packet

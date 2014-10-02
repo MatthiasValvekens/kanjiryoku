@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -187,6 +188,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			} catch (IndexOutOfBoundsException ex){
 				log.debug("Badly formed command.");
 				queueProcessingError(ch, new ProtocolSyntaxException("Badly formed command",ex));
+			} catch(CancelledKeyException ex) {
+				// if we get a CancelledKeyException here, this means the user has already been deregistered, and
+				// ensureHandler failed to set up a handler for the connection in question. In other words, this thread attempted to
+				// write a message after a remote disconnect.
+				log.warn("Failed to write message, peer already disconnected.");
 			} catch (Exception e) {
 				log.error("Failed to process command.",e);
 				queueProcessingError(ch, new ServerBackendException(e));
@@ -194,13 +200,15 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 
 	}
-	private MessageHandler ensureHandler(SocketChannel ch) {
+	private MessageHandler ensureHandler(SocketChannel ch) throws CancelledKeyException {
 		// first try the user store for a handler
 		MessageHandler h = store.getOutbox(ch);
 		//check anonymous handlers next
 		if(h==null) h = strayHandlers.get(ch);
 		if(h==null) {
-			h = new MessageHandler(ch.keyFor(selector));
+			SelectionKey key = ch.keyFor(selector);
+			if(key == null) throw new CancelledKeyException();
+			h = new MessageHandler(key);
 			strayHandlers.put(ch,h);
 		}
 		return h;

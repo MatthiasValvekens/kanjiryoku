@@ -20,12 +20,15 @@ import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 public class ZinniaGuesser implements KanjiGuesser {
 	private static final Logger log = LoggerFactory.getLogger(ZinniaGuesser.class);
 	private final Recognizer eng;
+	private final int tolerance;
 	public static class Factory implements KanjiGuesserFactory {
 
 		@Override
 		public KanjiGuesser getGuesser(IProperties config)
 				throws BadConfigurationException, IOException {
-			return new ZinniaGuesser(config.getRequired(ConfigFields.MODEL_FILE, String.class));
+			int tolerance = config.getTyped(ConfigFields.CR_TOLERANCE, Integer.class,ConfigFields.CR_TOLERANCE_DEFAULT);
+			String modelfile = config.getRequired(ConfigFields.MODEL_FILE, String.class);
+			return new ZinniaGuesser(modelfile,tolerance);
 		}
 		
 	}
@@ -39,15 +42,17 @@ public class ZinniaGuesser implements KanjiGuesser {
 			log.error("Failed to load Zinnia library.",err);
 		}
 	}
-	public ZinniaGuesser(Recognizer eng) {
+	public ZinniaGuesser(Recognizer eng, int tolerance) {
 		this.eng = eng;
+		this.tolerance = tolerance;
 	}
-	public ZinniaGuesser(String modelfile) throws IOException {
+	public ZinniaGuesser(String modelfile, int tolerance) throws IOException {
 		this.eng = new Recognizer();
-		if(!eng.open(modelfile)) throw new IOException("Failed to read model file.") ;
+		this.tolerance = tolerance;
+		if(!eng.open(modelfile)) throw new IOException("Failed to read model file.");
 	}
 	@Override
-	public List<Character> guess(int width,int height, List<List<Dot>> strokes, int numCandidates) {
+	public List<Character> guess(int width,int height, List<List<Dot>> strokes) {
 		// Zinnia character model
 		org.chasen.crfpp.Character charmodel = new org.chasen.crfpp.Character();
 		charmodel.set_width(width);
@@ -63,12 +68,12 @@ public class ZinniaGuesser implements KanjiGuesser {
 		Result res;
 		// synchronize on the recognizer, just to be safe
 		synchronized(eng) {
-			res = eng.classify(charmodel, numCandidates);
+			res = eng.classify(charmodel, tolerance);
 		}
 		
 		//process Zinnia result
-		List<Character> chars = new ArrayList<Character>(numCandidates);
-		for(int i = 0; i<numCandidates; i++) {
+		List<Character> chars = new ArrayList<Character>(tolerance);
+		for(int i = 0; i<tolerance; i++) {
 			String value = res.value(i);
 			float score = res.score(i);
 			log.debug("Candidate {} is {} with score {}",i+1,value,score);

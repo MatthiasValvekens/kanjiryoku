@@ -42,6 +42,8 @@ public class ConfigFields {
 	public static final String FILE_NAME_CATEGORY_VAR = "category";
 	public static final String FILE_NAME_DIFFICULTY_FORMAT = "difficultyFormat";
 	public static final String FILE_NAME_DIFFICULTY_FORMAT_DEFAULT = "%02d";
+	public static final String CR_TOLERANCE = "answerTolerance";
+	public static final int CR_TOLERANCE_DEFAULT = 50;
 	
 	
 	
