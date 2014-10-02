@@ -76,6 +76,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		synchronized(submitLock) {
 			try {
 				if(msg.argCount() == 3) {
+					log.info("Finalizing input...");
 					// submit all strokes
 					int width = Integer.parseInt(msg.get(1));
 					int height = Integer.parseInt(msg.get(2));

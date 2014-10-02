@@ -70,7 +70,13 @@ public class ProblemCollectionUtils {
 			for(int i = minDiff;i<=maxDiff;i++){
 				String fname=buildFilename(format, categoryName, i, digitFormat);
 				log.info("Loading problems from {}",fname);
-				List<String> strings = Files.readAllLines(Paths.get(fname), Charset.forName("Shift-JIS"));
+				List<String> strings;
+				try {
+					strings = Files.readAllLines(Paths.get(fname), Charset.forName("Shift-JIS"));
+				} catch (IOException ex) {
+					log.warn("Failed to read file {}",fname);
+					continue;
+				}
 				for(String s : strings) {
 					if(!s.startsWith("//"))
 						currentCategory.add(new RatedProblem(parser.parseProblem(s), i));

@@ -45,7 +45,7 @@ public class CategoryOrganizer implements ProblemOrganizer {
 		} else {
 			// hasNext returned true, so this will work
 			curCatIx++; // move to next category
-			problemsSet = 0;
+			problemsSet = 1;
 			if(resetDifficulty) difficulty=minDifficulty;
 		}
 		// find a problem of the appropriate difficulty
