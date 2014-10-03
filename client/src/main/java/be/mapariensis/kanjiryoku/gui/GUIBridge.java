@@ -6,4 +6,5 @@ public interface GUIBridge {
 	public ServerUplink getUplink();
 	public GameClientInterface getClient();
 	public ChatInterface getChat();
+	public void setUsername(String username);
 }

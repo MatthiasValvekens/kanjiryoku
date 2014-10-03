@@ -40,7 +40,7 @@ public class ServerUplink extends Thread implements Closeable {
 	private final Selector selector;
 	private final InetAddress addr;
 	private final int port;
-	private final String username;
+	private String username;
 	private MessageHandler messageHandler;
 	private SelectionKey key;
 	private final GUIBridge bridge;
@@ -53,7 +53,9 @@ public class ServerUplink extends Thread implements Closeable {
 		this.username = username;
 		threadPool = Executors.newFixedThreadPool(WORKER_THREADS, new NetworkThreadFactory(BUFFER_MAX,selector));
 	}
-	
+	public void setUsername(String username) {
+		this.username = username; 
+	}
 	
 	@Override
 	public void run() {

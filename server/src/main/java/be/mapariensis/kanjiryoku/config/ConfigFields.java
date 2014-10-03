@@ -18,6 +18,9 @@ public class ConfigFields {
 	public static final String WORKER_BUFFER_SIZE = "workerBufferSize";
 	public static final int WORKER_BUFFER_SIZE_DEFAULT = 2048;	
 	
+	public static final String USERNAME_LIMIT = "usernameCharLimit";
+	public static final int USERNAME_LIMIT_DEFAULT = 10;
+	
 	
 	// CR-related settings
 	
@@ -46,3 +49,4 @@ public class ConfigFields {
 	public static final String FILE_NAME_DIFFICULTY_FORMAT_DEFAULT = "%02d";
 	
 }
+

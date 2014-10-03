@@ -6,6 +6,8 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import javax.swing.AbstractAction;
 import javax.swing.JFrame;
@@ -22,14 +24,19 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.providers.KanjiryokuShindanParser;
 
 public class MainWindow extends JFrame implements GUIBridge {
+	public static final String CSS_FILE = "chatcss.css";
 	private final ServerUplink serv;
-	private final ChatPanel chat;
+	private final ChatInterface chat;
 	private final GamePanel gci;
+	private final String serverInfoString;
 	public MainWindow(InetAddress addr, int port, String username) throws IOException {
-		super(String.format("Kanjiryoku - %s (%s:%s)",username,addr,port));
+		this.serverInfoString = String.format("(%s:%s)",addr,port);
+		setTitle(String.format("Kanjiryoku - %s",this.serverInfoString));
 		setLayout(new FlowLayout());
-		chat = new ChatPanel(this);
-		add(chat);
+		String css = new String(Files.readAllBytes(Paths.get(CSS_FILE)));
+		HTMLChatPanel chatComponent = new HTMLChatPanel(this,css);
+		chat = chatComponent;
+		add(new ChatPanel(this,chatComponent));
 		serv = new ServerUplink(addr, port, username, this);
 		gci = new GamePanel(this, new KanjiryokuShindanParser());
 		add(gci);
@@ -128,5 +135,10 @@ public class MainWindow extends JFrame implements GUIBridge {
 	@Override
 	public ChatInterface getChat() {
 		return chat;
+	}
+	@Override
+	public void setUsername(String username) {
+		setTitle(String.format("Kanjiryoku - %s %s",username,serverInfoString));
+		serv.setUsername(username);
 	}
 }

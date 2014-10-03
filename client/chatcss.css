@@ -1,0 +1,48 @@
+body {
+	background-color: #fffff0;
+	font-size: 10px;
+}
+p {
+	margin: 0px;
+	padding: 0px;
+}
+#chatTable {
+	border-style: none;
+	font: Meiryo;
+	table-layout: fixed;
+	width: 300px;
+}
+#chatTable td {
+	padding: 0px;
+}
+.usercol {
+	display: inline-block;
+	vertical-align: top;
+	font-weight: bold;
+	width: 70px;
+}
+.messagecol {
+	margin-left: 20px;
+	text-align: left;
+	width: 230px;
+}
+.system {
+	font-weight: bold;
+	font-style: italic;
+	color: #c45000;
+}
+.error {
+	font-style: italic;
+}
+.error-header {
+	font-style: italic;
+	font-weight: bold;
+	color: red;
+}
+.server {
+	font-style: italic;
+}
+a {
+	text-decoration: none;
+	font-size: 2em;
+}

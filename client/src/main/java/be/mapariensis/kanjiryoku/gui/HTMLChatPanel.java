@@ -1,0 +1,160 @@
+package be.mapariensis.kanjiryoku.gui;
+
+import java.awt.BorderLayout;
+import java.io.IOException;
+import java.lang.Character.UnicodeBlock;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+
+import javax.swing.JEditorPane;
+import javax.swing.JPanel;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Element;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.html.HTML;
+import javax.swing.text.html.HTMLDocument;
+import javax.swing.text.html.HTMLEditorKit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import be.mapariensis.kanjiryoku.gui.utils.DummyResponseHandler;
+import be.mapariensis.kanjiryoku.gui.utils.YesNoTask;
+import be.mapariensis.kanjiryoku.net.client.ServerResponseHandler;
+import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
+import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
+
+public class HTMLChatPanel extends JPanel implements ChatInterface {
+	private static final Logger log = LoggerFactory.getLogger(HTMLChatPanel.class);
+	private final JEditorPane textPane;
+	private final Executor promptThreads = Executors.newSingleThreadExecutor(); // ensure only one prompt can exist at a time
+	private final HTMLDocument document;
+	private final Element table;
+	private final GUIBridge bridge;
+	
+	public static final String TABLE_ID = "chatTable";
+	public static final String USERCOL_CLASS = "usercol";
+	public static final String MESSAGECOL_CLASS = "messagecol";
+	public static final String SERVER_CLASS = "server";
+	public static final String SYSTEM_CLASS = "system";
+	public static final String ERROR_CLASS = "error";
+	public static final String ERROR_HEADER_CLASS = "error-header";
+	private final ServerResponseHandler dumpToChat = new DummyResponseHandler(this);	
+	
+	public HTMLChatPanel(GUIBridge bridge, String css) {
+		this.bridge = bridge;
+		HTMLEditorKit kit = new HTMLEditorKit();
+		kit.getStyleSheet().addRule(css);
+		
+		textPane = new JEditorPane();
+		textPane.setEditable(false);
+		textPane.setEditorKit(kit);
+		textPane.setContentType("text/html");
+		document = (HTMLDocument) textPane.getDocument();
+		
+		Element body = document.getElement(document.getDefaultRootElement(),StyleConstants.NameAttribute,HTML.Tag.BODY);
+		try {
+			document.insertBeforeEnd(body, "<table id=\""+TABLE_ID+"\"></table>");
+		} catch (BadLocationException | IOException e) {
+			log.warn("Failed to insert",e);
+		}
+		textPane.addHyperlinkListener(new HyperlinkListener() {
+			
+			@Override
+			public void hyperlinkUpdate(HyperlinkEvent e) {
+				if(e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+					try {
+						AttributeSet anchorAttributes = (AttributeSet) e.getSourceElement().getAttributes().getAttribute(HTML.Tag.A);
+						log.info("Clickety {}",anchorAttributes.getAttribute(HTML.Attribute.HREF));
+					} catch (RuntimeException ex) {
+						log.warn("Document structure is borked - could not process hyperlink event.");
+					}
+				}
+			}
+		});
+		table = document.getElement(TABLE_ID);
+		setLayout(new BorderLayout());
+		add(textPane, BorderLayout.CENTER);
+	}
+	@Override
+	public void displayServerMessage(String message) {
+		append(wrap("p","*server*",SERVER_CLASS), clickableKanji(message));
+	}
+
+	@Override
+	public void displayUserMessage(String from, String message) {
+		append(new StringBuilder().append('[').append(from).append(']'),message);
+	}
+
+	@Override
+	public void displayErrorMessage(int errorId, String message) {
+		append(wrap("p",String.format("Error E%03d",errorId),ERROR_HEADER_CLASS),wrap("p",message,ERROR_CLASS));
+	}
+
+	@Override
+	public void displayErrorMessage(ClientServerException ex) {
+		displayErrorMessage(ex.errorCode, ex.getMessage());
+	}
+
+	@Override
+	public void displaySystemMessage(String message) {
+		append(wrap("p","*system*",SYSTEM_CLASS), wrap("p",message,SYSTEM_CLASS));
+	}
+
+	@Override
+	public void yesNoPrompt(String question, NetworkMessage ifYes,
+			NetworkMessage ifNo) {
+		promptThreads.execute(new YesNoTask(this,bridge.getUplink(),question, ifYes,ifNo));
+	}
+
+	@Override
+	public ServerResponseHandler getDefaultResponseHandler() {
+		return dumpToChat;
+	}
+	
+	private static String wrap(String tag,String content, String... classes) {
+		StringBuilder sb = new StringBuilder(classes[0]);
+		for(int i = 1; i<classes.length;i++) {
+			sb.append(' ').append(classes[i]);
+		}
+		return String.format("<%s " +
+				"class=\"%s\">%s</%s>",tag,sb,content,tag);
+	}
+	
+	private static final String CSS_FORMAT_STRING = "<tr><td class=\""+USERCOL_CLASS+"\">%s</td><td class=\""+MESSAGECOL_CLASS+"\">%s</td></tr>"; 
+	private synchronized void append(Object usercol, Object messagecol) {
+		try {
+			document.insertBeforeEnd(table, String.format(CSS_FORMAT_STRING,usercol,messagecol));
+		} catch(IOException | BadLocationException ex) {
+			log.warn("Failed to append.",ex);
+		}
+	}
+	
+	private static CharSequence clickableKanji(String input) {
+		// locate kanji
+		List<Integer> locations = new ArrayList<Integer>();
+		locations.add(-1);
+		for(int i = 0; i<input.length(); i++) {
+			if(UnicodeBlock.of(input.charAt(i)) == UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS) {
+				locations.add(i);
+			}
+		}
+		StringBuilder sb = new StringBuilder();
+		for(int i = 1; i<locations.size();i++) {
+			int curLoc = locations.get(i);
+			sb.append(input,locations.get(i-1)+1,curLoc);
+			sb.append(clickableChar(input.charAt(curLoc)));
+		}
+		int lastloc = locations.get(locations.size()-1);
+		if(lastloc < input.length() - 1) sb.append(input,lastloc+1,input.length()); // play it safe
+		return sb;
+	}
+	
+	private static CharSequence clickableChar(char c) {
+		return new StringBuilder().append("<a href=\"").append(c).append("\">").append(c).append("</a>");
+	}
+}

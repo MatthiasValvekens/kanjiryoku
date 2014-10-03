@@ -62,7 +62,9 @@ public enum ClientCommand {
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
 			checkArgs(msg,2);
-			bridge.getChat().displayServerMessage(String.format("Welcome %s",msg.get(1)));
+			String username = msg.get(1);
+			bridge.setUsername(username);
+			bridge.getChat().displayServerMessage(String.format("Welcome %s",username));
 		}
 		
 	}, FROM {

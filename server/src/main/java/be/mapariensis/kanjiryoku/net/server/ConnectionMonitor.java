@@ -48,6 +48,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final UserStore store = new UserStore();
 	private final SessionManagerImpl sessman;
 	private final int bufferMax;
+	private final int usernameCharLimit;
 	
 	// store message handlers for anonymous connections here until they register/identify
 	private final Map<SocketChannel,MessageHandler> strayHandlers = new ConcurrentHashMap<SocketChannel,MessageHandler>();
@@ -73,6 +74,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			throw new BadConfigurationException("Failed to instantiate guesser factory.",ex);
 		}
 		sessman = new SessionManagerImpl(config,this,factory);
+		usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT, Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
 		setName("ConnectionMonitor:"+port);
 	}
 	@Override
@@ -179,6 +181,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				// check for REGISTER command (which gets special treatment)
 				if(command == ServerCommand.REGISTER) {
 					String handle = msg.get(1);
+					handle = handle.substring(0,Math.min(usernameCharLimit, handle.length())); // truncate handle
 					register(new User(handle,ch,new MessageHandler(ch.keyFor(selector))));
 				} else {
 					User u = store.getUser(ch);

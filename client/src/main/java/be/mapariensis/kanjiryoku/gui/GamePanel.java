@@ -39,6 +39,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		setLayout(new BorderLayout());
 		pane = new DrawPanel(size,this);
 		pane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+		cont.setBorder(BorderFactory.createLineBorder(Color.GRAY));
 		add(cont,BorderLayout.NORTH);
 		add(pane, BorderLayout.CENTER);
 		submitButton = new JButton(new AbstractAction("Submit") {
