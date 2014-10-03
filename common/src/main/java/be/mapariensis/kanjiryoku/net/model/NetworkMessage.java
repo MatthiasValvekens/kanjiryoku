@@ -10,10 +10,15 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static be.mapariensis.kanjiryoku.net.Constants.*;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
+import be.mapariensis.kanjiryoku.net.util.MessageFragmentBuffer;
 
 public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessage> {
+	private static final Logger log = LoggerFactory.getLogger(NetworkMessage.class);
 	public static final char ATOMIZER = '"'; 
 	public static final char DELIMITER = ' ';
 	public static final char ESCAPE_CHAR = '\\';
@@ -42,7 +47,7 @@ public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessa
 		return String.valueOf(args.get(ix));
 	}
 	
-	public static List<NetworkMessage> readRaw(ReadableByteChannel sock, ByteBuffer buf) throws IOException, EOFException {
+	public static List<NetworkMessage> readRaw(ReadableByteChannel sock, ByteBuffer buf, MessageFragmentBuffer mfb) throws IOException, EOFException {
 		buf.clear();
 		int bytesRead;
 		synchronized(sock) {
@@ -55,7 +60,33 @@ public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessa
 		String msgString = new String(msgBytes, ENCODING);
 		String[] lines = msgString.split(EOMSTR);
 		ArrayList<NetworkMessage> result = new ArrayList<NetworkMessage>(lines.length);
+		if(msgBytes[msgBytes.length - 1]!=EOM) {
+			int i;
+			// find last EOM in message
+			for(i = msgBytes.length - 1;i>0;i--) {
+				if(msgBytes[i-1]==EOM) break;
+			}
+			// partial message
+			mfb.postMessage(msgBytes,i,msgBytes.length - i);
+			lines[lines.length - 1] = null; // mark last part as invalid
+		} else if(mfb.readingPartialMessage()) { // submitting final part of message.
+			// find first EOM in message
+			int i;
+			for(i = 0;i<msgBytes.length;i++) {
+				if(msgBytes[i]==EOM) break;
+			}
+			NetworkMessage msg = mfb.postMessage(msgBytes, 0, i+1); // ensure the EOM is included
+			if(msg == null) {
+				log.error("Expected finalized message, but got null");
+			} else {
+				result.add(msg);
+			}
+			lines[0] = null; // mark first part as invalid
+		}
+		
+		
 		for(String line : lines) {
+			if(line == null) continue;
 			result.add(buildArgs(line));
 		}
 		return result;	
