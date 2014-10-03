@@ -55,7 +55,6 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 		textPane.setEditorKit(kit);
 		textPane.setContentType("text/html");
 		document = (HTMLDocument) textPane.getDocument();
-		
 		Element body = document.getElement(document.getDefaultRootElement(),StyleConstants.NameAttribute,HTML.Tag.BODY);
 		try {
 			document.insertBeforeEnd(body, "<table id=\""+TABLE_ID+"\"></table>");
@@ -129,6 +128,8 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	private synchronized void append(Object usercol, Object messagecol) {
 		try {
 			document.insertBeforeEnd(table, String.format(CSS_FORMAT_STRING,usercol,messagecol));
+			// caret auto update doesn't work
+			textPane.setCaretPosition(document.getLength());
 		} catch(IOException | BadLocationException ex) {
 			log.warn("Failed to append.",ex);
 		}

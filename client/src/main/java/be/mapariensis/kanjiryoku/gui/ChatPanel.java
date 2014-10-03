@@ -31,6 +31,7 @@ public class ChatPanel extends JPanel {
 		JPanel controls = new JPanel();
 		final JTextField input = new JTextField(20);
 		controls.add(input);
+		
 		input.addActionListener(new ActionListener() {
 			
 			@Override
