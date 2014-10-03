@@ -12,9 +12,13 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.geom.Path2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
@@ -22,10 +26,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.cr.Dot;
+import be.mapariensis.kanjiryoku.gui.utils.FadingOverlay;
 
 
 public class DrawPanel extends JPanel implements DrawingPanelInterface {
 	private static final Logger log = LoggerFactory.getLogger(DrawPanel.class);
+	private static final BufferedImage checkmarkImage;
+
+	static {
+		BufferedImage thing = null;
+		try {
+			thing = ImageIO.read(new File("checkmark.png"));
+		} catch (IOException e) {
+			log.warn("Failed to read checkmark.png");
+		}
+		checkmarkImage = thing;
+	}
 	private final List<List<Dot>> strokes = new LinkedList<List<Dot>>();
 	private List<Dot> currentStroke;
 	private final GameClientInterface server;
@@ -33,6 +49,7 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 	private static final Stroke BRUSH_STROKE = new BasicStroke(BRUSH_RADIUS, BasicStroke.CAP_ROUND,BasicStroke.JOIN_MITER);
 	private final Dimension size;
 	private boolean locked = true, solvedProblem = false;
+	private final FadingOverlay fader = new FadingOverlay(this, checkmarkImage);
 	public DrawPanel(Dimension size, GameClientInterface server) {
 		this.server = server;
 		this.size = size;
@@ -41,13 +58,13 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 		addMouseMotionListener(listener);
 		clearStrokes();
 	}
-	
+
 	public void endProblem() {
 		setLock(true);
 		solvedProblem = true;
-		repaint();
+		fader.startFade();
 	}
-	
+
 	@Override
 	public Dimension getSize() {
 		return size;
@@ -56,11 +73,7 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 	public Dimension getPreferredSize() {
 		return size;
 	}
-//	public List<Character> getChars() {
-//		//return server.guess(size.width, size.height,strokes, Constants.TOLERANCE);
-//		
-//	}
-	
+
 	@Override
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
@@ -91,9 +104,10 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 			}
 			g2d.draw(path);
 		}
+		fader.paint(g2d);
 		g2d.dispose();
 	}
-	
+
 	@Override
 	public void clearStrokes() {
 		strokes.clear();
@@ -102,8 +116,8 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 		strokes.add(currentStroke);
 		repaint();
 	}
-	
-	
+
+
 	private class DrawingListener implements MouseMotionListener, MouseListener {
 
 		@Override
@@ -131,7 +145,7 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 				currentStroke.add(new Dot(e.getX(),e.getY()));
 				log.debug("\nFinished stroke {}: {} ",strokes.size(), currentStroke);
 				server.sendStroke(currentStroke);
-				
+
 				currentStroke = new LinkedList<Dot>();
 				strokes.add(currentStroke);
 				repaint();

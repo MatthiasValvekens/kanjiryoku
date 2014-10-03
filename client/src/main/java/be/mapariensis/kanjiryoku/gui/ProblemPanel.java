@@ -24,6 +24,7 @@ import be.mapariensis.kanjiryoku.model.YomiProblem;
 public class ProblemPanel extends JPanel{
 	private static final Logger log = LoggerFactory.getLogger(ProblemPanel.class);
 	private static final Map<Class<? extends Problem>, ProblemRenderer> renderers;
+	private Character lastWrongInput = null;
 	public ProblemPanel() {
 		setPreferredSize(new Dimension(300,120));
 	}
@@ -58,6 +59,7 @@ public class ProblemPanel extends JPanel{
 	}
 	public void setProblem(Problem problem) {
 		this.problem = problem;
+		lastWrongInput = null;
 		correctInputs.clear();
 		counter = 0;
 		actualSolution = problem != null ? problem.getFullSolution() : null;
@@ -82,18 +84,18 @@ public class ProblemPanel extends JPanel{
 		if(problem != null) {
 			ProblemRenderer r = getRenderer(problem);
 			if(r!= null) {
-				r.drawProblem(g2d, correctInputs, problem);
+				r.drawProblem(g2d, correctInputs, problem,lastWrongInput);
 			} else {
 				log.warn("Could not render problem %s",problem.getFullSolution());
-				TextRendering.renderWord(g2d, "No renderer available for this problem","");
+				TextRendering.renderWord(g2d, "No renderer available for this problem","",null);
 			}
 		} else {
-			TextRendering.renderWord(g2d, "No problem selected", "");
+			TextRendering.renderWord(g2d, "No problem selected", "",null);
 		}
 		g2d.dispose();
 	}
 	public char addCorrectCharacter() {
-		
+		lastWrongInput = null;
 		if(counter>actualSolution.length()) throw new IllegalStateException("Too many input submissions");
 		char added = actualSolution.charAt(counter);
 		log.info("Adding new character "+added);
@@ -101,5 +103,10 @@ public class ProblemPanel extends JPanel{
 		counter++;
 		repaint();
 		return added;
+	}
+	
+	public void setLastWrongInput(Character c) {
+		lastWrongInput = c;
+		repaint();
 	}
 }

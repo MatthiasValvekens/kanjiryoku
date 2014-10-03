@@ -19,7 +19,7 @@ public class ChatPanel extends JPanel {
 	public static final int HISTORY_SIZE=20;
 	
 	private final History history = new StandardHistoryImpl(HISTORY_SIZE);
-	
+	private boolean firstManualCommandSent = false;
 	
 	public ChatPanel(final GUIBridge bridge, JComponent chatRenderer) {
 		setPreferredSize(new Dimension(400,600));
@@ -40,6 +40,10 @@ public class ChatPanel extends JPanel {
 				history.add(msg);
 				if(msg.isEmpty()) return;
 				if(msg.charAt(0)==':') {
+					if(!firstManualCommandSent) { 
+						bridge.getChat().displaySystemMessage("Lines starting with ':' are interpreted as server commands.");
+						firstManualCommandSent = true;
+					}
 					bridge.getUplink().enqueueMessage(NetworkMessage.buildArgs(msg.substring(1))); // interpret the rest as a command
 					input.setText("");
 					return;

@@ -8,6 +8,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.ParseException;
 import java.util.List;
+
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -23,12 +24,14 @@ import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 public class GamePanel extends JPanel implements GameClientInterface {
 	private static final Logger log = LoggerFactory.getLogger(GamePanel.class);
+	
+	
 	private final DrawPanel pane;
 	private final GUIBridge bridge;
 	private final ProblemParser<?> parser;
 	private final JButton submitButton;
 	private static final Dimension size = new Dimension(300, 400);
-	
+	 
 	private int inputCounter = 0; // keeps track of the current position in the problem for convenience
 	private final ProblemPanel cont = new ProblemPanel();
 
@@ -38,6 +41,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		this.bridge = bridge;
 		setLayout(new BorderLayout());
 		pane = new DrawPanel(size,this);
+		
 		pane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
 		cont.setBorder(BorderFactory.createLineBorder(Color.GRAY));
 		add(cont,BorderLayout.NORTH);
@@ -46,10 +50,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT, pane.getWidth(),pane.getHeight()));
-
-				pane.clearStrokes();
-				
+				bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT, pane.getWidth(),pane.getHeight()));				
 			}
 		});
 		add(submitButton,BorderLayout.SOUTH);
@@ -79,14 +80,11 @@ public class GamePanel extends JPanel implements GameClientInterface {
 			if(inputChar != added) {
 				log.warn("Added char differs from input char! %s <> %s",added,inputChar);
 			}
-			if(++inputCounter == cont.getSolution().length()-1) {
-				try {
-					Thread.sleep(500); // TODO : animation
-				} catch (InterruptedException e1) {
-				}
+			if(++inputCounter == cont.getSolution().length()) {
+				pane.endProblem();
 			}
 		} else {
-			// TODO : display char in different color if wrong
+			cont.setLastWrongInput(inputChar);
 		}
 	}
 	@Override
@@ -95,7 +93,8 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	}
 	@Override
 	public void setProblem(Problem p) {
-		pane.endProblem();
+		inputCounter = 0;
+		pane.clearStrokes();
 		cont.setProblem(p);
 	}
 	
@@ -107,6 +106,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	
 	@Override
 	public void clearInput() {
+		cont.setLastWrongInput(null);
 		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.CLEAR));
 	}
 	@Override
