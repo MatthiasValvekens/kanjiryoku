@@ -81,7 +81,7 @@ public class TakingTurnsServer implements GameServerInterface {
 					int width = Integer.parseInt(msg.get(1));
 					int height = Integer.parseInt(msg.get(2));
 					List<Character> chars =guess.guess(width, height, strokes);
-					
+					log.info("Retrieved {} characters",chars.size());
 					boolean answer = currentProblem.checkSolution(chars, problemPosition);
 					// build answer packet
 					char res;
@@ -110,7 +110,7 @@ public class TakingTurnsServer implements GameServerInterface {
 						for(GameListener l : listeners) {
 							log.info("Delivering answer "+res);
 							l.deliverAnswer(source, answer, res,rh);
-							l.clearStrokes(null);
+							if(rh == null) l.clearStrokes(null); // do not clear strokes on final input
 						}
 					}					
 				}
@@ -118,12 +118,12 @@ public class TakingTurnsServer implements GameServerInterface {
 				// SUBMIT [list_of_dots]
 				else if(msg.argCount() == 2) {
 					List<Dot> stroke = ParsingUtils.parseDots(msg.get(1));
+					strokes.add(stroke);
 					synchronized(listeners) {
 						for(GameListener l : listeners) {
 							l.deliverStroke(source, stroke);
 						}
 					}
-					strokes.add(stroke);
 				} else throw new ArgumentCountException(ArgumentCountException.Type.UNEQUAL, ServerCommand.SUBMIT);
 			} catch(NumberFormatException ex) {
 				throw new ProtocolSyntaxException(ex);
