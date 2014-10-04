@@ -63,7 +63,10 @@ public enum ServerCommand {
 			}
 			synchronized(client.sessionLock()) {
 				Session sess;
-				if((sess = client.getSession()) == null) throw new SessionException("You are not currently in a session.");
+				if((sess = client.getSession()) == null) {
+					userman.lobbyBroadcast(client, msg);
+					return;
+				}
 				sess.broadcastMessage(client, msg);
 			}
 		}
@@ -135,7 +138,7 @@ public enum ServerCommand {
 			}
 			
 		}
-	},KICK {
+	}, KICK {
 
 		@Override
 		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {

@@ -54,10 +54,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final int bufferMax;
 	private final int usernameCharLimit;
 	private final Runnable rereadConfig;
-	private final boolean adminEnabled;
+	private final IProperties config;
 	// store message handlers for anonymous connections here until they register/identify
 	private final Map<SocketChannel,MessageHandler> strayHandlers = new ConcurrentHashMap<SocketChannel,MessageHandler>();
 	public ConnectionMonitor(IProperties config, Runnable rereadConfig) throws IOException, BadConfigurationException {
+		this.config = config;
 		int port = config.getRequired(ConfigFields.PORT,Integer.class);
 		// get a socket
 		ssc = ServerSocketChannel.open();
@@ -79,8 +80,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 		sessman = new SessionManagerImpl(config,this,factory);
 		usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT, Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
-		this.adminEnabled = config.getTyped(ConfigFields.ENABLE_ADMIN, Boolean.class,ConfigFields.ENABLE_ADMIN_DEFAULT);
 		this.rereadConfig = rereadConfig;
+		
 		
 		
 		setName("ConnectionMonitor:"+port);
@@ -214,11 +215,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			} catch (IndexOutOfBoundsException ex){
 				log.debug("Badly formed command.");
 				queueProcessingError(ch, new ProtocolSyntaxException("Badly formed command",ex));
-			} catch(CancelledKeyException ex) {
-				// if we get a CancelledKeyException here, this means the user has already been deregistered, and
-				// ensureHandler failed to set up a handler for the connection in question. In other words, this thread attempted to
-				// write a message after a remote disconnect.
-				log.warn("Failed to write message, peer already disconnected.");
 			} catch (Exception e) {
 				log.error("Failed to process command.",e);
 				queueProcessingError(ch, new ServerBackendException(e));
@@ -240,7 +236,14 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		return h;
 	}
 	private void queueMessage(SocketChannel ch, NetworkMessage message) {
-		ensureHandler(ch).enqueue(message);
+		try {
+			ensureHandler(ch).enqueue(message);
+		} catch(CancelledKeyException | NullPointerException ex) {
+			// if we get a CancelledKeyException here, this means the user has already been deregistered, and
+			// ensureHandler failed to set up a handler for the connection in question. In other words, this thread attempted to
+			// write a message after a remote disconnect.
+			log.warn("Failed to write message, peer already disconnected.");
+		} 
 	}
 
 	private void queueProcessingError(SocketChannel ch,	ServerException ex) {
@@ -272,6 +275,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		// message behaviour for remaining messages in the old handler is undefined now, but this shouldn't really matter
 		messageUser(user, new NetworkMessage(ClientCommandList.WELCOME,user.handle));
 		log.info("Registered user {}",user);
+		lobbyBroadcast(user, new NetworkMessage(ClientCommandList.SAY, String.format("User %s entered the room.",user.handle)));
 	}
 
 	@Override
@@ -322,14 +326,34 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private static enum AdminCommand {
 		RECONF {
 			@Override
-			public Runnable getTask(ConnectionMonitor mon, NetworkMessage command) {
+			public Runnable getTask(User issuer, ConnectionMonitor mon, NetworkMessage command) {
 				return mon.rereadConfig;
 			}
+		}, BROADCAST {
+			@Override
+			public Runnable getTask(final User issuer, final ConnectionMonitor mon, final NetworkMessage command) throws ArgumentCountException {
+				if(command.argCount()<2) throw new ArgumentCountException(Type.TOO_FEW, BROADCAST);
+				return new Runnable() {
+					@Override
+					public void run() {
+						NetworkMessage message = new NetworkMessage(ClientCommandList.SAY,String.format("[GLOBAL from %s]\n%s",issuer.handle,command.get(1)));
+						for(User u : mon.store) {
+							mon.messageUser(u, message);
+						}
+					}
+				};
+			}
 		};
-		public abstract Runnable getTask(ConnectionMonitor mon, NetworkMessage command);
+		public abstract Runnable getTask(User issuer, ConnectionMonitor mon, NetworkMessage command) throws ProtocolSyntaxException;
 	}
 	@Override
 	public void adminCommand(User issuer, int id, NetworkMessage commandMessage) throws UserManagementException,ProtocolSyntaxException {
+		boolean adminEnabled;
+		try {
+			adminEnabled = config.getTyped(ConfigFields.ENABLE_ADMIN, Boolean.class,ConfigFields.ENABLE_ADMIN_DEFAULT);
+		} catch (BadConfigurationException e1) {
+			adminEnabled = ConfigFields.ENABLE_ADMIN_DEFAULT;
+		}
 		if(!adminEnabled) {
 			queueProcessingError(issuer.channel, new ServerException("Admin commands are disabled.", ServerException.ERROR_GENERIC));
 			return;			
@@ -350,10 +374,17 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 		ClientResponseHandler rh;
 		try {
-			rh= new AdminTaskExecutor(issuer, id,AdminCommand.valueOf(commandMessage.get(0).toUpperCase()).getTask(this, commandMessage));
+			rh= new AdminTaskExecutor(issuer, id,AdminCommand.valueOf(commandMessage.get(0).toUpperCase()).getTask(issuer,this, commandMessage));
 		} catch(IllegalArgumentException ex) {
 			throw new ProtocolSyntaxException("Unknown command "+commandMessage.get(0));
 		}
 		messageUser(issuer,new NetworkMessage(ClientCommandList.CONFIRMADMIN,id,rh.id),rh);
+	}
+	@Override
+	public void lobbyBroadcast(User user, NetworkMessage msg) {
+		for(User u : store) {
+			if(u.getSession() == null && !u.equals(user))
+				messageUser(u,msg); //only message fellow users that are not in a session
+		}
 	}
 }

@@ -1,14 +1,15 @@
 package be.mapariensis.kanjiryoku.net.model;
 
 import java.nio.channels.SocketChannel;
-import java.util.Collection;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.MessageHandler;
 
-public final class UserStore {
+public final class UserStore implements Iterable<User> {
 	private final Map<SocketChannel, User> userConnMap = new ConcurrentHashMap<SocketChannel, User>();
 	private final Map<String, User> userNameMap = new ConcurrentHashMap<String, User>();
 	private final Object LOCK = new Object();
@@ -56,8 +57,13 @@ public final class UserStore {
 		else return h;
 	}
 	
-	public Collection<User> getUsers() {
-		return userConnMap.values();
+	@Override
+	public Iterator<User> iterator() {
+		LinkedList<User> list = new LinkedList<User>();
+		synchronized(LOCK) {
+			list.addAll(userNameMap.values());
+		}
+		return list.iterator();
 	}
 	
 }

@@ -42,5 +42,7 @@ public interface UserManager {
 	
 	public void humanMessage(User user, String message);
 	
+	public void lobbyBroadcast(User user, NetworkMessage message);
+	
 	public void adminCommand(User issuer, int id, NetworkMessage commandMessage) throws UserManagementException, ProtocolSyntaxException;
 }

@@ -57,7 +57,7 @@ public class Session {
 			if(u.getSession() == this) return;
 			users.add(u);
 			if(u.getSession() != this) u.joinSession(this);
-			broadcastHumanMessage(u, String.format("User %s has joined the session.",u));
+			broadcastHumanMessage(u, String.format("User %s has joined the session.",u.handle));
 			uman.humanMessage(u, "Joined session.");
 			return;
 		}
