@@ -125,16 +125,24 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	}
 	
 	private static final String CSS_FORMAT_STRING = "<tr><td class=\""+USERCOL_CLASS+"\">%s</td><td class=\""+MESSAGECOL_CLASS+"\">%s</td></tr>"; 
-	private synchronized void append(Object usercol, Object messagecol) {
+	private synchronized void append(CharSequence usercol, CharSequence messagecol) {
 		try {
-			document.insertBeforeEnd(table, String.format(CSS_FORMAT_STRING,usercol,messagecol));
+			document.insertBeforeEnd(table, String.format(CSS_FORMAT_STRING,usercol,formatLinebreaks(messagecol)));
 			// caret auto update doesn't work
 			textPane.setCaretPosition(document.getLength());
 		} catch(IOException | BadLocationException ex) {
 			log.warn("Failed to append.",ex);
 		}
 	}
-	
+	private static CharSequence formatLinebreaks(CharSequence input) {
+		StringBuilder sb = new StringBuilder();
+		for(int i = 0;i<input.length();i++) {
+			char c = input.charAt(i);
+			if(c!='\n') sb.append(c);
+			else sb.append("<br/>");
+		}
+		return sb;
+	}
 	private static CharSequence clickableKanji(String input) {
 		// locate kanji
 		List<Integer> locations = new ArrayList<Integer>();

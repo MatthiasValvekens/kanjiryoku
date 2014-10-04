@@ -58,7 +58,8 @@ public class MessageHandler implements Runnable, Closeable {
 					key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 				}
 			} else {
-				log.error("Channel no longer available for writing.");
+				log.error("Channel no longer available for writing. Validity {}, writability {}.",key.isValid(),key.isWritable());
+				sendingNow = false;
 			}
 		}
 		key.selector().wakeup();

@@ -18,7 +18,7 @@ public class Kanjiryoku {
 		if(SKIP_CONNECT_SCREEN) {
 			JFrame frame;
 			try {
-				frame = new MainWindow(InetAddress.getByName("localhost"), 1000, "test"+(System.currentTimeMillis()%10000));
+				frame = new MainWindow(InetAddress.getByName("localhost"), 9630, "test"+(System.currentTimeMillis()%10000));
 			} catch (IOException e) {
 				log.error("I/O error while setting up main window",e);
 				return;

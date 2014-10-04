@@ -112,7 +112,7 @@ public class TakingTurnsServer implements GameServerInterface {
 							l.deliverAnswer(source, answer, res,rh);
 							if(rh == null) l.clearStrokes(null); // do not clear strokes on final input
 						}
-					}					
+					}
 				}
 				// submit one stroke
 				// SUBMIT [list_of_dots]
@@ -194,6 +194,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 		@Override
 		public void afterAnswer() throws ServerException {
+			log.info("All users answered. Moving on.");
 			if(problemSource.hasNext()) {
 				synchronized(submitLock) {
 					nextProblem(answer);

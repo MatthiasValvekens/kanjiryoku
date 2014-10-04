@@ -52,7 +52,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	
 	// store message handlers for anonymous connections here until they register/identify
 	private final Map<SocketChannel,MessageHandler> strayHandlers = new ConcurrentHashMap<SocketChannel,MessageHandler>();
-
 	public ConnectionMonitor(IProperties config) throws IOException, BadConfigurationException {
 		int port = config.getRequired(ConfigFields.PORT,Integer.class);
 		// get a socket
@@ -182,7 +181,14 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				if(command == ServerCommand.REGISTER) {
 					String handle = msg.get(1);
 					handle = handle.substring(0,Math.min(usernameCharLimit, handle.length())); // truncate handle
-					register(new User(handle,ch,new MessageHandler(ch.keyFor(selector))));
+					SelectionKey key = ch.keyFor(selector);
+					if(key == null) {
+						log.error("Key cancelled before registration could complete! Aborting.");
+						strayHandlers.remove(ch);
+						return;
+					}
+					MessageHandler h = new MessageHandler(key);
+					register(new User(handle,ch,h));
 				} else {
 					User u = store.getUser(ch);
 					if(u == null) {
