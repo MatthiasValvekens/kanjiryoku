@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku.config;
 
 public class ConfigFields {
 	public static final String CONFIG_FILE_NAME = "kanjiryoku.cfg";
+	public static final String CONFIG_FILE_DIR = ".";
 	
 	/**
 	 * The port number to listen on.
@@ -21,6 +22,8 @@ public class ConfigFields {
 	public static final String USERNAME_LIMIT = "usernameCharLimit";
 	public static final int USERNAME_LIMIT_DEFAULT = 10;
 	
+	public static final String ENABLE_ADMIN = "enableAdminCommands";
+	public static final boolean ENABLE_ADMIN_DEFAULT = false;
 	
 	// CR-related settings
 	

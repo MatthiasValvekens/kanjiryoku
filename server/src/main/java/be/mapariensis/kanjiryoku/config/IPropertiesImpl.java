@@ -12,9 +12,11 @@ import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 /**
  * Provides an additional layer of abstraction between the JSON library and the application.
  * @author Matthias Valvekens
- * @version 1.0
+ * @version 1.1
  */
 public class IPropertiesImpl implements IProperties {
+	private final Object LOCK = new Object();
+	
 	//don't implement Map, this class doesn't deal with put/remove/etc. 
 	private static class JSONArrayWrapper extends AbstractList<Object>{
 		final JSONArray arr;
@@ -45,10 +47,14 @@ public class IPropertiesImpl implements IProperties {
 	}
 	
 	public void swapBackend(String json) throws BadConfigurationException {
-		this.json = parse(json);
+		synchronized(LOCK) {
+			this.json = parse(json);
+		}
 	}
 	public void swapBackend(JSONObject json) {
-		this.json = json;
+		synchronized(LOCK) {
+			this.json = json;
+		}
 	}
 	/**
 	 * Construct a IPropertiesImpl object from the given JSON string.
@@ -74,12 +80,17 @@ public class IPropertiesImpl implements IProperties {
 	 */
 	@Override
 	public Object get(String key) {
-		return get(key,null);
+		synchronized(LOCK) {
+			return get(key,null);
+		}
 	}
 	@Override
 	public Object get(String key, Object defaultVal) {
 		try {
-			Object thing = json.get(key);
+			Object thing;
+			synchronized(LOCK) {
+				thing = json.get(key);
+			}
 			if(thing instanceof JSONObject) return new IPropertiesImpl((JSONObject) thing);
 			else if(thing instanceof JSONArray) return new JSONArrayWrapper((JSONArray) thing);
 			else return thing;
@@ -94,7 +105,9 @@ public class IPropertiesImpl implements IProperties {
 	 */
 	@Override
 	public boolean containsKey(String key){
-		return json.has(key);
+		synchronized(LOCK) {
+			return json.has(key);
+		}
 	}
 	/**
 	 * Return the key set associated with this IPropertiesImpl object.
@@ -102,7 +115,9 @@ public class IPropertiesImpl implements IProperties {
 	@Override
 	@SuppressWarnings("unchecked")
 	public Set<String> keySet() {
-		return json.keySet();
+		synchronized(LOCK) {
+			return json.keySet();
+		}
 	}
 	/**
 	 * Fetch a mandatory parameter by name and type.
@@ -115,7 +130,10 @@ public class IPropertiesImpl implements IProperties {
 	 */
 	@Override
 	public <T> T getRequired(String key, Class<T> type) throws BadConfigurationException {
-		Object item = this.get(key);
+		Object item;
+		synchronized(LOCK) {
+			item = this.get(key);
+		}
 		if(item==null) throw new BadConfigurationException("Missing mandatory parameter \""+key+"\".");
 		if(!isInstance(type, item)) throw new BadConfigurationException("Parameter "+key+" is of type "+item.getClass()+", but expected "+type);
 		return cast(type,item);
@@ -131,7 +149,10 @@ public class IPropertiesImpl implements IProperties {
 	
 	@Override
 	public <T> T getTyped(String key, Class<T> type, T defaultVal) throws BadConfigurationException {
-		Object item = this.get(key);
+		Object item;
+		synchronized(LOCK) {
+			item = this.get(key);
+		}
 		if(item==null) return defaultVal;
 		if(!isInstance(type, item)) throw new BadConfigurationException("Parameter "+key+" is of type "+item.getClass()+", but expected "+type);
 		return cast(type,item);
@@ -158,9 +179,12 @@ public class IPropertiesImpl implements IProperties {
 	@Override
 	public long getTimeMillis(String key, long defaultVal)
 			throws BadConfigurationException {
-		Object o = this.get(key);
-		if(o==null) return defaultVal;
-		return parseTime(o);
+		Object item;
+		synchronized(LOCK) {
+			item = this.get(key);
+		}
+		if(item==null) return defaultVal;
+		return parseTime(item);
 	}
 	public static long parseTime(Object o) throws BadConfigurationException {
 		if(o instanceof Long) return ((Long)o).longValue();
@@ -175,9 +199,12 @@ public class IPropertiesImpl implements IProperties {
 	}
 	@Override
 	public long getTimeMillis(String key) throws BadConfigurationException {
-		Object o = this.get(key);
-		if(o==null) throw new BadConfigurationException("Missing mandatory parameter \""+key+"\".");
-		return parseTime(o);
+		Object item;
+		synchronized(LOCK) {
+			item = this.get(key);
+		}
+		if(item==null) throw new BadConfigurationException("Missing mandatory parameter \""+key+"\".");
+		return parseTime(item);
 	}
 	
 }

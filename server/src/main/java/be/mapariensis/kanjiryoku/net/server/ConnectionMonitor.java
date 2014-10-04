@@ -54,6 +54,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final int bufferMax;
 	private final int usernameCharLimit;
 	private final Runnable rereadConfig;
+	private final boolean adminEnabled;
 	// store message handlers for anonymous connections here until they register/identify
 	private final Map<SocketChannel,MessageHandler> strayHandlers = new ConcurrentHashMap<SocketChannel,MessageHandler>();
 	public ConnectionMonitor(IProperties config, Runnable rereadConfig) throws IOException, BadConfigurationException {
@@ -78,8 +79,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 		sessman = new SessionManagerImpl(config,this,factory);
 		usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT, Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
-		setName("ConnectionMonitor:"+port);
+		this.adminEnabled = config.getTyped(ConfigFields.ENABLE_ADMIN, Boolean.class,ConfigFields.ENABLE_ADMIN_DEFAULT);
 		this.rereadConfig = rereadConfig;
+		
+		
+		setName("ConnectionMonitor:"+port);
 	}
 	@Override
 	public void run() {
@@ -326,6 +330,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	}
 	@Override
 	public void adminCommand(User issuer, int id, NetworkMessage commandMessage) throws UserManagementException,ProtocolSyntaxException {
+		if(!adminEnabled) {
+			queueProcessingError(issuer.channel, new ServerException("Admin commands are disabled.", ServerException.ERROR_GENERIC));
+			return;			
+		}
 		if(commandMessage.argCount()==0) throw new ArgumentCountException(Type.TOO_FEW, ServerCommand.ADMIN); // never hurts to be extra sure
 		InetAddress addr;
 		try {
