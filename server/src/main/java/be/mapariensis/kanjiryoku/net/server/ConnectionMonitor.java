@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku.net.server;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
@@ -26,6 +27,8 @@ import be.mapariensis.kanjiryoku.config.IProperties;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesserFactory;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
+import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
+import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
@@ -35,6 +38,7 @@ import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.MessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
+import be.mapariensis.kanjiryoku.net.server.handlers.AdminTaskExecutor;
 import be.mapariensis.kanjiryoku.net.util.MessageFragmentBuffer;
 import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 
@@ -49,10 +53,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final SessionManagerImpl sessman;
 	private final int bufferMax;
 	private final int usernameCharLimit;
-	
+	private final Runnable rereadConfig;
 	// store message handlers for anonymous connections here until they register/identify
 	private final Map<SocketChannel,MessageHandler> strayHandlers = new ConcurrentHashMap<SocketChannel,MessageHandler>();
-	public ConnectionMonitor(IProperties config) throws IOException, BadConfigurationException {
+	public ConnectionMonitor(IProperties config, Runnable rereadConfig) throws IOException, BadConfigurationException {
 		int port = config.getRequired(ConfigFields.PORT,Integer.class);
 		// get a socket
 		ssc = ServerSocketChannel.open();
@@ -75,6 +79,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		sessman = new SessionManagerImpl(config,this,factory);
 		usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT, Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
 		setName("ConnectionMonitor:"+port);
+		this.rereadConfig = rereadConfig;
 	}
 	@Override
 	public void run() {
@@ -309,5 +314,38 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	@Override
 	public void messageUser(User user, NetworkMessage message) {
 		queueMessage(user.channel, message);
+	}
+	private static enum AdminCommand {
+		RECONF {
+			@Override
+			public Runnable getTask(ConnectionMonitor mon, NetworkMessage command) {
+				return mon.rereadConfig;
+			}
+		};
+		public abstract Runnable getTask(ConnectionMonitor mon, NetworkMessage command);
+	}
+	@Override
+	public void adminCommand(User issuer, int id, NetworkMessage commandMessage) throws UserManagementException,ProtocolSyntaxException {
+		if(commandMessage.argCount()==0) throw new ArgumentCountException(Type.TOO_FEW, ServerCommand.ADMIN); // never hurts to be extra sure
+		InetAddress addr;
+		try {
+			addr = ((InetSocketAddress)issuer.channel.getRemoteAddress()).getAddress();
+		} catch (IOException e) {
+			log.error("Failed to get command issuer address. Aborting operation.");
+			return;
+		}
+		if(!addr.isLoopbackAddress()) {
+			// this is a weak security precaution that isn't even that hard to circumvent
+			// still, admin commands should not expose anything vital
+			log.warn("Warning: non-loopback address {} (bound to user {}) issued admin command. Silently ignoring.",addr,issuer.handle);
+			return;
+		}
+		ClientResponseHandler rh;
+		try {
+			rh= new AdminTaskExecutor(issuer, id,AdminCommand.valueOf(commandMessage.get(0).toUpperCase()).getTask(this, commandMessage));
+		} catch(IllegalArgumentException ex) {
+			throw new ProtocolSyntaxException("Unknown command "+commandMessage.get(0));
+		}
+		messageUser(issuer,new NetworkMessage(ClientCommandList.CONFIRMADMIN,id,rh.id),rh);
 	}
 }

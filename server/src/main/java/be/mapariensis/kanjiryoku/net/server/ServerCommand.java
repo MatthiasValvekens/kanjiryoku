@@ -281,6 +281,23 @@ public enum ServerCommand {
 			userman.messageUser(client, new NetworkMessage(ClientCommandList.RESPOND,responseCode,arr));
 		}
 		
+	}, ADMIN {
+
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			if(message.argCount() < 3) throw new ArgumentCountException(Type.TOO_FEW, ADMIN);
+			NetworkMessage commandPart = message.truncate(2);
+			int id;
+			try {
+				id = Integer.parseInt(message.get(1));
+			} catch (RuntimeException ex) {
+				throw new ProtocolSyntaxException(ex);
+			}
+			userman.adminCommand(client,id,commandPart);
+		}
+		
 	};
 	
 	public abstract void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException;

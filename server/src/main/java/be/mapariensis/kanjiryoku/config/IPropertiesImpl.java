@@ -35,13 +35,20 @@ public class IPropertiesImpl implements IProperties {
 		}
 		
 	}
-	private final JSONObject json;
+	private JSONObject json;
 	private static JSONObject parse(String json) throws BadConfigurationException {
 		try {
 			return new JSONObject(json);
 		} catch(JSONException ex) {
 			throw new BadConfigurationException("Failed to parse configuration", ex);
 		}
+	}
+	
+	public void swapBackend(String json) throws BadConfigurationException {
+		this.json = parse(json);
+	}
+	public void swapBackend(JSONObject json) {
+		this.json = json;
 	}
 	/**
 	 * Construct a IPropertiesImpl object from the given JSON string.

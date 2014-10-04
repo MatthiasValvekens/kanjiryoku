@@ -27,6 +27,7 @@ public class MessageHandler implements Runnable, Closeable {
 		this.key = key;
 	}
 	public void enqueue(NetworkMessage message) {
+		if(message == null || message.isEmpty()) return;
 		enqueue(message.toString().getBytes(Constants.ENCODING));
 	}
 	protected void enqueue(byte[] bytes) {

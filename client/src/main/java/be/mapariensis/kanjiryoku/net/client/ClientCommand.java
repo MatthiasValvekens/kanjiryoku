@@ -179,6 +179,22 @@ public enum ClientCommand {
 			bridge.getClient().setProblem(null);
 		}
 		
+	}, CONFIRMADMIN {
+
+		@Override
+		public void execute(NetworkMessage msg, GUIBridge bridge) {
+			int id;
+			int responseCode;
+			try {
+				checkArgs(msg,3);
+				id = Integer.parseInt(msg.get(1));
+				responseCode = Integer.parseInt(msg.get(2));
+			} catch (Exception ex) {
+				log.warn("Syntax error in admin command. Ignoring.");
+				return;
+			}
+			bridge.getChat().yesNoPrompt(String.format("Please confirm administrative action with id %s.",id), new NetworkMessage(ServerCommandList.RESPOND,responseCode,id), null);
+		}
 	};
 	private static final Logger log = LoggerFactory.getLogger(ClientCommand.class);
 	public abstract void execute(NetworkMessage msg, GUIBridge bridge) throws ClientException;

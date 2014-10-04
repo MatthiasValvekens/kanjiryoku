@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku.net.server;
 
 
 
+import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
@@ -41,4 +42,5 @@ public interface UserManager {
 	
 	public void humanMessage(User user, String message);
 	
+	public void adminCommand(User issuer, int id, NetworkMessage commandMessage) throws UserManagementException, ProtocolSyntaxException;
 }

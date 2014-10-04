@@ -46,7 +46,12 @@ public class NetworkMessage implements Iterable<String>, Comparable<NetworkMessa
 	public String get(int ix) {
 		return String.valueOf(args.get(ix));
 	}
-	
+	public NetworkMessage truncate(int start) {
+		return truncate(start,args.size());
+	}
+	public NetworkMessage truncate(int start, int end) {
+		return new NetworkMessage(args.subList(start, end));
+	}
 	public static List<NetworkMessage> readRaw(ReadableByteChannel sock, ByteBuffer buf, MessageFragmentBuffer mfb) throws IOException, EOFException {
 		buf.clear();
 		int bytesRead;
