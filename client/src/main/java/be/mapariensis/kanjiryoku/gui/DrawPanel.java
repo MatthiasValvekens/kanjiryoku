@@ -13,8 +13,8 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -32,13 +32,13 @@ import be.mapariensis.kanjiryoku.gui.utils.FadingOverlay;
 public class DrawPanel extends JPanel implements DrawingPanelInterface {
 	private static final Logger log = LoggerFactory.getLogger(DrawPanel.class);
 	private static final BufferedImage checkmarkImage;
-
+	private static final String CHECKMARK_FILE = "checkmark.png";
 	static {
 		BufferedImage thing = null;
-		try {
-			thing = ImageIO.read(new File("checkmark.png"));
-		} catch (IOException e) {
-			log.warn("Failed to read checkmark.png");
+		try(InputStream is = DrawPanel.class.getClassLoader().getResourceAsStream(CHECKMARK_FILE)) {
+				thing = ImageIO.read(is);
+		} catch (IOException | IllegalArgumentException e) {
+			log.warn("Failed to read checkmark.png",e);
 		}
 		checkmarkImage = thing;
 	}

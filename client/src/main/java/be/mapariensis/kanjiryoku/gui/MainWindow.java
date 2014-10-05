@@ -4,11 +4,12 @@ import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
+import java.nio.charset.Charset;
 import javax.swing.AbstractAction;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -33,7 +34,16 @@ public class MainWindow extends JFrame implements GUIBridge {
 		this.serverInfoString = String.format("(%s:%s)",addr,port);
 		setTitle(String.format("Kanjiryoku - %s",this.serverInfoString));
 		setLayout(new FlowLayout());
-		String css = new String(Files.readAllBytes(Paths.get(CSS_FILE)));
+		String css;
+		try(InputStream in = MainWindow.class.getClassLoader().getResourceAsStream(CSS_FILE)) {
+			BufferedReader r = new BufferedReader(new InputStreamReader(in,Charset.forName("UTF-8")));
+			StringBuilder sb = new StringBuilder();
+			String line;
+			while((line = r.readLine()) != null) sb.append(line).append('\n');
+			css = sb.toString();
+		} catch (RuntimeException ex) {
+			throw new IOException("Runtime exception while reading css file.",ex);
+		}
 		HTMLChatPanel chatComponent = new HTMLChatPanel(this,css);
 		chat = chatComponent;
 		add(new ChatPanel(this,chatComponent));

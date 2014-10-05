@@ -39,9 +39,9 @@ public class ChatPanel extends JPanel {
 				String msg = input.getText();
 				history.add(msg);
 				if(msg.isEmpty()) return;
-				if(msg.charAt(0)==':') {
+				if(msg.charAt(0)=='\\') {
 					if(!firstManualCommandSent) { 
-						bridge.getChat().displaySystemMessage("Lines starting with ':' are interpreted as server commands.");
+						bridge.getChat().displaySystemMessage("Lines starting with '\\' are interpreted as server commands.");
 						firstManualCommandSent = true;
 					}
 					bridge.getUplink().enqueueMessage(NetworkMessage.buildArgs(msg.substring(1))); // interpret the rest as a command
