@@ -123,7 +123,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						ch.configureBlocking(false);
 						SelectionKey channelKey = ch.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 						channelKey.attach(new MessageFragmentBuffer(bufferMax));
-						queueMessage(ch, new NetworkMessage(GREETING));
+						queueMessage(ch, new NetworkMessage(ClientCommandList.SAY,GREETING));
+						queueMessage(ch, new NetworkMessage(ClientCommandList.VERSION,protocolMajorVersion,protocolMinorVersion));
 					} else if(key.isReadable()) {
 						ch = (SocketChannel) key.channel();
 						List<NetworkMessage> msgs;

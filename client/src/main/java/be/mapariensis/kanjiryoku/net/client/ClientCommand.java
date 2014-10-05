@@ -61,10 +61,12 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
+			if(bridge.getUplink().registered()) throw new ServerCommunicationException(msg); 
 			checkArgs(msg,2);
 			String username = msg.get(1);
 			bridge.setUsername(username);
 			bridge.getChat().displayServerMessage(String.format("Welcome %s",username));
+			bridge.getUplink().flagRegisterComplete();
 		}
 		
 	}, FROM {
@@ -195,6 +197,31 @@ public enum ClientCommand {
 			}
 			bridge.getChat().yesNoPrompt(String.format("Please confirm administrative action with id %s.",id), new NetworkMessage(ServerCommandList.RESPOND,responseCode,id), null);
 		}
+	}, VERSION {
+
+		@Override
+		public void execute(NetworkMessage msg, GUIBridge bridge)
+				throws ClientException {
+			checkArgs(msg,3);
+			boolean incompatible;
+			int major, minor;
+			try {
+				major = Integer.parseInt(msg.get(1));
+				minor = Integer.parseInt(msg.get(2));
+				incompatible = (major != Constants.protocolMajorVersion || minor != Constants.protocolMinorVersion);
+			} catch (RuntimeException ex) {
+				// assume 0.1
+				incompatible = true;
+				major = 0;
+				minor = 1;
+			}
+			if(incompatible) {
+				bridge.getChat().displaySystemMessage(String.format("Warning:\nthe server's reported protocol version (%s.%s)\n" +
+						"does not match the client's (%s.%s)\n" +
+						"Unexpected behaviour may arise.",major,minor,Constants.protocolMajorVersion,Constants.protocolMinorVersion));
+			}
+		}
+		
 	};
 	private static final Logger log = LoggerFactory.getLogger(ClientCommand.class);
 	public abstract void execute(NetworkMessage msg, GUIBridge bridge) throws ClientException;

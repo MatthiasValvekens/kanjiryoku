@@ -117,21 +117,7 @@ public class ServerUplink extends Thread implements Closeable {
 					}
 				}
 				for(final NetworkMessage msg : msgs) {
-					if(msg.isEmpty()) continue;
-					// check for server post-registration message
-					if(msg.get(0).equals(ClientCommand.WELCOME.toString())) {
-						log.info("Registration complete");
-						registerCompleted = true;
-					}
-					if(!registerCompleted) {
-						threadPool.execute(new Runnable() {
-							
-							@Override
-							public void run() {
-								bridge.getChat().displayServerMessage(msg.toString());
-							}
-						});
-					} else if(!msg.isEmpty()) threadPool.execute(new CommandReceiver(msg)); // schedule command interpretation
+					if(!msg.isEmpty()) threadPool.execute(new CommandReceiver(msg)); // schedule command interpretation
 				}
 			}
 
@@ -143,6 +129,13 @@ public class ServerUplink extends Thread implements Closeable {
 				threadPool.execute(messageHandler);
 			}
 		}
+	}
+	public boolean registered() {
+		return registerCompleted;
+	}
+	public void flagRegisterComplete() {
+		log.info("Registration complete");
+		registerCompleted = true;
 	}
 	private class CommandReceiver implements Runnable {
 		private final NetworkMessage msg;
@@ -182,12 +175,12 @@ public class ServerUplink extends Thread implements Closeable {
 	}
 	
 	public void enqueueMessage(NetworkMessage msg) {
-		messageHandler.enqueue(msg);
+		if(messageHandler != null) messageHandler.enqueue(msg);
 	}
 	
 	public void enqueueMessage(NetworkMessage msg, ServerResponseHandler rh) {
 		activeResponseHandlers.add(rh);
-		messageHandler.enqueue(msg);
+		enqueueMessage(msg);
 	}
 	public static final int BLOCK_SLEEP_DELAY = 200;
 	public NetworkMessage blockUntilResponse(NetworkMessage msg, WaitingResponseHandler wrh, long timeout) {
