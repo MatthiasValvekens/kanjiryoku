@@ -6,7 +6,7 @@ import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 
 public class Constants {
 	public static final int protocolMajorVersion = 0;
-	public static final int protocolMinorVersion = 2;
+	public static final int protocolMinorVersion = 3;
 	public static final Charset ENCODING = Charset.forName("UTF-8");
 	public static final String GREETING = "Kanjiryoku server says hello.\n" +
 			"Registration command is "+ServerCommandList.REGISTER+". Disconnect command is "+ServerCommandList.BYE+".";

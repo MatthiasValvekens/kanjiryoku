@@ -53,17 +53,19 @@ public class TakingTurnsServer implements GameServerInterface {
 	}
 	
 	private volatile boolean gameRunning = false;
+	private final boolean enableBatonPass;
 	private final Object submitLock = new Object();
 	private volatile User currentPlayer;
-	private int problemPosition;
+	private int problemPosition, problemRepetitions;
 	private Problem currentProblem;
 	private TurnIterator ti;
 	private final KanjiGuesser guess;
 	private final ProblemOrganizer problemSource;
 	private final Collection<GameListener> listeners = new LinkedList<GameListener>();
-	public TakingTurnsServer(ProblemOrganizer problems, KanjiGuesser guess) {
+	public TakingTurnsServer(ProblemOrganizer problems, KanjiGuesser guess, boolean batonPass) {
 		this.guess = guess;
 		this.problemSource = problems;
+		this.enableBatonPass = batonPass;
 	}
 	@Override
 	public Game getGame() {
@@ -102,7 +104,7 @@ public class TakingTurnsServer implements GameServerInterface {
 					AnswerFeedbackHandler rh = null;
 					// move on to next position in problem
 					if(answer && currentProblem.getFullSolution().length() == ++problemPosition) {
-						rh = new NextTurnHandler(true);
+						rh = new NextTurnHandler(true,false);
 						ti.currentUserStats().correct++;
 					}
 					strokes.clear();
@@ -144,7 +146,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		if(gameRunning) throw new GameFlowException("Game already running.");
 		gameRunning = true;
 		this.ti = new TurnIterator(participants);
-		nextProblem(true);
+		nextProblem(problemSource.next(true));
 	}
 	@Override
 	public void close() {
@@ -163,10 +165,12 @@ public class TakingTurnsServer implements GameServerInterface {
 			listeners.remove(p);
 		}
 	}
-	private void nextProblem(boolean answer) {
+	private void nextProblem(Problem nextProblem) {
 		log.info("Next problem");
 		problemPosition = 0;
-		currentProblem = problemSource.next(answer);
+		if(currentProblem == nextProblem) problemRepetitions++;
+		else problemRepetitions = 0;
+		currentProblem = nextProblem;
 		currentPlayer = ti.next();
 		// hence this should be safe
 		synchronized(listeners) {
@@ -187,17 +191,19 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 	}
 	private class NextTurnHandler extends AnswerFeedbackHandler {
-		final boolean answer;
-		NextTurnHandler(boolean answer) {
+		final boolean answer, doBatonPass;
+		NextTurnHandler(boolean answer, boolean doBatonPass) {
 			super(ti.players);
 			this.answer = answer;
+			this.doBatonPass = doBatonPass;
 		}
 		@Override
 		public void afterAnswer() throws ServerException {
 			log.info("All users answered. Moving on.");
-			if(problemSource.hasNext()) {
+			if(doBatonPass || problemSource.hasNext()) {
 				synchronized(submitLock) {
-					nextProblem(answer);
+					// baton pass ?
+					nextProblem(doBatonPass ? currentProblem : problemSource.next(answer));
 				}
 			} else {
 				log.info("No problems left");
@@ -218,10 +224,12 @@ public class TakingTurnsServer implements GameServerInterface {
 		if(submitter != null && !submitter.equals(currentPlayer)) throw new GameFlowException("Only the current player can decide to skip a problem.");
 		log.info("Skipping problem.");
 		ti.currentUserStats().skipped++;
+		boolean batonPass = enableBatonPass && (problemRepetitions<ti.players.size()-1);
 		synchronized(listeners) {
-			AnswerFeedbackHandler rh = new NextTurnHandler(false);
+			AnswerFeedbackHandler rh = new NextTurnHandler(false,batonPass);
+			
 			for(GameListener l : listeners) {
-				l.problemSkipped(submitter,rh);
+				l.problemSkipped(submitter,batonPass,rh);
 			}
 		}
 	}

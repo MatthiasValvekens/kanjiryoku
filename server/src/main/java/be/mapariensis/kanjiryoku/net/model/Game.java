@@ -35,8 +35,9 @@ public enum Game {
 				@SuppressWarnings("unchecked")
 				List<String> categoryNames = config.getRequired(CATEGORY_LIST,List.class);
 				boolean resetDifficulty = config.getTyped(RESET_AFTER_CATEGORY_SWITCH,Boolean.class,true);
+				boolean batonPass = config.getTyped(ENABLE_BATON_PASS, Boolean.class,ENABLE_BATON_PASS_DEFAULT);
 				ProblemOrganizer org = ProblemCollectionUtils.buildKanjiryokuShindanOrganizer(fileNameFormat,categoryNames,digitFormat,problemsPerCategory,minDiff,maxDiff, resetDifficulty,new Random(seed));
-				return new TakingTurnsServer(org,guesser);
+				return new TakingTurnsServer(org,guesser,batonPass);
 			} catch (IOException | ParseException e) {
 				throw new ServerBackendException(e);
 			}

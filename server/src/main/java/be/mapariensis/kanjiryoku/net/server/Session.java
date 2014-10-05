@@ -239,8 +239,8 @@ public class Session {
 
 		
 		@Override
-		public void problemSkipped(User submitter, ClientResponseHandler rh) {
-			broadcastMessage(null,new NetworkMessage(ClientCommandList.PROBLEMSKIPPED,submitter.handle,rh.id),rh);
+		public void problemSkipped(User submitter, boolean batonPass, ClientResponseHandler rh) {
+			broadcastMessage(null,new NetworkMessage(ClientCommandList.PROBLEMSKIPPED,submitter.handle,rh.id,batonPass),rh);
 		}		
 	}
 	public GameServerInterface getGame() {

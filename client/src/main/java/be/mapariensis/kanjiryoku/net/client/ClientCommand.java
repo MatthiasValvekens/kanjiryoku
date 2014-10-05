@@ -140,14 +140,17 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ClientException {
-			checkArgs(msg,3);
+			if(msg.argCount()<3) throw new ServerCommunicationException(msg);
 			int responseCode;
+			boolean batonPass;
 			try {
 				responseCode = Integer.parseInt(msg.get(2));
+				batonPass = msg.argCount()>3 && Boolean.parseBoolean(msg.get(3));
 			} catch(RuntimeException ex) {
 				throw new ServerCommunicationException(ex);
 			}
-			bridge.getChat().displayGameMessage(String.format("User %s skipped the problem. The full solution was %s.",msg.get(1),bridge.getClient().getProblem().getFullSolution()));
+			bridge.getChat().displayGameMessage(String.format("User %s skipped the problem.",msg.get(1)));
+			if(!batonPass) bridge.getChat().displayGameMessage(String.format("The full solution was %s.",bridge.getClient().getProblem().getFullSolution()));
 			bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.RESPOND,responseCode));
 		}
 	}, STROKE {
