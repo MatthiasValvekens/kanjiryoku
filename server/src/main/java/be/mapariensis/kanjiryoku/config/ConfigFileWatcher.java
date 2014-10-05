@@ -19,6 +19,7 @@ public class ConfigFileWatcher extends Thread {
 	private final Runnable updateTask;
 	private final Path configDir = Paths.get(ConfigFields.CONFIG_FILE_DIR);
 	public ConfigFileWatcher(Runnable updateTask) throws IOException {
+		super("FileWatcher");
 		this.watcher = FileSystems.getDefault().newWatchService();
 		this.updateTask = updateTask;
 		setDaemon(true);

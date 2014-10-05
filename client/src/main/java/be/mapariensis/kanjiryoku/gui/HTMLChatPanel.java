@@ -43,6 +43,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	public static final String SYSTEM_CLASS = "system";
 	public static final String ERROR_CLASS = "error";
 	public static final String ERROR_HEADER_CLASS = "error-header";
+	public static final String KANJILINK_CLASS = "kanjilink";
 	private final ServerResponseHandler dumpToChat = new DummyResponseHandler(this);	
 	
 	public HTMLChatPanel(GUIBridge bridge, String css) {
@@ -164,6 +165,6 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	}
 	
 	private static CharSequence clickableChar(char c) {
-		return new StringBuilder().append("<a href=\"").append(c).append("\">").append(c).append("</a>");
+		return new StringBuilder().append("<a class=\"").append(KANJILINK_CLASS).append("\" href=\"").append(c).append("\">").append(c).append("</a>");
 	}
 }

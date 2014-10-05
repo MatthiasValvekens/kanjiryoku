@@ -41,7 +41,7 @@ p {
 .server {
 	font-style: italic;
 }
-a {
+.kanjilink {
 	text-decoration: none;
 	font-size: 2em;
 }
