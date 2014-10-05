@@ -19,6 +19,8 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.html.HTML;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
+
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,17 +84,20 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	}
 	@Override
 	public void displayServerMessage(String message) {
-		append(wrap("p","*server*",SERVER_CLASS), clickableKanji(message));
+		append(wrap("p","*server*",SERVER_CLASS), esc(message));
 	}
-
+	@Override
+	public void displayGameMessage(String message) {
+		append(wrap("p","*game*",SERVER_CLASS), clickableKanji(esc(message)));
+	}
 	@Override
 	public void displayUserMessage(String from, String message) {
-		append(new StringBuilder().append('[').append(from).append(']'),message);
+		append(new StringBuilder().append('[').append(esc(from)).append(']'),esc(message));
 	}
 
 	@Override
 	public void displayErrorMessage(int errorId, String message) {
-		append(wrap("p",String.format("Error E%03d",errorId),ERROR_HEADER_CLASS),wrap("p",message,ERROR_CLASS));
+		append(wrap("p",String.format("Error E%03d",errorId),ERROR_HEADER_CLASS),wrap("p",esc(message),ERROR_CLASS));
 	}
 
 	@Override
@@ -102,7 +107,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 
 	@Override
 	public void displaySystemMessage(String message) {
-		append(wrap("p","*system*",SYSTEM_CLASS), wrap("p",message,SYSTEM_CLASS));
+		append(wrap("p","*system*",SYSTEM_CLASS), wrap("p",esc(message),SYSTEM_CLASS));
 	}
 
 	@Override
@@ -126,7 +131,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	}
 	
 	private static final String CSS_FORMAT_STRING = "<tr><td class=\""+USERCOL_CLASS+"\">%s</td><td class=\""+MESSAGECOL_CLASS+"\">%s</td></tr>"; 
-	private synchronized void append(CharSequence usercol, CharSequence messagecol) {
+	private synchronized void append(CharSequence usercol, String messagecol) {
 		try {
 			document.insertBeforeEnd(table, String.format(CSS_FORMAT_STRING,usercol,formatLinebreaks(messagecol)));
 			// caret auto update doesn't work
@@ -144,7 +149,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 		}
 		return sb;
 	}
-	private static CharSequence clickableKanji(String input) {
+	private static String clickableKanji(String input) {
 		// locate kanji
 		List<Integer> locations = new ArrayList<Integer>();
 		locations.add(-1);
@@ -161,10 +166,13 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 		}
 		int lastloc = locations.get(locations.size()-1);
 		if(lastloc < input.length() - 1) sb.append(input,lastloc+1,input.length()); // play it safe
-		return sb;
+		return sb.toString();
 	}
 	
 	private static CharSequence clickableChar(char c) {
 		return new StringBuilder().append("<a class=\"").append(KANJILINK_CLASS).append("\" href=\"").append(c).append("\">").append(c).append("</a>");
+	}
+	private static String esc(String s) {
+		return StringEscapeUtils.escapeHtml4(s);
 	}
 }

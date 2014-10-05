@@ -14,9 +14,9 @@ p {
 }
 #chatTable td {
 	padding: 0px;
+	overflow: auto;
 }
 .usercol {
-	display: inline-block;
 	vertical-align: top;
 	font-weight: bold;
 	width: 70px;

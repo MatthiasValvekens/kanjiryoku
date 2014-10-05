@@ -54,7 +54,7 @@ public enum ClientCommand {
 			} catch(JSONException ex) {
 				throw new ServerCommunicationException(ex);
 			}
-			bridge.getChat().displayServerMessage(sb.toString());
+			bridge.getChat().displayGameMessage(sb.toString());
 		}
 	}, WELCOME {
 
@@ -106,7 +106,7 @@ public enum ClientCommand {
 				throws ServerCommunicationException {
 			checkArgs(msg,3);
 			String name = msg.get(1);
-			bridge.getChat().displayServerMessage(String.format("Question for %s" + (name.equals(bridge.getClient().getUsername()) ? " (You)" : ""),name));
+			bridge.getChat().displayGameMessage(String.format("Question for %s" + (name.equals(bridge.getClient().getUsername()) ? " (You)" : ""),name));
 			String problemString = msg.get(2);
 			try {
 				bridge.getClient().setProblem(bridge.getClient().parseProblem(problemString));
@@ -132,7 +132,7 @@ public enum ClientCommand {
 			} catch(RuntimeException ex) {
 				throw new ServerCommunicationException(ex);
 			}
-			bridge.getChat().displayServerMessage(String.format("User %s answered %s, which is %s", name, inputChar, wasCorrect ? "correct" : "unfortunately not the right answer"));
+			bridge.getChat().displayGameMessage(String.format("User %s answered %s: %s", name, inputChar, wasCorrect ? "correct" : "unfortunately not the right answer"));
 			bridge.getClient().deliverAnswer(wasCorrect, inputChar);
 			bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.RESPOND,responseCode)); // acknowledge 
 		}
@@ -147,10 +147,10 @@ public enum ClientCommand {
 			} catch(RuntimeException ex) {
 				throw new ServerCommunicationException(ex);
 			}
-			bridge.getChat().displayServerMessage(String.format("User %s skipped the problem. The full solution was %s.",msg.get(1),bridge.getClient().getProblem().getFullSolution()));
+			bridge.getChat().displayGameMessage(String.format("User %s skipped the problem. The full solution was %s.",msg.get(1),bridge.getClient().getProblem().getFullSolution()));
 			bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.RESPOND,responseCode));
 		}
-	},STROKE {
+	}, STROKE {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {

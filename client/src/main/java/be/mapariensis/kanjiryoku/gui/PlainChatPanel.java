@@ -71,4 +71,10 @@ public class PlainChatPanel extends JPanel implements ChatInterface {
 			textpanel.append(String.format("*system*\t%s\n",message));
 		}
 	}
+	@Override
+	public void displayGameMessage(String message) {
+		synchronized(textpanel) {
+			textpanel.append(String.format("*game*\t%s\n",message));
+		}
+	}
 }

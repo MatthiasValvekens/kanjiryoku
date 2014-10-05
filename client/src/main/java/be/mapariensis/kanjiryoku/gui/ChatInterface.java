@@ -6,6 +6,7 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public interface ChatInterface {
 	public void displayServerMessage(String message);
+	public void displayGameMessage(String message);
 	public void displayUserMessage(String from, String message);
 	public void displayErrorMessage(int errorId, String message);
 	public void displayErrorMessage(ClientServerException ex);
