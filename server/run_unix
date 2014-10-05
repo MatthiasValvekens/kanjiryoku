@@ -1,0 +1,2 @@
+export LD_LIBRARY_PATH=.
+java -Djava.library.path=. -jar target/server-0.1-SNAPSHOT.jar
