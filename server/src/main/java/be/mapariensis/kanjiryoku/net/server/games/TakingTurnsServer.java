@@ -152,6 +152,7 @@ public class TakingTurnsServer implements GameServerInterface {
 	public void close() {
 		gameRunning = false;
 		currentPlayer = null;
+		guess.close();
 	}
 	@Override
 	public void addProblemListener(GameListener p) {

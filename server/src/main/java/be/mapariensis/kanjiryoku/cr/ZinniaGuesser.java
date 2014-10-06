@@ -85,4 +85,8 @@ public class ZinniaGuesser implements KanjiGuesser {
 	public String toString() {
 		return "Zinnia engine";
 	}
+	@Override
+	public void close() {
+		if(eng != null) eng.close(); 
+	}
 }

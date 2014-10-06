@@ -3,7 +3,7 @@ package be.mapariensis.kanjiryoku.cr;
 
 import java.util.List;
 
-public interface KanjiGuesser {
+public interface KanjiGuesser extends AutoCloseable {
 	/**
 	 * This method should return a number of candidates given an (ordered) list of strokes.
 	 * @param strokes
@@ -11,4 +11,7 @@ public interface KanjiGuesser {
 	 * @return
 	 */
 	public List<Character> guess(int width, int heigth, List<List<Dot>> strokes);
+	
+	@Override
+	public void close();
 }
