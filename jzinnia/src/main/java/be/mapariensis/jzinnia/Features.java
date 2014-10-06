@@ -1,11 +1,13 @@
 package be.mapariensis.jzinnia;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
 public class Features {
 	private static final int kMaxCharacterSize = 50;
-	private static class FeatureNode implements Comparable<FeatureNode> {
+	public static class FeatureNode implements Comparable<FeatureNode> {
 		final int index;
 		final double value;
 		public FeatureNode(int index, double value) {
@@ -19,19 +21,19 @@ public class Features {
 		
 	}
 	// wrapper for code readability
-	private static class Node extends Pair<Double,Double> {
+	public static class Node extends Pair<Double,Double> {
 		public Node(Double x, Double y) {
 			super(x, y);
 		}
 	};
 	
-	private final List<FeatureNode> featureNodes = new LinkedList<>(); // list of index-value pairs
+	private final List<FeatureNode> featureNodes = new ArrayList<>(); // list of index-value pairs
 	private static final Node MIDDLE = new Node(0.5,0.5);
 	public void addFeature(int index, double value) {
 		featureNodes.add(new FeatureNode(index,value));
 	}
 	
-	public void makeBasicFeature(int offset, final Node first, final Node last) {
+	private void makeBasicFeature(int offset, final Node first, final Node last) {
 		// distance
 		addFeature(offset + 1,10*distance(first,last));
 		
@@ -57,28 +59,78 @@ public class Features {
 		addFeature(offset + 12, 5*(last.y - first.y));
 	}
 	
-	public void makeMoveFeature(int sid, final Node first, final Node last) {
+	private void makeMoveFeature(int sid, final Node first, final Node last) {
 		makeBasicFeature(100000 + sid * 1000,first,last);
 	}
 	
-	public void makeVertexFeature(int sid, List<Pair<Node,Node>> nodePairs) {
-		for(int i = 0; i<nodePairs.size() && i<=kMaxCharacterSize;i++) {
-			Pair<Node,Node> pair = nodePairs.get(i);
-			makeBasicFeature(sid * 1000 + 20 * i, pair.x, pair.y);
+	private void makeVertexFeature(int sid, List<Pair<Integer,Pair<Node,Node>>> nodePairs) {
+		for(Pair<Integer,Pair<Node,Node>> pair : nodePairs) {
+			int id = pair.x;
+			System.out.println(id);
+			if(id>kMaxCharacterSize) continue;
+			makeBasicFeature(sid * 1000 + 20 * id, pair.y.x, pair.y.y);
 		}
 	}
 	
-	public static double distanceSquared(Node p1, Node p2) {
-		double dx = p1.x - p2.x;
-		double dy = p1.y - p2.y;
-		return dx*dx + dy*dy;
+	public static final double TRESHOLD = 0.001;
+	private void getVertex(List<Node> nodes,int firstIx,int lastIx,int id, List<Pair<Integer,Pair<Node,Node>>> nodePairs) {
+		{
+			Node first = nodes.get(firstIx);
+			Node last = nodes.get(lastIx);
+			Pair<Node,Node> curPair = new Pair<>(first,last);
+			nodePairs.add(new Pair<>(id,curPair));
+		}
+		Pair<Integer,Double> distPair = minimumDistance(nodes.subList(firstIx, lastIx+1));
+		if(distPair.y > TRESHOLD) {
+			getVertex(nodes, firstIx, distPair.x, id * 2 + 1, nodePairs);
+			getVertex(nodes, distPair.x,lastIx, id * 2 + 2, nodePairs);
+		}
+	}
+	public void read(ZCharacter character) {
+		featureNodes.clear();
+		// bias term
+		
+		featureNodes.add(new FeatureNode(0, 1.0));
+		
+		List<List<Node>> nodes = new ArrayList<List<Node>>(character.strokeCount());
+		{
+			double height = character.getHeight();
+			double width = character.getWidth();
+			if(height == 0 || width == 0 || character.strokeCount() == 0) throw new IllegalArgumentException();
+			for(List<Pair<Integer,Integer>> stroke : character) {
+				ArrayList<Node> cur = new ArrayList<Node>(stroke.size());
+				for(Pair<Integer,Integer> p : stroke) cur.add(new Node(((double)p.x)/width,((double)p.y)/height));
+				nodes.add(cur);
+			}
+		}
+		{
+			Node prev = null;
+			for(int sid = 0; sid < nodes.size(); sid++) {
+				List<Pair<Integer,Pair<Node,Node>>> nodePairs = new LinkedList<>();
+				List<Node> stroke = nodes.get(sid);
+				getVertex(stroke,0,stroke.size()-1,0,nodePairs);
+				makeVertexFeature(sid, nodePairs);
+				if (prev != null) {
+					makeMoveFeature(sid, prev, stroke.get(0));
+				}
+				prev = stroke.get(stroke.size()-1);
+			}
+		}
+		addFeature(2000000, nodes.size());
+		addFeature(2000000 + nodes.size(), 10);
+		
+		Collections.sort(featureNodes);
+		featureNodes.add(new FeatureNode(-1, 0.0));
 	}
 	public static double distance(Node p1, Node p2) {
-		return Math.sqrt(distanceSquared(p1, p2));
+		double dx = p1.x - p2.x;
+		double dy = p1.y - p2.y;
+		return Math.sqrt(dx*dx + dy*dy);
 	}
 	
 	// return index of best node and minimal distance
-	public static Pair<Integer,Double> minimumDistance(List<Node> nodes) {
+	private static Pair<Integer,Double> minimumDistance(List<Node> nodes) {
+		if(nodes.size()<2) return new Pair<>(-1,0.0);
 		final int count = nodes.size();
 		final Node first = nodes.get(0);
 		final Node last = nodes.get(count-1);
@@ -98,5 +150,6 @@ public class Features {
 		
 		return new Pair<>(ix,(max*max)/(dx*dx+dy*dy));
 	}
+	
 	
 }
