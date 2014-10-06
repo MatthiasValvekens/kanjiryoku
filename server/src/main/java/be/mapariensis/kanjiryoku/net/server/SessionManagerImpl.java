@@ -56,6 +56,7 @@ public class SessionManagerImpl implements SessionManager {
 
 	@Override
 	public void destroySession(Session sess) {
+		if(sess.destroyed) return;
 		try {
 			sess.stopGame();
 		} catch (ServerException e) {

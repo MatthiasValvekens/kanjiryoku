@@ -163,6 +163,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 		}
 		log.info("Connection listener shut down.");
+		for(User u : store) {
+			try {
+				deregister(u);
+			} catch (UserManagementException e) {
+				log.info("Failed to deregister {}",u);
+			}
+		}
 		threadPool.shutdownNow();
 	}
 
@@ -344,17 +351,76 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					}
 				};
 			}
+		}, KICK {
+
+			@Override
+			public Runnable getTask(User issuer, final ConnectionMonitor mon,
+					NetworkMessage command) throws ProtocolSyntaxException {
+				if(command.argCount()<2) throw new ArgumentCountException(Type.TOO_FEW, KICK);
+				String username = command.get(1);
+				final User toBeKicked;
+				try {
+					toBeKicked = mon.getUser(username);
+				} catch (UserManagementException e) {
+					log.warn("User {} not found, aborting.",username,e);
+					return null;
+				}
+				return new Runnable() {
+
+					@Override
+					public void run() {
+						try {
+							mon.deregister(toBeKicked);
+						} catch (UserManagementException e) {
+							log.warn("Failed to kick user {}",toBeKicked,e);
+							return;
+						}
+					}
+					
+				};
+			}
+			
+		}, NUKESESSION {
+			@Override
+			public Runnable getTask(User issuer, final ConnectionMonitor mon,
+					NetworkMessage command) throws ProtocolSyntaxException {
+				if(command.argCount()<2) throw new ArgumentCountException(Type.TOO_FEW, NUKESESSION);
+				final Session target;
+				try {
+					target = mon.sessman.getSession(Integer.parseInt(command.get(1)));
+				} catch (Exception e) {
+					log.warn("Exception in NUKESESSION prep",e);
+					return null;
+				}
+				
+				return target == null ? null : new Runnable() {
+					
+					@Override
+					public void run() {
+						mon.sessman.destroySession(target);
+					}
+				};
+			}
+		}, SHUTDOWN {
+
+			@Override
+			public Runnable getTask(User issuer, final ConnectionMonitor mon,
+					NetworkMessage command) throws ProtocolSyntaxException {
+				return new Runnable() {
+					
+					@Override
+					public void run() {
+						mon.keepOn = false;
+					}
+				};
+			}
+			
 		};
 		public abstract Runnable getTask(User issuer, ConnectionMonitor mon, NetworkMessage command) throws ProtocolSyntaxException;
 	}
 	@Override
 	public void adminCommand(User issuer, int id, NetworkMessage commandMessage) throws UserManagementException,ProtocolSyntaxException {
-		boolean adminEnabled;
-		try {
-			adminEnabled = config.getTyped(ConfigFields.ENABLE_ADMIN, Boolean.class,ConfigFields.ENABLE_ADMIN_DEFAULT);
-		} catch (BadConfigurationException e1) {
-			adminEnabled = ConfigFields.ENABLE_ADMIN_DEFAULT;
-		}
+		boolean adminEnabled = config.getSafely(ConfigFields.ENABLE_ADMIN, Boolean.class,ConfigFields.ENABLE_ADMIN_DEFAULT);
 		if(!adminEnabled) {
 			queueProcessingError(issuer.channel, new ServerException("Admin commands are disabled.", ServerException.ERROR_GENERIC));
 			return;			
@@ -375,7 +441,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 		ClientResponseHandler rh;
 		try {
-			rh= new AdminTaskExecutor(issuer, id,AdminCommand.valueOf(commandMessage.get(0).toUpperCase()).getTask(issuer,this, commandMessage));
+			Runnable task = AdminCommand.valueOf(commandMessage.get(0).toUpperCase()).getTask(issuer,this, commandMessage);
+			if(task == null) return;
+			rh= new AdminTaskExecutor(issuer, id,task);
 		} catch(IllegalArgumentException ex) {
 			throw new ProtocolSyntaxException("Unknown command "+commandMessage.get(0));
 		}

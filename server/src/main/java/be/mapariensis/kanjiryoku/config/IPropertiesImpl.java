@@ -80,9 +80,7 @@ public class IPropertiesImpl implements IProperties {
 	 */
 	@Override
 	public Object get(String key) {
-		synchronized(LOCK) {
-			return get(key,null);
-		}
+		return get(key,null);
 	}
 	@Override
 	public Object get(String key, Object defaultVal) {
@@ -155,6 +153,16 @@ public class IPropertiesImpl implements IProperties {
 		}
 		if(item==null) return defaultVal;
 		if(!isInstance(type, item)) throw new BadConfigurationException("Parameter "+key+" is of type "+item.getClass()+", but expected "+type);
+		return cast(type,item);
+	}
+	
+	@Override
+	public <T> T getSafely(String key, Class<T> type, T defaultVal) {
+		Object item;
+		synchronized(LOCK) {
+			item = this.get(key);
+		}
+		if(item==null || !isInstance(type, item)) return defaultVal;
 		return cast(type,item);
 	}
 	

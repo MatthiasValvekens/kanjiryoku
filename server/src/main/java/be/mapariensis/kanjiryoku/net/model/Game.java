@@ -27,15 +27,15 @@ public enum Game {
 			try {
 				int seed=(int)(System.currentTimeMillis()%10000);
 				log.info("Starting game with seed {}",seed);
-				int problemsPerCategory = config.getTyped(PROBLEMS_PER_CATEGORY, Integer.class,PROBLEMS_PER_CATEGORY_DEFAULT);
-				String digitFormat = config.getTyped(FILE_NAME_DIFFICULTY_FORMAT, String.class,FILE_NAME_DIFFICULTY_FORMAT_DEFAULT);
+				int problemsPerCategory = config.getSafely(PROBLEMS_PER_CATEGORY, Integer.class,PROBLEMS_PER_CATEGORY_DEFAULT);
+				String digitFormat = config.getSafely(FILE_NAME_DIFFICULTY_FORMAT, String.class,FILE_NAME_DIFFICULTY_FORMAT_DEFAULT);
 				String fileNameFormat = config.getRequired(FILE_NAME_FORMAT, String.class);
-				int minDiff = config.getTyped(MIN_DIFFICULTY, Integer.class, MIN_DIFFICULTY_DEFAULT);
-				int maxDiff = config.getTyped(MAX_DIFFICULTY, Integer.class, MAX_DIFFICULTY_DEFAULT);
+				int minDiff = config.getSafely(MIN_DIFFICULTY, Integer.class, MIN_DIFFICULTY_DEFAULT);
+				int maxDiff = config.getSafely(MAX_DIFFICULTY, Integer.class, MAX_DIFFICULTY_DEFAULT);
 				@SuppressWarnings("unchecked")
 				List<String> categoryNames = config.getRequired(CATEGORY_LIST,List.class);
-				boolean resetDifficulty = config.getTyped(RESET_AFTER_CATEGORY_SWITCH,Boolean.class,true);
-				boolean batonPass = config.getTyped(ENABLE_BATON_PASS, Boolean.class,ENABLE_BATON_PASS_DEFAULT);
+				boolean resetDifficulty = config.getSafely(RESET_AFTER_CATEGORY_SWITCH,Boolean.class,true);
+				boolean batonPass = config.getSafely(ENABLE_BATON_PASS, Boolean.class,ENABLE_BATON_PASS_DEFAULT);
 				ProblemOrganizer org = ProblemCollectionUtils.buildKanjiryokuShindanOrganizer(fileNameFormat,categoryNames,digitFormat,problemsPerCategory,minDiff,maxDiff, resetDifficulty,new Random(seed));
 				return new TakingTurnsServer(org,guesser,batonPass);
 			} catch (IOException | ParseException e) {

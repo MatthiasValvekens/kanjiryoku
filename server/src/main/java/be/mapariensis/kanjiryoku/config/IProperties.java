@@ -74,6 +74,20 @@ public interface IProperties {
 	public <T> T getTyped(String key, Class<T> type, T defaultVal) throws BadConfigurationException;
 	
 	/**
+	 * Request the value associated with the specified key, or a default value if the key in question could not be read for whatever reason.
+	 * @param key
+	 *   A key.
+	 * @param type
+	 *   A value type.
+	 * @param defaultVal
+	 *   A default value.
+	 * @return
+	 *   The value associated with {@code key}. Return {@code defaultVal} if the key in question was not found or could not be cast to {@code type}.
+	 * 
+	 */
+	public <T> T getSafely(String key, Class<T> type, T defaultVal);
+	
+	/**
 	 * Find and parse a time field.
 	 * @param key
 	 *  A key.
