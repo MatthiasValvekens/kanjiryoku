@@ -10,7 +10,7 @@ public interface KanjiGuesser extends AutoCloseable {
 	 * @param numCandidates
 	 * @return
 	 */
-	public List<Character> guess(int width, int heigth, List<List<Dot>> strokes);
+	public List<Character> guess(int width, int height, List<List<Dot>> strokes);
 	
 	@Override
 	public void close();

@@ -84,6 +84,7 @@ public enum ServerCommand {
 				throws ServerException {
 			//enforce arglen
 			if(message.argCount() < 2) throw new ArgumentCountException(ArgumentCountException.Type.TOO_FEW, STARTSESSION);
+			if(client.getSession() != null) throw new SessionException("Can't do that while in a session.");
 			String gameName = message.get(1).toUpperCase();
 			Game game;
 			try {

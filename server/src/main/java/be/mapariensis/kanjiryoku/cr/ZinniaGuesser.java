@@ -22,19 +22,25 @@ public class ZinniaGuesser implements KanjiGuesser {
 	private final Recognizer eng;
 	private final int tolerance;
 	public static class Factory implements KanjiGuesserFactory {
-
+		static {
+			loadLibraries();
+		}
+		private Recognizer eng;
 		@Override
 		public KanjiGuesser getGuesser(IProperties config)
 				throws BadConfigurationException, IOException {
 			int tolerance = config.getTyped(ConfigFields.CR_TOLERANCE, Integer.class,ConfigFields.CR_TOLERANCE_DEFAULT);
-			String modelfile = config.getRequired(ConfigFields.MODEL_FILE, String.class);
-			return new ZinniaGuesser(modelfile,tolerance);
+			if(eng == null) {
+				String modelfile = config.getRequired(ConfigFields.MODEL_FILE, String.class);
+				Recognizer r = new Recognizer();
+				r.open(modelfile);
+				eng = r; // avoid invalid state if open throws an exception
+			}
+			return new ZinniaGuesser(eng,tolerance);
 		}
 		
 	}
-	static {
-		loadLibraries();
-	}
+
 	private static void loadLibraries() {
 		try {
 			System.loadLibrary("jzinnia-0.06-JAVA");
@@ -42,7 +48,8 @@ public class ZinniaGuesser implements KanjiGuesser {
 			log.error("Failed to load Zinnia library.",err);
 		}
 	}
-	public ZinniaGuesser(Recognizer eng, int tolerance) {
+	private ZinniaGuesser(Recognizer eng, int tolerance) {
+		if(eng == null) throw new IllegalArgumentException();
 		this.eng = eng;
 		this.tolerance = tolerance;
 	}
@@ -66,7 +73,7 @@ public class ZinniaGuesser implements KanjiGuesser {
 			}
 		}
 		Result res;
-		// synchronize on the recognizer, just to be safe
+		// synchronize on the recognizer, just to be safe TODO: determine whether this is necessary
 		synchronized(eng) {
 			res = eng.classify(charmodel, tolerance);
 		}
@@ -86,7 +93,5 @@ public class ZinniaGuesser implements KanjiGuesser {
 		return "Zinnia engine";
 	}
 	@Override
-	public void close() {
-		if(eng != null) eng.close(); 
-	}
+	public void close() { }
 }

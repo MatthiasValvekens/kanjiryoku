@@ -1,1 +1,0 @@
-A pure Java port of the Zinnia handwriting library. For the time being, I'll only implement the Recognizer and Character classes, and whatever they require.
