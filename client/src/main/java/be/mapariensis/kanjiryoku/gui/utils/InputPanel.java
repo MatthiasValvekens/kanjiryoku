@@ -33,6 +33,7 @@ public class InputPanel extends JPanel implements InputHandler {
 		setPreferredSize(size);
 		dummyPanel.setSize(size);
 		add(dummyPanel,BorderLayout.CENTER);
+		
 	}
 	private static final BufferedImage checkmarkImage;
 	private static final String CHECKMARK_FILE = "checkmark.png";
@@ -83,6 +84,7 @@ public class InputPanel extends JPanel implements InputHandler {
 	public void endProblem() {
 		if(currentComponent != null) {
 			currentComponent.endProblem();
+			currentComponent.getInputHandler().clearLocalInput();
 			fader.startFade(true);
 		}
 		else log.warn("No input component available, nothing to do.");

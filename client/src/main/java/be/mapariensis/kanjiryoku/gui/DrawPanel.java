@@ -31,7 +31,6 @@ public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 
 	private final List<List<Dot>> strokes = new LinkedList<List<Dot>>();
 	private List<Dot> currentStroke;
-	private final GUIBridge bridge;
 	private static final int BRUSH_RADIUS = 10;
 	private static final Stroke BRUSH_STROKE = new BasicStroke(BRUSH_RADIUS, BasicStroke.CAP_ROUND,BasicStroke.JOIN_MITER);
 	private final Dimension size;
@@ -39,7 +38,6 @@ public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 	
 	private final HandwrittenInputHandler ih;
 	public DrawPanel(Dimension size, GUIBridge bridge) {
-		this.bridge = bridge;
 		this.size = size;
 		this.ih = new HandwrittenInputHandlerImpl(this,bridge);
 		DrawingListener listener = new DrawingListener();

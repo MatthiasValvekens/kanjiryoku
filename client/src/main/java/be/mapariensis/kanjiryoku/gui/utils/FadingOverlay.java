@@ -12,16 +12,15 @@ import javax.swing.Timer;
 
 public class FadingOverlay {
 	private boolean hide = true;
-	private float opacity = 1f;
+	private float opacity = 0;
 	private final Image image;
 	private final JComponent component;
-	private static final Integer INTERVAL = 100;
+	private static final Integer INTERVAL = 50;
 	private final ActionListener updater = new ActionListener() {
-
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			opacity -= 0.1;
-			if(opacity <= 0) {
+			opacity += 0.1;
+			if(opacity >= 1) {
 				hide = true;
 				timer.stop();
 				timer = null;
@@ -37,7 +36,7 @@ public class FadingOverlay {
 
 	public void startFade(boolean block) {
 		if(image == null) return;
-		opacity = 1f;
+		opacity = 0;
 		hide = false;
 		if(timer != null && timer.isRunning()) timer.stop();
 		timer = new Timer(INTERVAL, updater);
