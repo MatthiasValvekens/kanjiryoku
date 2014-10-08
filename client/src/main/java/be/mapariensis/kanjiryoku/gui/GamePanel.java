@@ -108,10 +108,6 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		return bridge.getUplink().getUsername();
 	}
 	
-	@Override
-	public void inputCleared() {
-		problemPanel.setLastWrongInput(null);		
-	}
 	
 	@Override
 	public void setLock(boolean locked) {

@@ -13,5 +13,4 @@ public interface GameClientInterface {
 	public void setProblem(Problem p);
 	public Problem getProblem();
 	public InputHandler getInputHandler();
-	public void inputCleared();
 }

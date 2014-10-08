@@ -71,6 +71,5 @@ public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 	@Override
 	public void clearLocalInput() {
 		dpi.clearStrokes();
-		bridge.getClient().inputCleared();
 	}
 }

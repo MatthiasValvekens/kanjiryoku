@@ -118,7 +118,6 @@ public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 			if(!locked && SwingUtilities.isRightMouseButton(e)) {
 				clearStrokes();
 				ih.broadcastClearInput();
-				bridge.getClient().inputCleared();
 			}
 		}
 
