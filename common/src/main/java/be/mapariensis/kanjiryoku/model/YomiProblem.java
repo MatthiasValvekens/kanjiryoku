@@ -33,5 +33,9 @@ public final class YomiProblem extends ProblemWithBlank {
 		return new UnicodeBlockFilter(UnicodeBlock.HIRAGANA);
 	}
 	
+	@Override
+	public InputMethod getInputMethod() {
+		return InputMethod.HANDWRITTEN;
+	}
 	
 }

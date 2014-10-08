@@ -31,5 +31,10 @@ public final class KakiProblem extends ProblemWithBlank {
 	public Filter<Character> allowedChars() {
 		return new UnicodeBlockFilter(UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS);
 	}
+	
+	@Override
+	public InputMethod getInputMethod() {
+		return InputMethod.HANDWRITTEN;
+	}
 
 }

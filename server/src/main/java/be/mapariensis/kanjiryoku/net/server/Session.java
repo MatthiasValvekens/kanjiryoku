@@ -221,7 +221,7 @@ public class Session {
 		
 		@Override
 		public void deliverStroke(User submitter, List<Dot> stroke) {
-			broadcastMessage(submitter,new NetworkMessage(ClientCommandList.STROKE,submitter.handle,stroke));
+			broadcastMessage(submitter,new NetworkMessage(ClientCommandList.STROKE,stroke));
 		}
 
 		

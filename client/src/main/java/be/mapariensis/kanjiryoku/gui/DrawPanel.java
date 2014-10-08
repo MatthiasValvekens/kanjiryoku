@@ -48,7 +48,7 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 	private static final int BRUSH_RADIUS = 10;
 	private static final Stroke BRUSH_STROKE = new BasicStroke(BRUSH_RADIUS, BasicStroke.CAP_ROUND,BasicStroke.JOIN_MITER);
 	private final Dimension size;
-	private boolean locked = true, solvedProblem = false;
+	private boolean locked = true;
 	private final FadingOverlay fader = new FadingOverlay(this, checkmarkImage);
 	public DrawPanel(Dimension size, GameClientInterface server) {
 		this.server = server;
@@ -61,7 +61,6 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 
 	public void endProblem() {
 		setLock(true);
-		solvedProblem = true;
 		fader.startFade();
 	}
 
@@ -77,9 +76,6 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 	@Override
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
-		if(solvedProblem) {
-			// TODO: do something nice here
-		}
 		Rectangle frame = g.getClipBounds();
 		if(!(g instanceof Graphics2D)) throw new IllegalArgumentException("Require Graphics2D");
 		Graphics2D g2d = (Graphics2D) g.create(frame.x, frame.y, frame.width, frame.height); //normalize graphics to current clip

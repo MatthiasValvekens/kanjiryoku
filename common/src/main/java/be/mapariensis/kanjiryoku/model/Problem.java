@@ -41,4 +41,6 @@ public abstract class Problem implements Iterable<Word>{
 	public abstract String getFullSolution();
 	
 	public abstract Filter<Character> allowedChars();
+	
+	public abstract InputMethod getInputMethod();
 }

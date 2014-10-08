@@ -157,13 +157,8 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
-			checkArgs(msg,3);
-			String name = msg.get(1);
-			if(name.equals(bridge.getClient().getUsername())) { //FIXME : get rid of echo
-				log.warn("Stroke echo for "+name);
-				return;
-			}
-			List<Dot> stroke = ParsingUtils.parseDots(msg.get(2));
+			checkArgs(msg,2);
+			List<Dot> stroke = ParsingUtils.parseDots(msg.get(1));
 			bridge.getClient().getCanvas().drawStroke(stroke);
 		}
 	}, CLEARSTROKES {
