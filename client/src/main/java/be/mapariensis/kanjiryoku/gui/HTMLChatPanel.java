@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.Constants;
 import be.mapariensis.kanjiryoku.gui.utils.DummyResponseHandler;
 import be.mapariensis.kanjiryoku.gui.utils.YesNoTask;
 import be.mapariensis.kanjiryoku.net.client.ServerResponseHandler;
@@ -84,7 +85,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	}
 	@Override
 	public void displayServerMessage(String message) {
-		append(wrap("p","*server*",SERVER_CLASS), esc(message));
+		append(wrap("p",Constants.SERVER_HANDLE,SERVER_CLASS), esc(message));
 	}
 	@Override
 	public void displayGameMessage(String message) {

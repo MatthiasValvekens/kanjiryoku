@@ -30,6 +30,7 @@ public class MainWindow extends JFrame implements GUIBridge {
 	private final ChatInterface chat;
 	private final GamePanel gci;
 	private final String serverInfoString;
+	private final JMenuBar menuBar;
 	public MainWindow(InetAddress addr, int port, String username) throws IOException {
 		this.serverInfoString = String.format("(%s:%s)",addr,port);
 		setTitle(String.format("Kanjiryoku - %s",this.serverInfoString));
@@ -64,7 +65,8 @@ public class MainWindow extends JFrame implements GUIBridge {
 		});
 		// TODO : enable/disable menus based on WHOAMI return values
 		// menu bar
-		JMenuBar menuBar = new JMenuBar();
+		menuBar = new JMenuBar();
+		menuBar.setEnabled(false);
 		// session menu
 		JMenu sessionMenu = new JMenu("Session");
 		menuBar.add(sessionMenu);
@@ -150,5 +152,6 @@ public class MainWindow extends JFrame implements GUIBridge {
 	public void setUsername(String username) {
 		setTitle(String.format("Kanjiryoku - %s %s",username,serverInfoString));
 		serv.setUsername(username);
+		menuBar.setEnabled(true);
 	}
 }

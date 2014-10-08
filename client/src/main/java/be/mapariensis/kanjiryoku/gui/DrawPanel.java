@@ -12,56 +12,45 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.geom.Path2D;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 
-import javax.imageio.ImageIO;
-import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.cr.Dot;
-import be.mapariensis.kanjiryoku.gui.utils.FadingOverlay;
+import be.mapariensis.kanjiryoku.net.input.HandwrittenInputHandler;
+import be.mapariensis.kanjiryoku.net.input.HandwrittenInputHandlerImpl;
+import be.mapariensis.kanjiryoku.net.input.InputComponent;
 
 
-public class DrawPanel extends JPanel implements DrawingPanelInterface {
+public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 	private static final Logger log = LoggerFactory.getLogger(DrawPanel.class);
-	private static final BufferedImage checkmarkImage;
-	private static final String CHECKMARK_FILE = "checkmark.png";
-	static {
-		BufferedImage thing = null;
-		try(InputStream is = DrawPanel.class.getClassLoader().getResourceAsStream(CHECKMARK_FILE)) {
-				thing = ImageIO.read(is);
-		} catch (IOException | IllegalArgumentException e) {
-			log.warn("Failed to read checkmark.png",e);
-		}
-		checkmarkImage = thing;
-	}
+
 	private final List<List<Dot>> strokes = new LinkedList<List<Dot>>();
 	private List<Dot> currentStroke;
-	private final GameClientInterface server;
+	private final GUIBridge bridge;
 	private static final int BRUSH_RADIUS = 10;
 	private static final Stroke BRUSH_STROKE = new BasicStroke(BRUSH_RADIUS, BasicStroke.CAP_ROUND,BasicStroke.JOIN_MITER);
 	private final Dimension size;
 	private boolean locked = true;
-	private final FadingOverlay fader = new FadingOverlay(this, checkmarkImage);
-	public DrawPanel(Dimension size, GameClientInterface server) {
-		this.server = server;
+	
+	private final HandwrittenInputHandler ih;
+	public DrawPanel(Dimension size, GUIBridge bridge) {
+		this.bridge = bridge;
 		this.size = size;
+		this.ih = new HandwrittenInputHandlerImpl(this,bridge);
 		DrawingListener listener = new DrawingListener();
 		addMouseListener(listener);
 		addMouseMotionListener(listener);
 		clearStrokes();
 	}
 
+	@Override
 	public void endProblem() {
 		setLock(true);
-		fader.startFade();
 	}
 
 	@Override
@@ -100,7 +89,7 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 			}
 			g2d.draw(path);
 		}
-		fader.paint(g2d);
+		
 		g2d.dispose();
 	}
 
@@ -128,7 +117,8 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 		public void mouseClicked(MouseEvent e) {
 			if(!locked && SwingUtilities.isRightMouseButton(e)) {
 				clearStrokes();
-				server.clearInput();
+				ih.broadcastClearInput();
+				bridge.getClient().inputCleared();
 			}
 		}
 
@@ -140,7 +130,7 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 			if(!locked && SwingUtilities.isLeftMouseButton(e)) {
 				currentStroke.add(new Dot(e.getX(),e.getY()));
 				log.debug("\nFinished stroke {}: {} ",strokes.size(), currentStroke);
-				server.sendStroke(currentStroke);
+				ih.sendStroke(currentStroke);
 
 				currentStroke = new LinkedList<Dot>();
 				strokes.add(currentStroke);
@@ -166,7 +156,13 @@ public class DrawPanel extends JPanel implements DrawingPanelInterface {
 		strokes.add(dots);
 		repaint();
 	}
+	@Override
 	public void setLock(boolean locked) {
 		this.locked = locked;
+	}
+	
+	@Override
+	public HandwrittenInputHandler getInputHandler() {
+		return ih;
 	}
 }

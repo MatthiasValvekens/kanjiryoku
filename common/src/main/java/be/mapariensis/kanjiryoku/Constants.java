@@ -8,4 +8,7 @@ public class Constants {
 	public static String version() {
 		return String.format("%d.%d.%d",majorVersion,minorVersion,patch);
 	}
+	
+	public static final String SERVER_HANDLE = "*server*";
+	public static final String SYSTEM_HANDLE = "*system*";
 }

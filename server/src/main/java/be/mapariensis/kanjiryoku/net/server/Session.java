@@ -2,16 +2,11 @@ package be.mapariensis.kanjiryoku.net.server;
 
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Set;
 
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import be.mapariensis.kanjiryoku.cr.Dot;
-import be.mapariensis.kanjiryoku.model.Problem;
-import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
@@ -39,14 +34,13 @@ public class Session {
 		this.manager = manager;
 		this.uman = uman;
 		this.game = game;
-		this.game.addProblemListener(new NetworkedGameListener());
 		synchronized(master.sessionLock()) {
 			master.joinSession(this); // session is locked until we're done. No threads can access our partially constructed session
 		}
 	}
 	public synchronized void start() throws GameFlowException, SessionException {
 		checkDestroyed();
-		game.startGame(users);
+		game.startGame(this,users);
 		broadcastHumanMessage(null, "Game started");
 	}
 	
@@ -203,45 +197,8 @@ public class Session {
 	private void checkDestroyed() throws SessionException {
 		if(destroyed) throw new SessionException("Session destroyed");
 	}
-	
-	private class NetworkedGameListener implements GameListener {
-
-		
-		@Override
-		public void deliverProblem(Problem p, User to) {
-			broadcastMessage(null,new NetworkMessage(ClientCommandList.PROBLEM,to.handle,p.toString()));
-		}
-
-		
-		@Override
-		public void deliverAnswer(User submitter, boolean wasCorrect,char input, ClientResponseHandler rh) {
-			broadcastMessage(null,new NetworkMessage(ClientCommandList.ANSWER,submitter.handle,wasCorrect,input, rh != null ? rh.id : -1),rh);
-		}
-
-		
-		@Override
-		public void deliverStroke(User submitter, List<Dot> stroke) {
-			broadcastMessage(submitter,new NetworkMessage(ClientCommandList.STROKE,stroke));
-		}
-
-		
-		@Override
-		public void clearStrokes(User submitter) {
-			broadcastMessage(submitter, new NetworkMessage(ClientCommandList.CLEARSTROKES));
-		}
-
-		
-		@Override
-		public void finished(JSONObject statistics) {
-			if(statistics != null) broadcastMessage(null, new NetworkMessage(ClientCommandList.STATISTICS,statistics));
-			manager.destroySession(Session.this);
-		}
-
-		
-		@Override
-		public void problemSkipped(User submitter, boolean batonPass, ClientResponseHandler rh) {
-			broadcastMessage(null,new NetworkMessage(ClientCommandList.PROBLEMSKIPPED,submitter.handle,rh.id,batonPass),rh);
-		}		
+	public void destroy() {
+		manager.destroySession(this);
 	}
 	public GameServerInterface getGame() {
 		return game;

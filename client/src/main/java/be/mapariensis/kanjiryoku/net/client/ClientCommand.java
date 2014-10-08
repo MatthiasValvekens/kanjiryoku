@@ -2,7 +2,6 @@ package be.mapariensis.kanjiryoku.net.client;
 
 import java.text.ParseException;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -11,14 +10,12 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.gui.GUIBridge;
 import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
-import be.mapariensis.kanjiryoku.util.ParsingUtils;
 
 // TODO : placeholders only
 public enum ClientCommand {
@@ -153,28 +150,13 @@ public enum ClientCommand {
 			if(!batonPass) bridge.getChat().displayGameMessage(String.format("The full solution was %s.",bridge.getClient().getProblem().getFullSolution()));
 			bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.RESPOND,responseCode));
 		}
-	}, STROKE {
-		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
-				throws ServerCommunicationException {
-			checkArgs(msg,2);
-			List<Dot> stroke = ParsingUtils.parseDots(msg.get(1));
-			bridge.getClient().getCanvas().drawStroke(stroke);
-		}
-	}, CLEARSTROKES {
-		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
-				throws ServerCommunicationException {
-			log.info("Clearing drawing panel");
-			bridge.getClient().getCanvas().clearStrokes();
-		}
 	}, RESETUI {
 
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ClientException {
 			log.info("Resetting UI");
-			bridge.getClient().getCanvas().clearStrokes();
+			bridge.getClient().getInputHandler().clearLocalInput();
 			bridge.getClient().setLock(true);
 			bridge.getClient().setProblem(null);
 		}
@@ -220,10 +202,19 @@ public enum ClientCommand {
 			}
 		}
 		
+	}, INPUT {
+
+		@Override
+		public void execute(NetworkMessage msg, GUIBridge bridge)
+				throws ClientException {
+			if(msg.argCount()<2) throw new ServerCommunicationException(msg);
+			bridge.getClient().getInputHandler().receiveMessage(msg.get(1), msg.truncate(2));
+		}
+		
 	};
 	private static final Logger log = LoggerFactory.getLogger(ClientCommand.class);
 	public abstract void execute(NetworkMessage msg, GUIBridge bridge) throws ClientException;
-	private static void checkArgs(NetworkMessage msg, int args) throws ServerCommunicationException {
+	public static void checkArgs(NetworkMessage msg, int args) throws ServerCommunicationException {
 		if(msg.argCount() != args) throw new ServerCommunicationException(msg);
 	}
 }

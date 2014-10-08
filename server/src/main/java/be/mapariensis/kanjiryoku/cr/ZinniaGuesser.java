@@ -60,6 +60,7 @@ public class ZinniaGuesser implements KanjiGuesser {
 	}
 	@Override
 	public List<Character> guess(int width,int height, List<List<Dot>> strokes) {
+		if(strokes.isEmpty()) throw new IllegalArgumentException();
 		// Zinnia character model
 		org.chasen.crfpp.Character charmodel = new org.chasen.crfpp.Character();
 		charmodel.set_width(width);

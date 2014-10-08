@@ -15,6 +15,7 @@ public class FadingOverlay {
 	private float opacity = 1f;
 	private final Image image;
 	private final JComponent component;
+	private static final Integer INTERVAL = 100;
 	private final ActionListener updater = new ActionListener() {
 
 		@Override
@@ -34,12 +35,20 @@ public class FadingOverlay {
 		this.component = component;
 	}
 
-	public void startFade() {
+	public void startFade(boolean block) {
 		if(image == null) return;
 		opacity = 1f;
 		hide = false;
-		timer = new Timer(75, updater);
+		if(timer != null && timer.isRunning()) timer.stop();
+		timer = new Timer(INTERVAL, updater);
 		timer.start();
+		if(block) {
+			while(timer != null && timer.isRunning()) {
+				try {
+					Thread.sleep(2*INTERVAL);
+				} catch (InterruptedException e) {	}
+			}
+		}
 	}
 
 	

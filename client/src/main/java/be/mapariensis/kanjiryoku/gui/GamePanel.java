@@ -2,23 +2,23 @@ package be.mapariensis.kanjiryoku.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.ParseException;
-import java.util.List;
-
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import be.mapariensis.kanjiryoku.cr.Dot;
+import be.mapariensis.kanjiryoku.gui.utils.InputPanel;
 import be.mapariensis.kanjiryoku.model.*;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
+import be.mapariensis.kanjiryoku.net.input.InputHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
@@ -26,31 +26,31 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	private static final Logger log = LoggerFactory.getLogger(GamePanel.class);
 	
 	
-	private final DrawPanel pane;
+	
 	private final GUIBridge bridge;
 	private final ProblemParser<?> parser;
 	private final JButton submitButton;
-	private static final Dimension size = new Dimension(300, 400);
-	 
+	
 	private int inputCounter = 0; // keeps track of the current position in the problem for convenience
-	private final ProblemPanel cont = new ProblemPanel();
+	private final ProblemPanel problemPanel = new ProblemPanel();
 
 	private volatile boolean locked;
+	private final InputPanel inputContainer;
 	public GamePanel(final GUIBridge bridge, ProblemParser<?> parser) {
 		this.parser = parser;
 		this.bridge = bridge;
 		setLayout(new BorderLayout());
-		pane = new DrawPanel(size,this);
 		
-		pane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-		cont.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-		add(cont,BorderLayout.NORTH);
-		add(pane, BorderLayout.CENTER);
+		inputContainer = new InputPanel(bridge);
+		inputContainer.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+		problemPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+		add(problemPanel,BorderLayout.NORTH);
+		add(inputContainer, BorderLayout.CENTER);
 		submitButton = new JButton(new AbstractAction("Submit") {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT, pane.getWidth(),pane.getHeight()));				
+				bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT, inputContainer.getWidth(),inputContainer.getHeight()));				
 			}
 		});
 		add(submitButton,BorderLayout.SOUTH);
@@ -58,7 +58,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		// add double-click listener to problem panel
 		// for skipping problems
 		
-		cont.addMouseListener(new MouseAdapter() {
+		problemPanel.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent ev) {
 				if(!locked && ev.getClickCount() == 2) {
@@ -69,22 +69,18 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		setLock(true);
 	}
 	@Override
-	public void sendStroke(List<Dot> dots) {
-		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT,dots));
-	}
-	@Override
 	public void deliverAnswer(boolean correct, char inputChar) {
 		
 		if(correct) {
-			char added = cont.addCorrectCharacter();
+			char added = problemPanel.addCorrectCharacter();
 			if(inputChar != added) {
 				log.warn("Added char differs from input char! %s <> %s",added,inputChar);
 			}
-			if(++inputCounter == cont.getSolution().length()) {
-				pane.endProblem();
+			if(++inputCounter == problemPanel.getSolution().length()) {
+				inputContainer.endProblem();
 			}
 		} else {
-			cont.setLastWrongInput(inputChar);
+			problemPanel.setLastWrongInput(inputChar);
 		}
 	}
 	@Override
@@ -92,10 +88,18 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		return parser.parseProblem(s);
 	}
 	@Override
-	public void setProblem(Problem p) {
+	public void setProblem(final Problem p) {
 		inputCounter = 0;
-		pane.clearStrokes();
-		cont.setProblem(p);
+		inputContainer.clearLocalInput();
+		problemPanel.setProblem(p);
+		SwingUtilities.invokeLater(new Runnable() {
+
+			@Override
+			public void run() {
+				inputContainer.setInputMethod(p != null ? p.getInputMethod() : null);
+			}
+		});
+		
 	}
 	
 
@@ -105,24 +109,24 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	}
 	
 	@Override
-	public void clearInput() {
-		cont.setLastWrongInput(null);
-		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.CLEAR));
+	public void inputCleared() {
+		problemPanel.setLastWrongInput(null);		
 	}
+	
 	@Override
 	public void setLock(boolean locked) {
 		log.info("Panel lock set to {}", locked ? "locked" : "released");
 		this.locked = locked;
-		pane.setLock(locked);
+		inputContainer.setLock(locked);
 		submitButton.setEnabled(!locked);
 	}
 	@Override
-	public DrawingPanelInterface getCanvas() {
-		return pane;
+	public Problem getProblem() {
+		return problemPanel.getProblem();
 	}
 	@Override
-	public Problem getProblem() {
-		return cont.getProblem();
+	public InputHandler getInputHandler() {
+		return inputContainer;
 	}
 
 }

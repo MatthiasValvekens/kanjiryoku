@@ -9,6 +9,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.text.DefaultCaret;
 
+import be.mapariensis.kanjiryoku.Constants;
 import be.mapariensis.kanjiryoku.gui.utils.DummyResponseHandler;
 import be.mapariensis.kanjiryoku.gui.utils.YesNoTask;
 import be.mapariensis.kanjiryoku.net.client.ServerResponseHandler;
@@ -34,7 +35,7 @@ public class PlainChatPanel extends JPanel implements ChatInterface {
 	@Override
 	public void displayServerMessage(String message) {
 		synchronized(textpanel) {
-			textpanel.append(String.format("*server*\t%s\n",message));
+			textpanel.append(String.format("%s\t%s\n",Constants.SERVER_HANDLE,message));
 		}
 		
 	}

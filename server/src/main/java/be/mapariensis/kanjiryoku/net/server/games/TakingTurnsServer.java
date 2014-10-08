@@ -10,9 +10,11 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.Constants;
 import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
 import be.mapariensis.kanjiryoku.model.Problem;
+import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
@@ -20,9 +22,10 @@ import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
-import be.mapariensis.kanjiryoku.net.server.GameListener;
+import be.mapariensis.kanjiryoku.net.server.ClientResponseHandler;
 import be.mapariensis.kanjiryoku.net.server.GameServerInterface;
 import be.mapariensis.kanjiryoku.net.server.ServerCommand;
+import be.mapariensis.kanjiryoku.net.server.Session;
 import be.mapariensis.kanjiryoku.net.server.handlers.AnswerFeedbackHandler;
 import be.mapariensis.kanjiryoku.problemsets.ProblemOrganizer;
 import be.mapariensis.kanjiryoku.util.Filter;
@@ -59,19 +62,21 @@ public class TakingTurnsServer implements GameServerInterface {
 	private int problemPosition, problemRepetitions;
 	private Problem currentProblem;
 	private TurnIterator ti;
+	private Session session;
 	private final KanjiGuesser guess;
 	private final ProblemOrganizer problemSource;
-	private final Collection<GameListener> listeners = new LinkedList<GameListener>();
 	public TakingTurnsServer(ProblemOrganizer problems, KanjiGuesser guess, boolean batonPass) {
 		this.guess = guess;
 		this.problemSource = problems;
 		this.enableBatonPass = batonPass;
 	}
+	
 	@Override
 	public Game getGame() {
 		return Game.TAKINGTURNS;
 	}
 	private final List<List<Dot>> strokes = new LinkedList<List<Dot>>();
+	
 	@Override
 	public void submit(NetworkMessage msg, User source) throws GameFlowException, ProtocolSyntaxException {
 		if(!canPlay(source)) throw new GameFlowException("You can't do that now.");
@@ -108,24 +113,16 @@ public class TakingTurnsServer implements GameServerInterface {
 						ti.currentUserStats().correct++;
 					}
 					strokes.clear();
-					synchronized(listeners) {
-						for(GameListener l : listeners) {
-							log.info("Delivering answer "+res);
-							l.deliverAnswer(source, answer, res,rh);
-							if(rh == null) l.clearStrokes(null); // do not clear strokes on final input
-						}
-					}
+					log.info("Delivering answer "+res);
+					deliverAnswer(source, answer, res,rh);
+					if(rh == null) clearStrokes(null); // do not clear strokes on final input
 				}
 				// submit one stroke
 				// SUBMIT [list_of_dots]
 				else if(msg.argCount() == 2) {
 					List<Dot> stroke = ParsingUtils.parseDots(msg.get(1));
 					strokes.add(stroke);
-					synchronized(listeners) {
-						for(GameListener l : listeners) {
-							l.deliverStroke(source, stroke);
-						}
-					}
+					deliverStroke(source, stroke);
 				} else throw new ArgumentCountException(ArgumentCountException.Type.UNEQUAL, ServerCommand.SUBMIT);
 			} catch(NumberFormatException ex) {
 				throw new ProtocolSyntaxException(ex);
@@ -133,39 +130,33 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 	}
 
+	
 	@Override
 	public boolean canPlay(User u) {
 		return gameRunning && u == currentPlayer;
 	}
+	
 	@Override
 	public boolean running() {
 		return gameRunning;
 	}
+	
 	@Override
-	public void startGame(Set<User> participants) throws GameFlowException {
+	public void startGame(Session sess, Set<User> participants) throws GameFlowException {
 		if(gameRunning) throw new GameFlowException("Game already running.");
 		gameRunning = true;
+		this.session = sess;
 		this.ti = new TurnIterator(participants);
 		nextProblem(problemSource.next(true));
 	}
+	
 	@Override
 	public void close() {
 		gameRunning = false;
 		currentPlayer = null;
 		guess.close();
 	}
-	@Override
-	public void addProblemListener(GameListener p) {
-		synchronized(listeners) {
-			listeners.add(p);
-		}
-	}
-	@Override
-	public void removeProblemListener(GameListener p) {
-		synchronized(listeners) {
-			listeners.remove(p);
-		}
-	}
+	
 	private void nextProblem(Problem nextProblem) {
 		log.info("Next problem");
 		problemPosition = 0;
@@ -174,22 +165,15 @@ public class TakingTurnsServer implements GameServerInterface {
 		currentProblem = nextProblem;
 		currentPlayer = ti.next();
 		// hence this should be safe
-		synchronized(listeners) {
-			for(GameListener l : listeners) {
-				l.deliverProblem(currentProblem,currentPlayer);
-			}
-		}
+		deliverProblem(currentProblem,currentPlayer);
 	}
+	
 	@Override
 	public void clearInput(User submitter) throws GameFlowException {
 		if(submitter != null && !submitter.equals(currentPlayer)) throw new GameFlowException("Only the current player can clear the screen.");
 		log.info("Clearing input.");
 		strokes.clear();
-		synchronized(listeners) {
-			for(GameListener l : listeners) {
-				l.clearStrokes(submitter);
-			}
-		}
+		clearStrokes(submitter);
 	}
 	private class NextTurnHandler extends AnswerFeedbackHandler {
 		final boolean answer, doBatonPass;
@@ -198,6 +182,7 @@ public class TakingTurnsServer implements GameServerInterface {
 			this.answer = answer;
 			this.doBatonPass = doBatonPass;
 		}
+		
 		@Override
 		public void afterAnswer() throws ServerException {
 			log.info("All users answered. Moving on.");
@@ -209,30 +194,21 @@ public class TakingTurnsServer implements GameServerInterface {
 			} else {
 				log.info("No problems left");
 				gameRunning = false;
-				synchronized(listeners) {
-					JSONObject stats = stats();
-					for(GameListener l : listeners) {
-						l.finished(stats);
-					}
-				}
+				TakingTurnsServer.this.finished(stats());
 			}
 		}
 
 	}
 
+	
 	@Override
 	public void skipProblem(User submitter) throws GameFlowException {
 		if(submitter != null && !submitter.equals(currentPlayer)) throw new GameFlowException("Only the current player can decide to skip a problem.");
 		log.info("Skipping problem.");
 		ti.currentUserStats().skipped++;
 		boolean batonPass = enableBatonPass && (problemRepetitions<ti.players.size()-1);
-		synchronized(listeners) {
-			AnswerFeedbackHandler rh = new NextTurnHandler(false,batonPass);
-			
-			for(GameListener l : listeners) {
-				l.problemSkipped(submitter,batonPass,rh);
-			}
-		}
+		AnswerFeedbackHandler rh = new NextTurnHandler(false,batonPass);
+		problemSkipped(submitter,batonPass,rh);
 	}
 	
 	private JSONObject stats() {
@@ -247,6 +223,47 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 		return res;
 	}
+
+	
+	
+	
+	// network code (moved from old GameListener)
+	private void deliverProblem(Problem p, User to) {
+		session.broadcastMessage(null,new NetworkMessage(ClientCommandList.PROBLEM,to.handle,p.toString()));
+	}
+
+	
+	
+	private void deliverAnswer(User submitter, boolean wasCorrect,char input, ClientResponseHandler rh) {
+		session.broadcastMessage(null,new NetworkMessage(ClientCommandList.ANSWER,submitter.handle,wasCorrect,input, rh != null ? rh.id : -1),rh);
+	}
+
+	
+	
+	private void deliverStroke(User submitter, List<Dot> stroke) {
+		String uname = submitter != null ? submitter.handle : Constants.SERVER_HANDLE;
+		session.broadcastMessage(submitter,new NetworkMessage(ClientCommandList.INPUT,uname,ClientCommandList.STROKE,stroke));
+	}
+
+	
+	
+	private void clearStrokes(User submitter) {
+		String uname = submitter != null ? submitter.handle : Constants.SERVER_HANDLE;
+		session.broadcastMessage(submitter, new NetworkMessage(ClientCommandList.INPUT,uname,ClientCommandList.CLEARSTROKES));
+	}
+
+	
+	
+	private void finished(JSONObject statistics) {
+		if(statistics != null) session.broadcastMessage(null, new NetworkMessage(ClientCommandList.STATISTICS,statistics));
+		session.destroy();
+	}
+
+	
+	
+	private void problemSkipped(User submitter, boolean batonPass, ClientResponseHandler rh) {
+		session.broadcastMessage(null,new NetworkMessage(ClientCommandList.PROBLEMSKIPPED,submitter.handle,rh.id,batonPass),rh);
+	}		
 	
 
 }
