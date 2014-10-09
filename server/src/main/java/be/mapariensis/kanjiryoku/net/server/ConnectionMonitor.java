@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
@@ -421,6 +422,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	@Override
 	public void adminCommand(User issuer, int id, NetworkMessage commandMessage) throws UserManagementException,ProtocolSyntaxException {
 		boolean adminEnabled = config.getSafely(ConfigFields.ENABLE_ADMIN, Boolean.class,ConfigFields.ENABLE_ADMIN_DEFAULT);
+		@SuppressWarnings("unchecked")
+		List<String> allowedIps = config.getSafely(ConfigFields.ADMIN_WHITELIST, List.class, ConfigFields.ADMIN_WHITELIST_DEFAULT);
 		if(!adminEnabled) {
 			queueProcessingError(issuer.channel, new ServerException("Admin commands are disabled.", ServerException.ERROR_GENERIC));
 			return;			
@@ -433,7 +436,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			log.error("Failed to get command issuer address. Aborting operation.");
 			return;
 		}
-		if(!addr.isLoopbackAddress()) {
+		if(!addr.isLoopbackAddress() && !checkAddress(addr,allowedIps)) {
 			// this is a weak security precaution that isn't even that hard to circumvent
 			// still, admin commands should not expose anything vital
 			log.warn("Warning: non-loopback address {} (bound to user {}) issued admin command. Silently ignoring.",addr,issuer.handle);
@@ -448,6 +451,17 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			throw new ProtocolSyntaxException("Unknown command "+commandMessage.get(0));
 		}
 		messageUser(issuer,new NetworkMessage(ClientCommandList.CONFIRMADMIN,id,rh.id),rh);
+	}
+	private static boolean checkAddress(InetAddress addr, List<String> allowedIps) {
+		for(String s : allowedIps) {
+			try {
+				if(InetAddress.getByName(s).equals(addr)) return true;
+			} catch (UnknownHostException e) {
+				log.warn("Unknown host {}",s);
+				continue;
+			}
+		}
+		return false;
 	}
 	@Override
 	public void lobbyBroadcast(User user, NetworkMessage msg) {

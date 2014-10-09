@@ -1,5 +1,8 @@
 package be.mapariensis.kanjiryoku.config;
 
+import java.util.Collections;
+import java.util.List;
+
 public class ConfigFields {
 	public static final String CONFIG_FILE_NAME = "kanjiryoku.cfg";
 	public static final String CONFIG_FILE_DIR = ".";
@@ -24,6 +27,10 @@ public class ConfigFields {
 	
 	public static final String ENABLE_ADMIN = "enableAdminCommands";
 	public static final boolean ENABLE_ADMIN_DEFAULT = false;
+	
+	public static final String ADMIN_WHITELIST = "adminWhitelist";
+	public static final List<String> ADMIN_WHITELIST_DEFAULT = Collections.emptyList();
+	
 	
 	// CR-related settings
 	
