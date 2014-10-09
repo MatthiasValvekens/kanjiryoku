@@ -87,6 +87,7 @@ public class TakingTurnsServer implements GameServerInterface {
 					// submit all strokes
 					int width = Integer.parseInt(msg.get(1));
 					int height = Integer.parseInt(msg.get(2));
+					if(strokes.size() == 0) throw new GameFlowException("No input.");
 					List<Character> chars =guess.guess(width, height, strokes);
 					log.info("Retrieved {} characters",chars.size());
 					boolean answer = currentProblem.checkSolution(chars, problemPosition);

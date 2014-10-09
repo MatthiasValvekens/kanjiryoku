@@ -291,15 +291,20 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	public void deregister(User user) throws UserManagementException {
 		// TODO allow for disconnect handlers? 
 		if(user==null) throw new UserManagementException("null is not a user");
+		String username = user.handle;
 		user.purgeResponseHandlers();
-		try {
-			sessman.removeUser(user);
-		} catch (SessionException e) {
-			new UserManagementException(e);
+		boolean nosession = user.getSession() == null;
+		if(!nosession) {
+			try {
+				sessman.removeUser(user);
+			} catch (SessionException e) {
+				new UserManagementException(e);
+			}
 		}
 		store.removeUser(user);
 		log.info("Deregistered user {}",user);
 		closeQuietly(user.channel);
+		if(nosession) lobbyBroadcast(user, new NetworkMessage(ClientCommandList.SAY,String.format("User %s has disconnected.",username)));		
 	}
 
 	private void closeQuietly(SocketChannel channel) {
