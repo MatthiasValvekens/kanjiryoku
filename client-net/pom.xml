@@ -7,8 +7,8 @@
 		<artifactId>kanjiryoku</artifactId>
 		<version>${currentVersion}</version>
 	</parent>
-	<name>client</name>
-	<artifactId>client</artifactId>
+	<name>client-net</name>
+	<artifactId>client-net</artifactId>
 	<url>http://maven.apache.org</url>
 
 	<properties>
@@ -27,7 +27,7 @@
 		</dependency>
 		<dependency>
 			<groupId>be.mapariensis</groupId>
-			<artifactId>client-net</artifactId>
+			<artifactId>common</artifactId>
 			<version>${currentVersion}</version>
 		</dependency>
 		<dependency>
@@ -36,42 +36,4 @@
 			<version>3.3.2</version>
 		</dependency>
 	</dependencies>
-	<build>
-		<plugins>
-			<plugin>
-			<artifactId>maven-jar-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifest>
-							<mainClass>be.mapariensis.kanjiryoku.Kanjiryoku</mainClass>
-						</manifest>
-					</archive>
-				</configuration>
-			</plugin>
-			<plugin>
-
-				<artifactId>maven-assembly-plugin</artifactId>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-				  <appendAssemblyId>false</appendAssemblyId>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-					<archive>
-						<manifest>
-							<mainClass>be.mapariensis.kanjiryoku.Kanjiryoku</mainClass>
-						</manifest>
-					</archive>
-				</configuration>
-			</plugin>
-			
-		</plugins>
-	</build>
 </project>
