@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.gui.DrawPanel;
 import be.mapariensis.kanjiryoku.gui.GUIBridge;
+import be.mapariensis.kanjiryoku.gui.TilePanel;
 import be.mapariensis.kanjiryoku.model.InputMethod;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.input.InputComponent;
@@ -68,8 +69,11 @@ public class InputPanel extends JPanel implements InputHandler {
 			switch(im) {
 			case HANDWRITTEN:
 				comp = new DrawPanel(size,bridge);
-				inputs.put(im,currentComponent);
+				break;
+			case MULTIPLE_CHOICE:
+				comp = new TilePanel(bridge);
 			}
+			inputs.put(im,comp);
 		}
 		if(comp != currentComponent) {
 			remove(currentComponent != null ? currentComponent : dummyPanel);
@@ -122,8 +126,16 @@ public class InputPanel extends JPanel implements InputHandler {
 	}
 	
 	@Override
+	public void submit() {
+		if(currentComponent != null && currentComponent.getInputHandler() != null)
+			currentComponent.getInputHandler().submit();
+		else log.warn("Attempted submit, but no input handler was available.");
+	}
+	
+	@Override
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		fader.paint(g);
 	}
+	
 }

@@ -14,21 +14,26 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.JPanel;
-
+import javax.swing.JComponent;
 import be.mapariensis.kanjiryoku.gui.utils.TextRendering;
+import be.mapariensis.kanjiryoku.net.input.InputComponent;
+import be.mapariensis.kanjiryoku.net.input.InputHandler;
 
-public class TilePanel extends JPanel implements TiledInputInterface {
+public class TilePanel extends InputComponent implements TiledInputInterface {
 	private static final double TILE_SCALE = 0.9;
 	private static final Color selectionColor = TextRendering.rgb(41, 82, 229,(float)0.4);
-	private class Tile extends JPanel {
+	private static final Color highlightColor = TextRendering.rgb(41, 82, 229,(float)0.2);
+	private class Tile extends JComponent {
 		final String content;
-		public Tile(String s) {
+		final int id;
+		public Tile(String s, int i) {
 			this.content = s;
+			this.id = i;
 			addMouseListener(new MouseAdapter() {
 				@Override
 				public void mouseClicked(MouseEvent ev) {
 					// TODO : interact with server here
+					tileSelected(id);
 				}
 				
 				@Override
@@ -54,14 +59,18 @@ public class TilePanel extends JPanel implements TiledInputInterface {
 		private int swidth = 0;
 		private volatile Dimension size;
 		private volatile boolean highlighted;
+		private volatile boolean selected;
 		@Override
 		public void paintComponent(Graphics g) {
+			super.paintComponent(g);
 			Graphics2D g2d = (Graphics2D) g;
 			Rectangle rect = g2d.getClipBounds();
 			g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
 			g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-			g2d.setColor(highlighted ? selectionColor : Color.WHITE);
-			g2d.fillRect(rect.x,rect.y,rect.width,rect.height);
+			if(highlighted || selected) {
+				g2d.setColor(selected ? selectionColor : highlightColor);
+				g2d.fillRect(rect.x,rect.y,rect.width,rect.height);
+			}
 			g2d.setColor(Color.BLACK);
 			Rectangle contentClip = scale(rect,TILE_SCALE);
 			// compute font size
@@ -82,18 +91,29 @@ public class TilePanel extends JPanel implements TiledInputInterface {
 		
 	}
 	private volatile boolean locked;
+	private final GUIBridge bridge;
 	public static Rectangle scale(Rectangle r, double factor) {
 		int newwidth = (int) (r.width * factor);
 		int newheight = (int) (r.height * factor);
 		return new Rectangle(r.x+(r.width - newwidth)/2, r.y+(r.height - newheight)/2,newwidth,newheight);
 	}
-	public TilePanel() {
+	public TilePanel(GUIBridge bridge) {
+		this.bridge = bridge;
 		setBackground(Color.WHITE);
 	}
 	private volatile int rowcount;
+	private volatile int selectedTile = -1;
 	@Override
 	public void tileSelected(int i) {
-		
+		if(i<0 || i>=tiles.size()) throw new IllegalArgumentException();
+		if(selectedTile != -1) {
+			Tile t = tiles.get(selectedTile);
+			t.selected = false;
+			t.repaint();
+		}
+		Tile t = tiles.get(selectedTile = i);
+		t.selected = true;
+		t.repaint();
 	}
 	private List<Tile> tiles;
 	@Override
@@ -102,8 +122,8 @@ public class TilePanel extends JPanel implements TiledInputInterface {
 		GridLayout layout = new GridLayout(rowcount, rowcount, 0, 0);
 		setLayout(layout);
 		this.tiles = new ArrayList<Tile>(tiles.size());
-		for(String s : tiles) {
-			Tile t = new Tile(s);
+		for(int i = 0;i<tiles.size();i++) {
+			Tile t = new Tile(tiles.get(i),i);
 			add(t);
 			this.tiles.add(t);
 		}
@@ -111,8 +131,20 @@ public class TilePanel extends JPanel implements TiledInputInterface {
 		repaint();
 	}
 	
+
 	@Override
-	public void setLocked(boolean locked) {
+	public InputHandler getInputHandler() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	@Override
+	public void endProblem() {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public void setLock(boolean locked) {
 		this.locked = locked;
 	}
+
 }

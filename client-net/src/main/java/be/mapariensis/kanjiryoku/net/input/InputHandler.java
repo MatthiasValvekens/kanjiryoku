@@ -9,4 +9,5 @@ public interface InputHandler {
 	public void broadcastClearInput();
 	public void clearLocalInput();
 	public InputMethod inputType();
+	public void submit();
 }

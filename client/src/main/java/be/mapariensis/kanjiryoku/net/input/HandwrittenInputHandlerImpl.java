@@ -72,4 +72,9 @@ public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 	public void clearLocalInput() {
 		dpi.clearStrokes();
 	}
+
+	@Override
+	public void submit() {
+		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT, dpi.getWidth(),dpi.getHeight()));
+	}
 }

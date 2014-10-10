@@ -50,7 +50,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT, inputContainer.getWidth(),inputContainer.getHeight()));				
+				inputContainer.submit();				
 			}
 		});
 		add(submitButton,BorderLayout.SOUTH);
