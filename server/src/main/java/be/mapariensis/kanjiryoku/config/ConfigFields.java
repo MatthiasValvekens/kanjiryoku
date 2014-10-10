@@ -57,6 +57,8 @@ public class ConfigFields {
 	public static final String FILE_NAME_CATEGORY_VAR = "category";
 	public static final String FILE_NAME_DIFFICULTY_FORMAT = "difficultyFormat";
 	public static final String FILE_NAME_DIFFICULTY_FORMAT_DEFAULT = "%02d";
+	public static final String FILE_ENCODING = "fileEncoding";
+	public static final String FILE_ENCODING_DEFAULT = "UTF-8";
 	public static final String ENABLE_BATON_PASS = "enableBatonPass";
 	public static final boolean ENABLE_BATON_PASS_DEFAULT = false;
 }

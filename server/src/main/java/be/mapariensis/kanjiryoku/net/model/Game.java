@@ -1,6 +1,7 @@
 package be.mapariensis.kanjiryoku.net.model;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Random;
@@ -36,7 +37,8 @@ public enum Game {
 				List<String> categoryNames = config.getRequired(CATEGORY_LIST,List.class);
 				boolean resetDifficulty = config.getSafely(RESET_AFTER_CATEGORY_SWITCH,Boolean.class,true);
 				boolean batonPass = config.getSafely(ENABLE_BATON_PASS, Boolean.class,ENABLE_BATON_PASS_DEFAULT);
-				ProblemOrganizer org = ProblemCollectionUtils.buildKanjiryokuShindanOrganizer(fileNameFormat,categoryNames,digitFormat,problemsPerCategory,minDiff,maxDiff, resetDifficulty,new Random(seed));
+				String enc = config.getSafely(FILE_ENCODING, String.class, FILE_ENCODING_DEFAULT);
+				ProblemOrganizer org = ProblemCollectionUtils.buildKanjiryokuShindanOrganizer(fileNameFormat,categoryNames,digitFormat,problemsPerCategory,minDiff,maxDiff, resetDifficulty,new Random(seed),Charset.forName(enc));
 				return new TakingTurnsServer(org,guesser,batonPass);
 			} catch (IOException | ParseException e) {
 				throw new ServerBackendException(e);

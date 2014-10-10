@@ -1,6 +1,7 @@
 package be.mapariensis.kanjiryoku.net.server.games;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -59,7 +60,7 @@ public class TakingTurnsServer implements GameServerInterface {
 	private final boolean enableBatonPass;
 	private final Object submitLock = new Object();
 	private volatile User currentPlayer;
-	private int problemPosition, problemRepetitions;
+	private int problemPosition, problemRepetitions, multiProblemChoice = -1;
 	private Problem currentProblem;
 	private TurnIterator ti;
 	private Session session;
@@ -84,6 +85,9 @@ public class TakingTurnsServer implements GameServerInterface {
 			switch(currentProblem.getInputMethod()) {
 			case HANDWRITTEN:
 				handwrittenSubmit(msg,source);
+				break;
+			case MULTIPLE_CHOICE:
+				multipleChoiceSubmit(msg, source);
 			}
 		}
 	}
@@ -130,8 +134,13 @@ public class TakingTurnsServer implements GameServerInterface {
 	public void clearInput(User submitter) throws GameFlowException {
 		if(submitter != null && !submitter.equals(currentPlayer)) throw new GameFlowException("Only the current player can clear the screen.");
 		log.info("Clearing input.");
-		strokes.clear();
+		localClear();
 		broadcastClearInput(submitter);
+	}
+	
+	private void localClear() {
+		strokes.clear();
+		multiProblemChoice = -1;
 	}
 	private class NextTurnHandler extends AnswerFeedbackHandler {
 		final boolean answer, doBatonPass;
@@ -233,7 +242,7 @@ public class TakingTurnsServer implements GameServerInterface {
 				List<Character> chars =guess.guess(width, height, strokes);
 				log.info("Retrieved {} characters",chars.size());
 				checkAnswer(chars,source);
-				strokes.clear();
+				localClear();
 			}
 			// submit one stroke
 			// SUBMIT [list_of_dots]
@@ -247,7 +256,22 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 		
 	}
-	
+	private void multipleChoiceSubmit(NetworkMessage msg, User source) throws ProtocolSyntaxException {
+		try {
+			if(msg.argCount() == 1) {
+				log.info("Submitting multiple choice answer");
+				// TODO retrieve selected option here
+				char c = currentProblem.getFullSolution().charAt(problemPosition); // dummied
+				checkAnswer(Arrays.asList(c),source);
+			} else if(msg.argCount() == 2) {
+				int i = Integer.parseInt(msg.get(1));
+				if(i<0) throw new ProtocolSyntaxException();
+				multiProblemChoice = i;
+			}
+		} catch(NumberFormatException ex) {
+			throw new ProtocolSyntaxException(ex);
+		}		
+	}
 	private void checkAnswer(List<Character> chars, User source) {
 		boolean answer = currentProblem.checkSolution(chars, problemPosition);
 		// build answer packet

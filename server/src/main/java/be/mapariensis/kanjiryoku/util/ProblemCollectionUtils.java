@@ -62,7 +62,7 @@ public class ProblemCollectionUtils {
 			}
 		};
 	}
-	public static ProblemOrganizer buildKanjiryokuShindanOrganizer(String format, List<String> categoryNames, String digitFormat,int problemsPerCategory, int minDiff, int maxDiff, boolean resetDifficulty,Random rng) throws IOException, ParseException {
+	public static ProblemOrganizer buildKanjiryokuShindanOrganizer(String format, List<String> categoryNames, String digitFormat,int problemsPerCategory, int minDiff, int maxDiff, boolean resetDifficulty,Random rng, Charset enc) throws IOException, ParseException {
 		ProblemParser<ProblemWithBlank> parser = new KanjiryokuShindanParser();
 		List<RatedProblemList> cats = new ArrayList<RatedProblemList>(categoryNames.size());
 		for(String categoryName : categoryNames) {
@@ -72,7 +72,7 @@ public class ProblemCollectionUtils {
 				log.info("Loading problems from {}",fname);
 				List<String> strings;
 				try {
-					strings = Files.readAllLines(Paths.get(fname), Charset.forName("Shift-JIS"));
+					strings = Files.readAllLines(Paths.get(fname), enc);
 				} catch (IOException ex) {
 					log.warn("Failed to read file {}",fname);
 					continue;
