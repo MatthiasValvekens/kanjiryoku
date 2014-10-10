@@ -81,52 +81,9 @@ public class TakingTurnsServer implements GameServerInterface {
 	public void submit(NetworkMessage msg, User source) throws GameFlowException, ProtocolSyntaxException {
 		if(!canPlay(source)) throw new GameFlowException("You can't do that now.");
 		synchronized(submitLock) {
-			try {
-				if(msg.argCount() == 3) {
-					log.info("Finalizing input...");
-					// submit all strokes
-					int width = Integer.parseInt(msg.get(1));
-					int height = Integer.parseInt(msg.get(2));
-					if(strokes.size() == 0) throw new GameFlowException("No input.");
-					List<Character> chars =guess.guess(width, height, strokes);
-					log.info("Retrieved {} characters",chars.size());
-					boolean answer = currentProblem.checkSolution(chars, problemPosition);
-					// build answer packet
-					char res;
-					if(answer) {
-						res = currentProblem.getFullSolution().charAt(problemPosition);
-					} else {
-						Filter<Character> allowedChars = currentProblem.allowedChars();
-						res = '?';
-						for(char c : chars) {
-							if(allowedChars.accepts(c)) {
-								res = c;
-								break;
-							}
-						}
-						
-					}
-
-					AnswerFeedbackHandler rh = null;
-					// move on to next position in problem
-					if(answer && currentProblem.getFullSolution().length() == ++problemPosition) {
-						rh = new NextTurnHandler(true,false);
-						ti.currentUserStats().correct++;
-					}
-					strokes.clear();
-					log.info("Delivering answer "+res);
-					deliverAnswer(source, answer, res,rh);
-					if(rh == null) clearStrokes(null); // do not clear strokes on final input
-				}
-				// submit one stroke
-				// SUBMIT [list_of_dots]
-				else if(msg.argCount() == 2) {
-					List<Dot> stroke = ParsingUtils.parseDots(msg.get(1));
-					strokes.add(stroke);
-					deliverStroke(source, stroke);
-				} else throw new ArgumentCountException(ArgumentCountException.Type.UNEQUAL, ServerCommand.SUBMIT);
-			} catch(NumberFormatException ex) {
-				throw new ProtocolSyntaxException(ex);
+			switch(currentProblem.getInputMethod()) {
+			case HANDWRITTEN:
+				handwrittenSubmit(msg,source);
 			}
 		}
 	}
@@ -174,7 +131,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		if(submitter != null && !submitter.equals(currentPlayer)) throw new GameFlowException("Only the current player can clear the screen.");
 		log.info("Clearing input.");
 		strokes.clear();
-		clearStrokes(submitter);
+		broadcastClearInput(submitter);
 	}
 	private class NextTurnHandler extends AnswerFeedbackHandler {
 		final boolean answer, doBatonPass;
@@ -248,7 +205,7 @@ public class TakingTurnsServer implements GameServerInterface {
 
 	
 	
-	private void clearStrokes(User submitter) {
+	private void broadcastClearInput(User submitter) {
 		session.broadcastMessage(submitter, new NetworkMessage(ClientCommandList.CLEAR));
 	}
 
@@ -265,5 +222,59 @@ public class TakingTurnsServer implements GameServerInterface {
 		session.broadcastMessage(null,new NetworkMessage(ClientCommandList.PROBLEMSKIPPED,submitter.handle,rh.id,batonPass),rh);
 	}		
 	
+	private void handwrittenSubmit(NetworkMessage msg, User source) throws ProtocolSyntaxException {
+		try {
+			if(msg.argCount() == 3) {
+				log.info("Finalizing input...");
+				// submit all strokes
+				int width = Integer.parseInt(msg.get(1));
+				int height = Integer.parseInt(msg.get(2));
+				if(strokes.size() == 0) throw new ProtocolSyntaxException("No input.");
+				List<Character> chars =guess.guess(width, height, strokes);
+				log.info("Retrieved {} characters",chars.size());
+				checkAnswer(chars,source);
+				strokes.clear();
+			}
+			// submit one stroke
+			// SUBMIT [list_of_dots]
+			else if(msg.argCount() == 2) {
+				List<Dot> stroke = ParsingUtils.parseDots(msg.get(1));
+				strokes.add(stroke);
+				deliverStroke(source, stroke);
+			} else throw new ArgumentCountException(ArgumentCountException.Type.UNEQUAL, ServerCommand.SUBMIT);
+		} catch(NumberFormatException ex) {
+			throw new ProtocolSyntaxException(ex);
+		}
+		
+	}
+	
+	private void checkAnswer(List<Character> chars, User source) {
+		boolean answer = currentProblem.checkSolution(chars, problemPosition);
+		// build answer packet
+		char res;
+		if(answer) {
+			res = currentProblem.getFullSolution().charAt(problemPosition);
+		} else {
+			Filter<Character> allowedChars = currentProblem.allowedChars();
+			res = '?';
+			for(char c : chars) {
+				if(allowedChars.accepts(c)) {
+					res = c;
+					break;
+				}
+			}
+			
+		}
+
+		AnswerFeedbackHandler rh = null;
+		// move on to next position in problem
+		if(answer && currentProblem.getFullSolution().length() == ++problemPosition) {
+			rh = new NextTurnHandler(true,false);
+			ti.currentUserStats().correct++;
+		}
+		log.info("Delivering answer "+res);
+		deliverAnswer(source, answer, res,rh);
+		if(rh == null) broadcastClearInput(null); // do not clear on final input
+	}
 
 }
