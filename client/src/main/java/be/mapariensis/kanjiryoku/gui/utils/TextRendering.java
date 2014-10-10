@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import be.mapariensis.kanjiryoku.model.Word;
 
 public class TextRendering {
+	public static final String FONT_NAME = "Meiryo";
 	public static enum MistakeMarker {
 		FURIGANA, MAIN
 	}
@@ -26,8 +27,8 @@ public class TextRendering {
 		g2d = null;
 		Rectangle rect = g.getClipBounds();
 		
-		Font normal = new Font("Meiryo",Font.PLAIN,normalSize);
-		Font ruby = new Font("Meiryo",Font.PLAIN,rubySize);
+		Font normal = new Font(FONT_NAME,Font.PLAIN,normalSize);
+		Font ruby = new Font(FONT_NAME,Font.PLAIN,rubySize);
 		
 		//calculate main width
 		FontMetrics metrics = g.getFontMetrics(normal);
@@ -65,5 +66,9 @@ public class TextRendering {
 		g.dispose();
 		
 		return width;
+	}
+	
+	public static Color rgb(int r, int g, int b, float alpha){
+		return new Color((float)(r/256.0),(float)(g/256.0),(float)(b/256.0),alpha);
 	}
 }
