@@ -35,8 +35,8 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	private static final Logger log = LoggerFactory.getLogger(HTMLChatPanel.class);
 	private final JEditorPane textPane;
 	private final Executor promptThreads = Executors.newSingleThreadExecutor(); // ensure only one prompt can exist at a time
-	private final HTMLDocument document;
-	private final Element table;
+	private HTMLDocument document;
+	private Element table;
 	private final GUIBridge bridge;
 	
 	public static final String TABLE_ID = "chatTable";
@@ -58,13 +58,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 		textPane.setEditable(false);
 		textPane.setEditorKit(kit);
 		textPane.setContentType("text/html");
-		document = (HTMLDocument) textPane.getDocument();
-		Element body = document.getElement(document.getDefaultRootElement(),StyleConstants.NameAttribute,HTML.Tag.BODY);
-		try {
-			document.insertBeforeEnd(body, "<table id=\""+TABLE_ID+"\"></table>");
-		} catch (BadLocationException | IOException e) {
-			log.warn("Failed to insert",e);
-		}
+		documentSetup();
 		textPane.addHyperlinkListener(new HyperlinkListener() {
 			
 			@Override
@@ -79,7 +73,6 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 				}
 			}
 		});
-		table = document.getElement(TABLE_ID);
 		setLayout(new BorderLayout());
 		add(textPane, BorderLayout.CENTER);
 	}
@@ -175,5 +168,22 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	}
 	private static String esc(String s) {
 		return StringEscapeUtils.escapeHtml4(s);
+	}
+	
+	public void clear() {
+		documentSetup();		
+	}
+	
+	private void documentSetup() {
+		document = (HTMLDocument) textPane.getEditorKit().createDefaultDocument();
+		Element body = document.getElement(document.getDefaultRootElement(),StyleConstants.NameAttribute,HTML.Tag.BODY);
+		try {
+			document.insertBeforeEnd(body, "<table id=\""+TABLE_ID+"\"></table>");
+		} catch (BadLocationException | IOException e) {
+			log.warn("Failed to insert",e);
+		}
+
+		table = document.getElement(TABLE_ID);
+		textPane.setDocument(document);
 	}
 }

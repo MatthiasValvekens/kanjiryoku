@@ -45,7 +45,7 @@ public class MainWindow extends JFrame implements GUIBridge {
 		} catch (RuntimeException ex) {
 			throw new IOException("Runtime exception while reading css file.",ex);
 		}
-		HTMLChatPanel chatComponent = new HTMLChatPanel(this,css);
+		final HTMLChatPanel chatComponent = new HTMLChatPanel(this,css);
 		chat = chatComponent;
 		add(new ChatPanel(this,chatComponent));
 		serv = new ServerUplink(addr, port, username, this);
@@ -66,7 +66,6 @@ public class MainWindow extends JFrame implements GUIBridge {
 		// TODO : enable/disable menus based on WHOAMI return values
 		// menu bar
 		menuBar = new JMenuBar();
-		menuBar.setEnabled(false);
 		// session menu
 		JMenu sessionMenu = new JMenu("Session");
 		menuBar.add(sessionMenu);
@@ -130,7 +129,20 @@ public class MainWindow extends JFrame implements GUIBridge {
 			}
 		}));
 		
+		// client menu
+		JMenu clientMenu = new JMenu("Client");
+		menuBar.add(clientMenu);
+		clientMenu.add(new JMenuItem(new AbstractAction("Clear chat") {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				chatComponent.clear();				
+			}
+			
+		}));
+		
 		setJMenuBar(menuBar);
+		toggleMenuBar(false);
 		pack();
 	}
 
@@ -152,6 +164,13 @@ public class MainWindow extends JFrame implements GUIBridge {
 	public void setUsername(String username) {
 		setTitle(String.format("Kanjiryoku - %s %s",username,serverInfoString));
 		serv.setUsername(username);
-		menuBar.setEnabled(true);
+		toggleMenuBar(true);
+	}
+	
+	private void toggleMenuBar(boolean enable) {
+		int count = menuBar.getMenuCount();
+		for(int i = 0;i<count;i++) {
+			menuBar.getMenu(i).setEnabled(enable);
+		}
 	}
 }
