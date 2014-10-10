@@ -202,7 +202,13 @@ public enum ClientCommand {
 			}
 		}
 		
-	}, INPUT {
+	}, CLEAR {
+		@Override
+		public void execute(NetworkMessage msg, GUIBridge bridge)
+				throws ClientException {
+			bridge.getClient().getInputHandler().clearLocalInput();
+		}
+	},INPUT {
 
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)

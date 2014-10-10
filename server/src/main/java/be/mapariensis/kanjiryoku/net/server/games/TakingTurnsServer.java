@@ -243,14 +243,13 @@ public class TakingTurnsServer implements GameServerInterface {
 	
 	private void deliverStroke(User submitter, List<Dot> stroke) {
 		String uname = submitter != null ? submitter.handle : Constants.SERVER_HANDLE;
-		session.broadcastMessage(submitter,new NetworkMessage(ClientCommandList.INPUT,uname,ClientCommandList.STROKE,stroke));
+		session.broadcastMessage(submitter,new NetworkMessage(ClientCommandList.INPUT,uname,stroke));
 	}
 
 	
 	
 	private void clearStrokes(User submitter) {
-		String uname = submitter != null ? submitter.handle : Constants.SERVER_HANDLE;
-		session.broadcastMessage(submitter, new NetworkMessage(ClientCommandList.INPUT,uname,ClientCommandList.CLEARSTROKES));
+		session.broadcastMessage(submitter, new NetworkMessage(ClientCommandList.CLEAR));
 	}
 
 	

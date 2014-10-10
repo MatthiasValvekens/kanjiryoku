@@ -17,9 +17,10 @@ import java.util.List;
 import javax.swing.JComponent;
 import be.mapariensis.kanjiryoku.gui.utils.TextRendering;
 import be.mapariensis.kanjiryoku.net.input.InputComponent;
-import be.mapariensis.kanjiryoku.net.input.InputHandler;
+import be.mapariensis.kanjiryoku.net.input.MultipleChoiceInputHandler;
+import be.mapariensis.kanjiryoku.net.input.MultipleChoiceInputHandlerImpl;
 
-public class TilePanel extends InputComponent implements TiledInputInterface {
+public class TilePanel extends InputComponent implements MultipleChoiceInputInterface {
 	private static final double TILE_SCALE = 0.9;
 	private static final Color selectionColor = TextRendering.rgb(41, 82, 229,(float)0.4);
 	private static final Color highlightColor = TextRendering.rgb(41, 82, 229,(float)0.2);
@@ -33,7 +34,7 @@ public class TilePanel extends InputComponent implements TiledInputInterface {
 				@Override
 				public void mouseClicked(MouseEvent ev) {
 					// TODO : interact with server here
-					tileSelected(id);
+					optionSelected(id);
 				}
 				
 				@Override
@@ -91,33 +92,38 @@ public class TilePanel extends InputComponent implements TiledInputInterface {
 		
 	}
 	private volatile boolean locked;
-	private final GUIBridge bridge;
+	private final MultipleChoiceInputHandler ih;
 	public static Rectangle scale(Rectangle r, double factor) {
 		int newwidth = (int) (r.width * factor);
 		int newheight = (int) (r.height * factor);
 		return new Rectangle(r.x+(r.width - newwidth)/2, r.y+(r.height - newheight)/2,newwidth,newheight);
 	}
 	public TilePanel(GUIBridge bridge) {
-		this.bridge = bridge;
+		this.ih = new MultipleChoiceInputHandlerImpl(bridge, this);
 		setBackground(Color.WHITE);
 	}
 	private volatile int rowcount;
 	private volatile int selectedTile = -1;
 	@Override
-	public void tileSelected(int i) {
+	public void optionSelected(int i) {
 		if(i<0 || i>=tiles.size()) throw new IllegalArgumentException();
+		clearSelection();
+		Tile t = tiles.get(selectedTile = i);
+		t.selected = true;
+		t.repaint();
+	}
+	@Override
+	public void clearSelection() {
 		if(selectedTile != -1) {
 			Tile t = tiles.get(selectedTile);
 			t.selected = false;
 			t.repaint();
 		}
-		Tile t = tiles.get(selectedTile = i);
-		t.selected = true;
-		t.repaint();
+		selectedTile = -1;
 	}
 	private List<Tile> tiles;
 	@Override
-	public void setTiles(List<String> tiles) {
+	public void setOptions(List<String> tiles) {
 		rowcount = (int) Math.ceil(Math.sqrt(tiles.size()));
 		GridLayout layout = new GridLayout(rowcount, rowcount, 0, 0);
 		setLayout(layout);
@@ -133,18 +139,21 @@ public class TilePanel extends InputComponent implements TiledInputInterface {
 	
 
 	@Override
-	public InputHandler getInputHandler() {
-		// TODO Auto-generated method stub
-		return null;
+	public MultipleChoiceInputHandler getInputHandler() {
+		return ih;
 	}
 	@Override
 	public void endProblem() {
-		// TODO Auto-generated method stub
 		
 	}
 	@Override
 	public void setLock(boolean locked) {
 		this.locked = locked;
 	}
+	@Override
+	public String optionContent(int i) {
+		return tiles.get(i).content;
+	}
+
 
 }
