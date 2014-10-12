@@ -4,6 +4,7 @@ import java.util.Set;
 
 import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
@@ -14,7 +15,7 @@ public interface GameServerInterface extends AutoCloseable {
 	public void submit(NetworkMessage msg, User user) throws GameFlowException, ProtocolSyntaxException;
 	public boolean canPlay(User u);
 	public boolean running();
-	public void startGame(Session sess, Set<User> participants) throws GameFlowException;
+	public void startGame(Session sess, Set<User> participants) throws GameFlowException, ServerBackendException;
 	@Override
 	public void close() throws ServerException;
 	public void clearInput(User submitter) throws GameFlowException;

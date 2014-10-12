@@ -14,11 +14,14 @@ import org.slf4j.LoggerFactory;
 import be.mapariensis.kanjiryoku.Constants;
 import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
+import be.mapariensis.kanjiryoku.model.InputMethod;
+import be.mapariensis.kanjiryoku.model.MultipleChoiceOptions;
 import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
@@ -61,6 +64,7 @@ public class TakingTurnsServer implements GameServerInterface {
 	private final Object submitLock = new Object();
 	private volatile User currentPlayer;
 	private int problemPosition, problemRepetitions, multiProblemChoice = -1;
+	private List<String> multiProblemOptions;
 	private Problem currentProblem;
 	private TurnIterator ti;
 	private Session session;
@@ -104,7 +108,7 @@ public class TakingTurnsServer implements GameServerInterface {
 	}
 	
 	@Override
-	public void startGame(Session sess, Set<User> participants) throws GameFlowException {
+	public void startGame(Session sess, Set<User> participants) throws GameFlowException, ServerBackendException {
 		if(gameRunning) throw new GameFlowException("Game already running.");
 		gameRunning = true;
 		this.session = sess;
@@ -119,13 +123,21 @@ public class TakingTurnsServer implements GameServerInterface {
 		guess.close();
 	}
 	
-	private void nextProblem(Problem nextProblem) {
+	private void nextProblem(Problem nextProblem) throws ServerBackendException {
 		log.info("Next problem");
 		problemPosition = 0;
 		if(currentProblem == nextProblem) problemRepetitions++;
 		else problemRepetitions = 0;
 		currentProblem = nextProblem;
 		currentPlayer = ti.next();
+		
+		if(currentProblem.getInputMethod() == InputMethod.MULTIPLE_CHOICE) {
+			try {
+				multiProblemOptions = ((MultipleChoiceOptions)currentProblem).getOptions(0);
+			} catch (ClassCastException ex) {
+				throw new ServerBackendException(ex);
+			}
+		}
 		// hence this should be safe
 		deliverProblem(currentProblem,currentPlayer);
 	}
@@ -231,14 +243,14 @@ public class TakingTurnsServer implements GameServerInterface {
 		session.broadcastMessage(null,new NetworkMessage(ClientCommandList.PROBLEMSKIPPED,submitter.handle,rh.id,batonPass),rh);
 	}		
 	
-	private void handwrittenSubmit(NetworkMessage msg, User source) throws ProtocolSyntaxException {
+	private void handwrittenSubmit(NetworkMessage msg, User source) throws ProtocolSyntaxException, GameFlowException {
 		try {
 			if(msg.argCount() == 3) {
 				log.info("Finalizing input...");
 				// submit all strokes
 				int width = Integer.parseInt(msg.get(1));
 				int height = Integer.parseInt(msg.get(2));
-				if(strokes.size() == 0) throw new ProtocolSyntaxException("No input.");
+				if(strokes.size() == 0) throw new GameFlowException("No input.");
 				List<Character> chars =guess.guess(width, height, strokes);
 				log.info("Retrieved {} characters",chars.size());
 				checkAnswer(chars,source);
@@ -256,12 +268,12 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 		
 	}
-	private void multipleChoiceSubmit(NetworkMessage msg, User source) throws ProtocolSyntaxException {
+	private void multipleChoiceSubmit(NetworkMessage msg, User source) throws ProtocolSyntaxException, GameFlowException {
 		try {
 			if(msg.argCount() == 1) {
+				if(multiProblemChoice == -1) throw new GameFlowException("No input.");
 				log.info("Submitting multiple choice answer");
-				// TODO retrieve selected option here
-				char c = currentProblem.getFullSolution().charAt(problemPosition); // dummied
+				char c = multiProblemOptions.get(multiProblemChoice).charAt(0); // FIXME remove the charAt 0 once I properly generalize the solution model
 				checkAnswer(Arrays.asList(c),source);
 			} else if(msg.argCount() == 2) {
 				int i = Integer.parseInt(msg.get(1));
@@ -292,7 +304,7 @@ public class TakingTurnsServer implements GameServerInterface {
 
 		AnswerFeedbackHandler rh = null;
 		// move on to next position in problem
-		if(answer && currentProblem.getFullSolution().length() == ++problemPosition) {
+		if(answer && currentProblem.getFullSolution().length() == nextPosition()) {
 			rh = new NextTurnHandler(true,false);
 			ti.currentUserStats().correct++;
 		}
@@ -301,4 +313,11 @@ public class TakingTurnsServer implements GameServerInterface {
 		if(rh == null) broadcastClearInput(null); // do not clear on final input
 	}
 
+	private int nextPosition() {
+		if(currentProblem.getFullSolution().length() != ++problemPosition && currentProblem.getInputMethod() == InputMethod.MULTIPLE_CHOICE) {
+			multiProblemOptions = ((MultipleChoiceOptions)currentProblem).getOptions(problemPosition); // this won't throw an exception, we checked this the first time
+			
+		}
+		return problemPosition;
+	}
 }

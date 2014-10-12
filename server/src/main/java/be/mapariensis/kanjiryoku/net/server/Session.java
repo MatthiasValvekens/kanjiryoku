@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
@@ -38,7 +39,7 @@ public class Session {
 			master.joinSession(this); // session is locked until we're done. No threads can access our partially constructed session
 		}
 	}
-	public synchronized void start() throws GameFlowException, SessionException {
+	public synchronized void start() throws GameFlowException, SessionException, ServerBackendException {
 		checkDestroyed();
 		game.startGame(this,users);
 		broadcastHumanMessage(null, "Game started");

@@ -38,7 +38,7 @@ public abstract class Problem implements Iterable<Word>{
 		}
 	}
 	
-	public abstract String getFullSolution();
+	public abstract String getFullSolution(); // TODO : model solutions as something else, not strings
 	
 	public abstract Filter<Character> allowedChars();
 	
