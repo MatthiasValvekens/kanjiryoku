@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 
 import static be.mapariensis.kanjiryoku.net.Constants.*;
 import be.mapariensis.kanjiryoku.config.ConfigFields;
-import be.mapariensis.kanjiryoku.config.IProperties;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesserFactory;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
@@ -42,6 +41,7 @@ import be.mapariensis.kanjiryoku.net.model.UserStore;
 import be.mapariensis.kanjiryoku.net.server.handlers.AdminTaskExecutor;
 import be.mapariensis.kanjiryoku.net.util.MessageFragmentBuffer;
 import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
+import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class ConnectionMonitor extends Thread implements UserManager, Closeable {
 	private static final Logger log = LoggerFactory.getLogger(ConnectionMonitor.class);

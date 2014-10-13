@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.config.ConfigFields;
 import be.mapariensis.kanjiryoku.config.ConfigFileWatcher;
-import be.mapariensis.kanjiryoku.config.IPropertiesImpl;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.server.ConnectionMonitor;
+import be.mapariensis.kanjiryoku.util.IPropertiesImpl;
 
 
 

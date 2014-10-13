@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 
 
 import static be.mapariensis.kanjiryoku.config.ConfigFields.*;
-import be.mapariensis.kanjiryoku.config.IProperties;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
@@ -19,6 +18,7 @@ import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
 import be.mapariensis.kanjiryoku.net.server.GameServerInterface;
 import be.mapariensis.kanjiryoku.net.server.games.TakingTurnsServer;
 import be.mapariensis.kanjiryoku.problemsets.ProblemOrganizer;
+import be.mapariensis.kanjiryoku.util.IProperties;
 import be.mapariensis.kanjiryoku.util.ProblemCollectionUtils;
 public enum Game {
 	TAKINGTURNS {

@@ -10,6 +10,7 @@ import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
+import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
@@ -81,7 +82,7 @@ public enum ServerCommand {
 
 		@Override
 		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
-				throws ServerException {
+				throws ServerException, BadConfigurationException {
 			//enforce arglen
 			if(message.argCount() < 2) throw new ArgumentCountException(ArgumentCountException.Type.TOO_FEW, STARTSESSION);
 			if(client.getSession() != null) throw new SessionException("Can't do that while in a session.");
@@ -304,5 +305,5 @@ public enum ServerCommand {
 		
 	};
 	
-	public abstract void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException;
+	public abstract void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException, BadConfigurationException;
 }

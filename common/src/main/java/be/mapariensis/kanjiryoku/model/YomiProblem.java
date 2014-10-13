@@ -6,7 +6,7 @@ import java.util.List;
 import be.mapariensis.kanjiryoku.util.Filter;
 import be.mapariensis.kanjiryoku.util.UnicodeBlockFilter;
 
-public final class YomiProblem extends ProblemWithBlank {
+public class YomiProblem extends ProblemWithBlank {
 	public YomiProblem(List<Word> words, int blankIndex) {
 		super(words, blankIndex);
 	}

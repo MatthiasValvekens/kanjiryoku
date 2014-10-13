@@ -1,4 +1,4 @@
-package be.mapariensis.kanjiryoku.config;
+package be.mapariensis.kanjiryoku.util;
 
 import java.util.Set;
 

@@ -1,5 +1,6 @@
 package be.mapariensis.kanjiryoku.net.server;
 
+import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.model.Game;
@@ -45,7 +46,8 @@ public interface SessionManager {
 	 * @throws SessionException
 	 *    When a selected user is already in a session, or if an ID could not be obtained.
 	 * @throws ServerException 
+	 * @throws BadConfigurationException 
 	 */
 	
-	public Session startSession(User master, Game game) throws ServerException;
+	public Session startSession(User master, Game game) throws ServerException, BadConfigurationException;
 }

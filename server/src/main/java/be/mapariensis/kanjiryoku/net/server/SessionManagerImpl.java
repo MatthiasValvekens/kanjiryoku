@@ -8,13 +8,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.config.ConfigFields;
-import be.mapariensis.kanjiryoku.config.IProperties;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesserFactory;
+import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.User;
+import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class SessionManagerImpl implements SessionManager {
 	private static final Logger log = LoggerFactory.getLogger(SessionManagerImpl.class);
@@ -29,7 +30,7 @@ public class SessionManagerImpl implements SessionManager {
 		this.kgf = kgf;
 	}
 	@Override
-	public Session startSession(User master, Game game) throws ServerException {
+	public Session startSession(User master, Game game) throws ServerException, BadConfigurationException {
 		IProperties gameSettings = config.getRequired(ConfigFields.GAME_SETTINGS_HEADER, IProperties.class).getRequired(game.name(), IProperties.class);
 		GameServerInterface host;
 		try {

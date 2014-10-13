@@ -10,8 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.config.ConfigFields;
-import be.mapariensis.kanjiryoku.config.IProperties;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
+import be.mapariensis.kanjiryoku.util.IProperties;
 /**
  * A frontend to the Zinnia handwriting recognition engine.
  * @author Matthias Valvekens

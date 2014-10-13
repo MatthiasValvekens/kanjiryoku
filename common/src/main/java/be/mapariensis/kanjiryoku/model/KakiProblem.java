@@ -6,7 +6,7 @@ import java.util.List;
 import be.mapariensis.kanjiryoku.util.Filter;
 import be.mapariensis.kanjiryoku.util.UnicodeBlockFilter;
 
-public final class KakiProblem extends ProblemWithBlank {
+public class KakiProblem extends ProblemWithBlank {
 
 	public KakiProblem(List<Word> words, int blankIndex) {
 		super(words, blankIndex);

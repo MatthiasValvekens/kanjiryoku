@@ -1,7 +1,7 @@
 package be.mapariensis.kanjiryoku.net.exceptions;
 
 
-public class BadConfigurationException extends ServerException {
+public class BadConfigurationException extends ClientServerException {
 	public BadConfigurationException(String message){
 		super(message,ERROR_SERVER_CONFIG);
 	}
