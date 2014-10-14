@@ -29,9 +29,8 @@ import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 
 public class ServerUplink extends Thread implements Closeable {
 	private static final Logger log = LoggerFactory.getLogger(ServerUplink.class);
-	private static final int WORKER_THREADS = 10;
 	private static final long SELECT_TIMEOUT = 500;
-	private static final int BUFFER_MAX = 2048;
+	private static final int BUFFER_MAX = 10000;
 	private final ExecutorService threadPool;
 	private final SocketChannel channel;
 	private volatile boolean keepOn = true;
@@ -51,7 +50,7 @@ public class ServerUplink extends Thread implements Closeable {
 		this.port = port;
 		this.bridge = bridge;
 		this.username = username;
-		threadPool = Executors.newFixedThreadPool(WORKER_THREADS, new NetworkThreadFactory(BUFFER_MAX,selector));
+		threadPool = Executors.newSingleThreadExecutor(new NetworkThreadFactory(BUFFER_MAX,selector));
 	}
 	public void setUsername(String username) {
 		this.username = username; 
