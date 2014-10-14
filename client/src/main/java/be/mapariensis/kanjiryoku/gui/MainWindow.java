@@ -22,7 +22,6 @@ import be.mapariensis.kanjiryoku.gui.dialogs.SingleInputDialog;
 import be.mapariensis.kanjiryoku.net.client.ServerUplink;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
-import be.mapariensis.kanjiryoku.providers.KanjiryokuShindanParser;
 
 public class MainWindow extends JFrame implements GUIBridge {
 	public static final String CSS_FILE = "chatcss.css";
@@ -49,7 +48,7 @@ public class MainWindow extends JFrame implements GUIBridge {
 		chat = chatComponent;
 		add(new ChatPanel(this,chatComponent));
 		serv = new ServerUplink(addr, port, username, this);
-		gci = new GamePanel(this, new KanjiryokuShindanParser());
+		gci = new GamePanel(this);
 		add(gci);
 		serv.start();
 		setResizable(false);

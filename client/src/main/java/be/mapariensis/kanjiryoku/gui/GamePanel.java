@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.text.ParseException;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -20,7 +19,6 @@ import be.mapariensis.kanjiryoku.model.*;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.input.InputHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
-import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 public class GamePanel extends JPanel implements GameClientInterface {
 	private static final Logger log = LoggerFactory.getLogger(GamePanel.class);
@@ -28,7 +26,6 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	
 	
 	private final GUIBridge bridge;
-	private final ProblemParser<?> parser;
 	private final JButton submitButton;
 	
 	private int inputCounter = 0; // keeps track of the current position in the problem for convenience
@@ -36,8 +33,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 
 	private volatile boolean locked;
 	private final InputPanel inputContainer;
-	public GamePanel(final GUIBridge bridge, ProblemParser<?> parser) {
-		this.parser = parser;
+	public GamePanel(final GUIBridge bridge) {
 		this.bridge = bridge;
 		setLayout(new BorderLayout());
 		
@@ -83,10 +79,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 			problemPanel.setLastWrongInput(inputChar);
 		}
 	}
-	@Override
-	public Problem parseProblem(String s) throws ParseException {
-		return parser.parseProblem(s);
-	}
+
 	@Override
 	public void setProblem(final Problem p) {
 		inputCounter = 0;

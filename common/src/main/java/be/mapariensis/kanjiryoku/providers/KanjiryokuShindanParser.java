@@ -12,7 +12,7 @@ import be.mapariensis.kanjiryoku.model.ProblemWithBlank;
 import be.mapariensis.kanjiryoku.model.Word;
 import be.mapariensis.kanjiryoku.model.YomiProblem;
 
-public class KanjiryokuShindanParser implements ProblemParser<ProblemWithBlank> {
+public class KanjiryokuShindanParser implements ProblemParser {
 	private static final Logger log = LoggerFactory.getLogger(KanjiryokuShindanParser.class);
 	private static final char BLANK_DELIMITER = '（';
 	

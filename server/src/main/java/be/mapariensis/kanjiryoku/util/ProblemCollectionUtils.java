@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.config.ConfigFields;
 import be.mapariensis.kanjiryoku.model.Problem;
-import be.mapariensis.kanjiryoku.model.ProblemWithBlank;
 import be.mapariensis.kanjiryoku.problemsets.ProblemOrganizer;
 import be.mapariensis.kanjiryoku.problemsets.RatedProblem;
 import be.mapariensis.kanjiryoku.problemsets.RatedProblemList;
@@ -63,7 +62,7 @@ public class ProblemCollectionUtils {
 		};
 	}
 	public static ProblemOrganizer buildKanjiryokuShindanOrganizer(String format, List<String> categoryNames, String digitFormat,int problemsPerCategory, int minDiff, int maxDiff, boolean resetDifficulty,Random rng, Charset enc) throws IOException, ParseException {
-		ProblemParser<ProblemWithBlank> parser = new KanjiryokuShindanParser();
+		ProblemParser parser = new KanjiryokuShindanParser();
 		List<RatedProblemList> cats = new ArrayList<RatedProblemList>(categoryNames.size());
 		for(String categoryName : categoryNames) {
 			List<RatedProblem> currentCategory = new ArrayList<RatedProblem>();

@@ -4,6 +4,6 @@ import java.text.ParseException;
 
 import be.mapariensis.kanjiryoku.model.Problem;
 
-public interface ProblemParser<T extends Problem> {
-	public T parseProblem(String input) throws ParseException;
+public interface ProblemParser {
+	public Problem parseProblem(String input) throws ParseException;
 }

@@ -12,10 +12,12 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.gui.GUIBridge;
 import be.mapariensis.kanjiryoku.net.Constants;
+import be.mapariensis.kanjiryoku.net.commands.ParserName;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
+import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 // TODO : placeholders only
 public enum ClientCommand {
@@ -101,12 +103,19 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
-			checkArgs(msg,3);
+			checkArgs(msg,4);
 			String name = msg.get(1);
 			bridge.getChat().displayGameMessage(String.format("Question for %s" + (name.equals(bridge.getClient().getUsername()) ? " (You)" : ""),name));
-			String problemString = msg.get(2);
+			String problemParserName = msg.get(2);
+			String problemString = msg.get(3);
+			ProblemParser parser;
 			try {
-				bridge.getClient().setProblem(bridge.getClient().parseProblem(problemString));
+				parser = ParserName.valueOf(problemParserName).getParser();
+			} catch (IllegalArgumentException ex) {
+				throw new ServerCommunicationException("Unknown problem parser: "+problemParserName);
+			}
+			try {
+				bridge.getClient().setProblem(parser.parseProblem(problemString));
 			} catch (ParseException e) {
 				throw new ServerCommunicationException("Unparseable problem passed: "+problemString);
 			}
