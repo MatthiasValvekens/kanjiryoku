@@ -17,6 +17,7 @@ import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
 import be.mapariensis.kanjiryoku.model.InputMethod;
 import be.mapariensis.kanjiryoku.model.MultipleChoiceOptions;
 import be.mapariensis.kanjiryoku.model.Problem;
+import be.mapariensis.kanjiryoku.model.YojiProblem;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.commands.ParserName;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
@@ -209,7 +210,8 @@ public class TakingTurnsServer implements GameServerInterface {
 	
 	// network code (moved from old GameListener)
 	private void deliverProblem(Problem p, User to) {
-		session.broadcastMessage(null,new NetworkMessage(ClientCommandList.PROBLEM,to.handle,ParserName.KS_PARSER,p.toString()));
+		ParserName parser = p instanceof YojiProblem ? ParserName.YOJI_PARSER : ParserName.KS_PARSER;
+		session.broadcastMessage(null,new NetworkMessage(ClientCommandList.PROBLEM,to.handle,parser,p.toString()));
 	}
 
 	
