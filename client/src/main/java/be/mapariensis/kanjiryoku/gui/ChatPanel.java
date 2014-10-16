@@ -48,7 +48,7 @@ public class ChatPanel extends JPanel {
 					input.setText("");
 					return;
 				}
-				bridge.getChat().displayUserMessage(bridge.getUplink().getUsername(),msg);
+				bridge.getChat().displayUserMessage(bridge.getUplink().getUsername(),msg,true);
 				bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SESSIONMESSAGE, msg));
 				input.setText("");
 			}

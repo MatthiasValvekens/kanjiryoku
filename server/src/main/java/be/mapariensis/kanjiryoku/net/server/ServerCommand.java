@@ -44,7 +44,7 @@ public enum ServerCommand {
 		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
 			try {
 				String handle = message.get(1);
-				NetworkMessage pm = new NetworkMessage(ClientCommandList.FROM,client.handle,message.get(2));
+				NetworkMessage pm = new NetworkMessage(ClientCommandList.FROM,client.handle,message.get(2),false);
 				User other = userman.getUser(handle);
 				userman.messageUser(other, pm);
 			} catch (IndexOutOfBoundsException ex) {
@@ -58,7 +58,7 @@ public enum ServerCommand {
 				throws ServerException {
 			NetworkMessage msg;
 			try {
-				msg = new NetworkMessage(ClientCommandList.FROM,client.handle,message.get(1));
+				msg = new NetworkMessage(ClientCommandList.FROM,client.handle,message.get(1),true);
 			} catch (IndexOutOfBoundsException ex) {
 				throw new ProtocolSyntaxException(ex);
 			}

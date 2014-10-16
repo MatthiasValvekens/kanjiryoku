@@ -40,7 +40,7 @@ public class PlainChatPanel extends JPanel implements ChatInterface {
 		
 	}
 	@Override
-	public void displayUserMessage(String from, String message) {
+	public void displayUserMessage(String from, String message, boolean broadcast) {
 		synchronized(textpanel) {
 			textpanel.append(String.format("[%s]\t%s\n",from,message));
 		}

@@ -47,6 +47,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	public static final String ERROR_CLASS = "error";
 	public static final String ERROR_HEADER_CLASS = "error-header";
 	public static final String KANJILINK_CLASS = "kanjilink";
+	public static final String PRIVATE_MESSAGE_CLASS = "private-message";
 	private final ServerResponseHandler dumpToChat = new DummyResponseHandler(this);	
 	
 	public HTMLChatPanel(GUIBridge bridge, String css) {
@@ -85,8 +86,15 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 		append(wrap("p","*game*",SERVER_CLASS), clickableKanji(esc(message)));
 	}
 	@Override
-	public void displayUserMessage(String from, String message) {
-		append(new StringBuilder().append('[').append(esc(from)).append(']'),esc(message));
+	public void displayUserMessage(String from, String message, boolean broadcast) {
+		CharSequence fromString = new StringBuilder().append('[').append(esc(from)).append(']');
+		message = esc(message);
+		if(!broadcast){
+			fromString = wrap("p",fromString,PRIVATE_MESSAGE_CLASS);
+			message = wrap("p",fromString,PRIVATE_MESSAGE_CLASS);
+		}
+		
+		append(fromString,message);
 	}
 
 	@Override
@@ -115,7 +123,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 		return dumpToChat;
 	}
 	
-	private static String wrap(String tag,String content, String... classes) {
+	private static String wrap(String tag,CharSequence content, String... classes) {
 		StringBuilder sb = new StringBuilder(classes[0]);
 		for(int i = 1; i<classes.length;i++) {
 			sb.append(' ').append(classes[i]);

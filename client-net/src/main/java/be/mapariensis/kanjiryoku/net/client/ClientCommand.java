@@ -73,8 +73,12 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, GUIBridge bridge)
 				throws ServerCommunicationException {
-			checkArgs(msg,3);
-			bridge.getChat().displayUserMessage(msg.get(1),msg.get(2));
+			checkArgs(msg,4);
+			try {
+				bridge.getChat().displayUserMessage(msg.get(1),msg.get(2),Boolean.valueOf(msg.get(3)));
+			} catch (RuntimeException ex) {
+				throw new ServerCommunicationException(msg);
+			}
 		}
 		
 		

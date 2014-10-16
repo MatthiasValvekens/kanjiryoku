@@ -45,3 +45,6 @@ p {
 	text-decoration: none;
 	font-size: 2em;
 }
+.private-message {
+	font-style: italic;
+}

@@ -57,7 +57,7 @@ public class AdminConsole implements GUIBridge, ChatInterface {
 	}
 
 	@Override
-	public void displayUserMessage(String from, String message) {
+	public void displayUserMessage(String from, String message, boolean broadcast) {
 		printMessage(String.format("[%s]",from),message);
 	}
 
