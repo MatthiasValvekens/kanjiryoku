@@ -4,7 +4,7 @@ import java.util.List;
 
 import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.gui.DrawingPanelInterface;
-import be.mapariensis.kanjiryoku.gui.GUIBridge;
+import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.model.InputMethod;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
@@ -13,8 +13,8 @@ import be.mapariensis.kanjiryoku.util.ParsingUtils;
 
 public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 	private final DrawingPanelInterface dpi;
-	private final GUIBridge bridge;
-	public HandwrittenInputHandlerImpl(DrawingPanelInterface dpi, GUIBridge bridge) {
+	private final UIBridge bridge;
+	public HandwrittenInputHandlerImpl(DrawingPanelInterface dpi, UIBridge bridge) {
 		this.dpi = dpi;
 		this.bridge = bridge;
 	}

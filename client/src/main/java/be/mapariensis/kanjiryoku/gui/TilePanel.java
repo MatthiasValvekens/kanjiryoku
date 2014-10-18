@@ -98,7 +98,7 @@ public class TilePanel extends InputComponent implements MultipleChoiceInputInte
 		int newheight = (int) (r.height * factor);
 		return new Rectangle(r.x+(r.width - newwidth)/2, r.y+(r.height - newheight)/2,newwidth,newheight);
 	}
-	public TilePanel(GUIBridge bridge) {
+	public TilePanel(UIBridge bridge) {
 		this.ih = new MultipleChoiceInputHandlerImpl(bridge, this);
 		setBackground(Color.WHITE);
 	}

@@ -20,9 +20,9 @@ public class PlainChatPanel extends JPanel implements ChatInterface {
 	private final JTextArea textpanel = new JTextArea();
 	private final Executor promptThreads = Executors.newSingleThreadExecutor(); // ensure only one prompt can exist at a time
 	private final ServerResponseHandler dumpToChat = new DummyResponseHandler(this);
-	private final GUIBridge bridge;
+	private final UIBridge bridge;
 	
-	public PlainChatPanel(GUIBridge bridge) {
+	public PlainChatPanel(UIBridge bridge) {
 		this.bridge = bridge;
 		textpanel.setEditable(false);
 		textpanel.setLineWrap(true);

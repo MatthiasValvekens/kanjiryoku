@@ -48,3 +48,7 @@ p {
 .private-message {
 	font-style: italic;
 }
+.userlink {
+	text-decoration: none;
+	color: black;
+}

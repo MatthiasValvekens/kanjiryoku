@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.gui.ChatInterface;
-import be.mapariensis.kanjiryoku.gui.GUIBridge;
+import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.gui.GameClientInterface;
 import be.mapariensis.kanjiryoku.net.client.ServerResponseHandler;
 import be.mapariensis.kanjiryoku.net.client.ServerUplink;
@@ -17,7 +17,7 @@ import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
-public class AdminConsole implements GUIBridge, ChatInterface {
+public class AdminConsole implements UIBridge, ChatInterface {
 	private static final Logger log = LoggerFactory.getLogger(AdminConsole.class);
 	private final ServerUplink uplink;
 	public AdminConsole(InetAddress addr,int port, String username) throws IOException {

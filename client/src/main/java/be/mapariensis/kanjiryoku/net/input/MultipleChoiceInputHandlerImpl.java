@@ -1,6 +1,6 @@
 package be.mapariensis.kanjiryoku.net.input;
 
-import be.mapariensis.kanjiryoku.gui.GUIBridge;
+import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.gui.MultipleChoiceInputInterface;
 import be.mapariensis.kanjiryoku.model.InputMethod;
 import be.mapariensis.kanjiryoku.net.client.ClientCommand;
@@ -10,9 +10,9 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public class MultipleChoiceInputHandlerImpl implements
 		MultipleChoiceInputHandler {
-	private final GUIBridge bridge;
+	private final UIBridge bridge;
 	private final MultipleChoiceInputInterface choices;
-	public MultipleChoiceInputHandlerImpl(GUIBridge bridge,
+	public MultipleChoiceInputHandlerImpl(UIBridge bridge,
 			MultipleChoiceInputInterface choices) {
 		this.bridge = bridge;
 		this.choices = choices;

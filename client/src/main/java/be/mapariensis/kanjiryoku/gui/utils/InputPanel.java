@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.gui.DrawPanel;
-import be.mapariensis.kanjiryoku.gui.GUIBridge;
+import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.gui.TilePanel;
 import be.mapariensis.kanjiryoku.model.InputMethod;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
@@ -27,8 +27,8 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 public class InputPanel extends JPanel implements InputHandler {
 	private static final Logger log = LoggerFactory.getLogger(InputPanel.class);
 	public static final Dimension size = new Dimension(300, 400);
-	private final GUIBridge bridge;
-	public InputPanel(GUIBridge bridge) {
+	private final UIBridge bridge;
+	public InputPanel(UIBridge bridge) {
 		this.bridge = bridge;
 		setLayout(new BorderLayout());
 		setPreferredSize(size);

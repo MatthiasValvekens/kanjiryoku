@@ -1,6 +1,7 @@
 package be.mapariensis.kanjiryoku.gui;
 
 import javax.swing.*;
+
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.util.History;
@@ -21,7 +22,7 @@ public class ChatPanel extends JPanel {
 	private final History history = new StandardHistoryImpl(HISTORY_SIZE);
 	private boolean firstManualCommandSent = false;
 	
-	public ChatPanel(final GUIBridge bridge, JComponent chatRenderer) {
+	public ChatPanel(final UIBridge bridge, JComponent chatRenderer) {
 		setPreferredSize(new Dimension(400,600));
 		setLayout(new BorderLayout());
 		JScrollPane scrollPane = new JScrollPane(chatRenderer);
@@ -73,5 +74,4 @@ public class ChatPanel extends JPanel {
 		input.getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), HISTORY_FORWARD);
 		add(controls,BorderLayout.SOUTH);	
 	}
-
 }

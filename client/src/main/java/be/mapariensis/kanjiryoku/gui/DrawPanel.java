@@ -37,7 +37,7 @@ public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 	private boolean locked = true;
 	
 	private final HandwrittenInputHandler ih;
-	public DrawPanel(Dimension size, GUIBridge bridge) {
+	public DrawPanel(Dimension size, UIBridge bridge) {
 		this.size = size;
 		this.ih = new HandwrittenInputHandlerImpl(this,bridge);
 		DrawingListener listener = new DrawingListener();

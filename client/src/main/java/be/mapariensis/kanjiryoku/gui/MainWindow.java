@@ -1,6 +1,7 @@
 package be.mapariensis.kanjiryoku.gui;
 
 import java.awt.FlowLayout;
+import java.awt.Frame;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -171,5 +172,10 @@ public class MainWindow extends JFrame implements GUIBridge {
 		for(int i = 0;i<count;i++) {
 			menuBar.getMenu(i).setEnabled(enable);
 		}
+	}
+
+	@Override
+	public Frame getFrame() {
+		return this;
 	}
 }

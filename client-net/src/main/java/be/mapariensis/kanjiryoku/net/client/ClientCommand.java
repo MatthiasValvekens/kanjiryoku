@@ -10,7 +10,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import be.mapariensis.kanjiryoku.gui.GUIBridge;
+import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ParserName;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
@@ -24,7 +24,7 @@ public enum ClientCommand {
 	
 	SAY {
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ServerCommunicationException {
 			checkArgs(msg,2);
 			bridge.getChat().displayServerMessage(msg.get(1));
@@ -32,7 +32,7 @@ public enum ClientCommand {
 	}, STATISTICS {
 		@SuppressWarnings("unchecked")
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ClientException {
 			checkArgs(msg,2);
 			StringBuilder sb = new StringBuilder("Statistics:");
@@ -58,7 +58,7 @@ public enum ClientCommand {
 	}, WELCOME {
 
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ServerCommunicationException {
 			if(bridge.getUplink().registered()) throw new ServerCommunicationException(msg); 
 			checkArgs(msg,2);
@@ -71,7 +71,7 @@ public enum ClientCommand {
 	}, FROM {
 
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ServerCommunicationException {
 			checkArgs(msg,4);
 			try {
@@ -84,7 +84,7 @@ public enum ClientCommand {
 		
 	}, INVITE {
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ServerCommunicationException {
 			checkArgs(msg,5);
 			 // TODO : behaviour is undefined when invitations for multiple sessions are sent
@@ -98,14 +98,14 @@ public enum ClientCommand {
 		}
 	}, RESPOND {
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge) throws ClientException {
+		public void execute(NetworkMessage msg, UIBridge bridge) throws ClientException {
 			if(msg.argCount()<2) throw new ServerCommunicationException(msg);
 			bridge.getUplink().consumeActiveResponseHandler(msg);
 		}
 		
 	}, PROBLEM {
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ServerCommunicationException {
 			checkArgs(msg,4);
 			String name = msg.get(1);
@@ -128,7 +128,7 @@ public enum ClientCommand {
 		}
 	}, ANSWER {
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ServerCommunicationException {
 			checkArgs(msg,5);
 			String name = msg.get(1);
@@ -148,7 +148,7 @@ public enum ClientCommand {
 		}
 	}, PROBLEMSKIPPED {
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ClientException {
 			if(msg.argCount()<3) throw new ServerCommunicationException(msg);
 			int responseCode;
@@ -166,7 +166,7 @@ public enum ClientCommand {
 	}, RESETUI {
 
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ClientException {
 			log.info("Resetting UI");
 			bridge.getClient().getInputHandler().clearLocalInput();
@@ -177,7 +177,7 @@ public enum ClientCommand {
 	}, CONFIRMADMIN {
 
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge) {
+		public void execute(NetworkMessage msg, UIBridge bridge) {
 			int id;
 			int responseCode;
 			try {
@@ -193,7 +193,7 @@ public enum ClientCommand {
 	}, VERSION {
 
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ClientException {
 			checkArgs(msg,3);
 			boolean incompatible;
@@ -217,14 +217,14 @@ public enum ClientCommand {
 		
 	}, CLEAR {
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ClientException {
 			bridge.getClient().getInputHandler().clearLocalInput();
 		}
 	},INPUT {
 
 		@Override
-		public void execute(NetworkMessage msg, GUIBridge bridge)
+		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ClientException {
 			if(msg.argCount()<2) throw new ServerCommunicationException(msg);
 			bridge.getClient().getInputHandler().receiveMessage(msg.get(1), msg.truncate(2));
@@ -232,7 +232,7 @@ public enum ClientCommand {
 		
 	};
 	private static final Logger log = LoggerFactory.getLogger(ClientCommand.class);
-	public abstract void execute(NetworkMessage msg, GUIBridge bridge) throws ClientException;
+	public abstract void execute(NetworkMessage msg, UIBridge bridge) throws ClientException;
 	public static void checkArgs(NetworkMessage msg, int args) throws ServerCommunicationException {
 		if(msg.argCount() != args) throw new ServerCommunicationException(msg);
 	}

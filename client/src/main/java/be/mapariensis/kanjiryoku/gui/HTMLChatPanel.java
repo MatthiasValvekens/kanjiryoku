@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.Constants;
+import be.mapariensis.kanjiryoku.gui.dialogs.PrivateMessageDialog;
 import be.mapariensis.kanjiryoku.gui.utils.DummyResponseHandler;
 import be.mapariensis.kanjiryoku.gui.utils.YesNoTask;
 import be.mapariensis.kanjiryoku.net.client.ServerResponseHandler;
@@ -47,6 +48,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	public static final String ERROR_CLASS = "error";
 	public static final String ERROR_HEADER_CLASS = "error-header";
 	public static final String KANJILINK_CLASS = "kanjilink";
+	public static final String USERLINK_CLASS = "userlink";
 	public static final String PRIVATE_MESSAGE_CLASS = "private-message";
 	private final ServerResponseHandler dumpToChat = new DummyResponseHandler(this);	
 	
@@ -67,7 +69,17 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 				if(e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
 					try {
 						AttributeSet anchorAttributes = (AttributeSet) e.getSourceElement().getAttributes().getAttribute(HTML.Tag.A);
-						log.info("Clickety {}",anchorAttributes.getAttribute(HTML.Attribute.HREF));
+						String anchorClass = String.valueOf(anchorAttributes.getAttribute(HTML.Attribute.CLASS));
+						String href = String.valueOf(anchorAttributes.getAttribute(HTML.Attribute.HREF));
+						
+						switch(anchorClass) {
+						case KANJILINK_CLASS:
+							// TODO : info panel goes here
+							log.info("Clickety {}",href);
+							break;
+						case USERLINK_CLASS:
+							getPrivateMessageDialog(href).setVisible(true);
+						}
 					} catch (RuntimeException ex) {
 						log.warn("Document structure is borked - could not process hyperlink event.");
 					}
@@ -87,11 +99,13 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	}
 	@Override
 	public void displayUserMessage(String from, String message, boolean broadcast) {
-		CharSequence fromString = new StringBuilder().append('[').append(esc(from)).append(']');
+		from = esc(from);
+		CharSequence link = userLink(from);
+		CharSequence fromString = new StringBuilder().append('[').append(link).append(']');
 		message = esc(message);
 		if(!broadcast){
 			fromString = wrap("p",fromString,PRIVATE_MESSAGE_CLASS);
-			message = wrap("p",fromString,PRIVATE_MESSAGE_CLASS);
+			message = wrap("p",message,PRIVATE_MESSAGE_CLASS);
 		}
 		
 		append(fromString,message);
@@ -177,7 +191,10 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	private static String esc(String s) {
 		return StringEscapeUtils.escapeHtml4(s);
 	}
-	
+	// TODO : link username in all relevant places
+	private static CharSequence userLink(String username) {
+		return new StringBuilder().append("<a class=\"").append(USERLINK_CLASS).append("\" href=\"").append(username).append("\">").append(username).append("</a>");
+	}
 	public void clear() {
 		documentSetup();		
 	}
@@ -194,4 +211,8 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 		table = document.getElement(TABLE_ID);
 		textPane.setDocument(document);
 	}
+	protected PrivateMessageDialog getPrivateMessageDialog(String username) {
+		return new PrivateMessageDialog(bridge.getFrame(),bridge.getUplink(),username,this);
+	}
+	
 }

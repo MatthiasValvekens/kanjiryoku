@@ -16,7 +16,7 @@ import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import be.mapariensis.kanjiryoku.gui.GUIBridge;
+import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.net.client.handlers.WaitingResponseHandler;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
@@ -42,8 +42,8 @@ public class ServerUplink extends Thread implements Closeable {
 	private String username;
 	private MessageHandler messageHandler;
 	private SelectionKey key;
-	private final GUIBridge bridge;
-	public ServerUplink(InetAddress addr, int port, String username, GUIBridge bridge) throws IOException {
+	private final UIBridge bridge;
+	public ServerUplink(InetAddress addr, int port, String username, UIBridge bridge) throws IOException {
 		channel = SocketChannel.open();
 		selector = Selector.open();
 		this.addr = addr;

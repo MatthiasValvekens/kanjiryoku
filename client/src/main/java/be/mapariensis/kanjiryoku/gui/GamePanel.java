@@ -25,7 +25,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	
 	
 	
-	private final GUIBridge bridge;
+	private final UIBridge bridge;
 	private final JButton submitButton;
 	
 	private int inputCounter = 0; // keeps track of the current position in the problem for convenience
@@ -33,7 +33,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 
 	private volatile boolean locked;
 	private final InputPanel inputContainer;
-	public GamePanel(final GUIBridge bridge) {
+	public GamePanel(final UIBridge bridge) {
 		this.bridge = bridge;
 		setLayout(new BorderLayout());
 		
