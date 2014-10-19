@@ -27,7 +27,7 @@ public enum ClientCommand {
 		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ServerCommunicationException {
 			checkArgs(msg,2);
-			bridge.getChat().displayServerMessage(msg.get(1));
+			bridge.getChat().displayServerMessage(msg.timestamp,msg.get(1));
 		}
 	}, STATISTICS {
 		@SuppressWarnings("unchecked")
@@ -53,7 +53,7 @@ public enum ClientCommand {
 			} catch(JSONException ex) {
 				throw new ServerCommunicationException(ex);
 			}
-			bridge.getChat().displayGameMessage(sb.toString());
+			bridge.getChat().displayGameMessage(msg.timestamp,sb.toString());
 		}
 	}, WELCOME {
 
@@ -64,7 +64,7 @@ public enum ClientCommand {
 			checkArgs(msg,2);
 			String username = msg.get(1);
 			bridge.setUsername(username);
-			bridge.getChat().displayServerMessage(String.format("Welcome %s",username));
+			bridge.getChat().displayServerMessage(msg.timestamp,String.format("Welcome %s",username));
 			bridge.getUplink().flagRegisterComplete();
 		}
 		
@@ -75,7 +75,7 @@ public enum ClientCommand {
 				throws ServerCommunicationException {
 			checkArgs(msg,4);
 			try {
-				bridge.getChat().displayUserMessage(msg.get(1),msg.get(2),Boolean.valueOf(msg.get(3)));
+				bridge.getChat().displayUserMessage(msg.timestamp,msg.get(1),msg.get(2),Boolean.valueOf(msg.get(3)));
 			} catch (RuntimeException ex) {
 				throw new ServerCommunicationException(msg);
 			}
@@ -109,7 +109,7 @@ public enum ClientCommand {
 				throws ServerCommunicationException {
 			checkArgs(msg,4);
 			String name = msg.get(1);
-			bridge.getChat().displayGameMessage(String.format("Question for %s" + (name.equals(bridge.getClient().getUsername()) ? " (You)" : ""),name));
+			bridge.getChat().displayGameMessage(msg.timestamp,String.format("Question for %s" + (name.equals(bridge.getClient().getUsername()) ? " (You)" : ""),name));
 			String problemParserName = msg.get(2);
 			String problemString = msg.get(3);
 			ProblemParser parser;
@@ -142,7 +142,7 @@ public enum ClientCommand {
 			} catch(RuntimeException ex) {
 				throw new ServerCommunicationException(ex);
 			}
-			bridge.getChat().displayGameMessage(String.format("User %s answered %s: %s", name, inputChar, wasCorrect ? "correct" : "unfortunately not the right answer"));
+			bridge.getChat().displayGameMessage(msg.timestamp,String.format("User %s answered %s: %s", name, inputChar, wasCorrect ? "correct" : "unfortunately not the right answer"));
 			bridge.getClient().deliverAnswer(wasCorrect, inputChar);
 			bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.RESPOND,responseCode)); // acknowledge 
 		}
@@ -159,8 +159,8 @@ public enum ClientCommand {
 			} catch(RuntimeException ex) {
 				throw new ServerCommunicationException(ex);
 			}
-			bridge.getChat().displayGameMessage(String.format("User %s skipped the problem.",msg.get(1)));
-			if(!batonPass) bridge.getChat().displayGameMessage(String.format("The full solution was %s.",bridge.getClient().getProblem().getFullSolution()));
+			bridge.getChat().displayGameMessage(msg.timestamp,String.format("User %s skipped the problem.",msg.get(1)));
+			if(!batonPass) bridge.getChat().displayGameMessage(msg.timestamp,String.format("The full solution was %s.",bridge.getClient().getProblem().getFullSolution()));
 			bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.RESPOND,responseCode));
 		}
 	}, RESETUI {

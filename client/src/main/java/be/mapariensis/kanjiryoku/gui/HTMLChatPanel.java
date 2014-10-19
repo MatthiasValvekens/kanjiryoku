@@ -3,7 +3,10 @@ package be.mapariensis.kanjiryoku.gui;
 import java.awt.BorderLayout;
 import java.io.IOException;
 import java.lang.Character.UnicodeBlock;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -42,6 +45,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	
 	public static final String TABLE_ID = "chatTable";
 	public static final String USERCOL_CLASS = "usercol";
+	public static final String TIMECOL_CLASS = "timecol";
 	public static final String MESSAGECOL_CLASS = "messagecol";
 	public static final String SERVER_CLASS = "server";
 	public static final String SYSTEM_CLASS = "system";
@@ -90,15 +94,15 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 		add(textPane, BorderLayout.CENTER);
 	}
 	@Override
-	public void displayServerMessage(String message) {
-		append(wrap("p",Constants.SERVER_HANDLE,SERVER_CLASS), esc(message));
+	public void displayServerMessage(long timestamp, String message) {
+		append(timestamp,wrap("p",Constants.SERVER_HANDLE,SERVER_CLASS), esc(message));
 	}
 	@Override
-	public void displayGameMessage(String message) {
-		append(wrap("p","*game*",SERVER_CLASS), clickableKanji(esc(message)));
+	public void displayGameMessage(long timestamp, String message) {
+		append(timestamp,wrap("p","*game*",SERVER_CLASS), clickableKanji(esc(message)));
 	}
 	@Override
-	public void displayUserMessage(String from, String message, boolean broadcast) {
+	public void displayUserMessage(long timestamp, String from, String message, boolean broadcast) {
 		from = esc(from);
 		CharSequence link = userLink(from);
 		CharSequence fromString = new StringBuilder().append('[').append(link).append(']');
@@ -108,12 +112,12 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 			message = wrap("p",message,PRIVATE_MESSAGE_CLASS);
 		}
 		
-		append(fromString,message);
+		append(timestamp,fromString,message);
 	}
 
 	@Override
 	public void displayErrorMessage(int errorId, String message) {
-		append(wrap("p",String.format("Error E%03d",errorId),ERROR_HEADER_CLASS),wrap("p",esc(message),ERROR_CLASS));
+		append(-1,wrap("p",String.format("Error E%03d",errorId),ERROR_HEADER_CLASS),wrap("p",esc(message),ERROR_CLASS));
 	}
 
 	@Override
@@ -123,7 +127,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 
 	@Override
 	public void displaySystemMessage(String message) {
-		append(wrap("p","*system*",SYSTEM_CLASS), wrap("p",esc(message),SYSTEM_CLASS));
+		append(-1,wrap("p","*system*",SYSTEM_CLASS), wrap("p",esc(message),SYSTEM_CLASS));
 	}
 
 	@Override
@@ -146,10 +150,12 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 				"class=\"%s\">%s</%s>",tag,sb,content,tag);
 	}
 	
-	private static final String CSS_FORMAT_STRING = "<tr><td class=\""+USERCOL_CLASS+"\">%s</td><td class=\""+MESSAGECOL_CLASS+"\">%s</td></tr>"; 
-	private synchronized void append(CharSequence usercol, String messagecol) {
+	private static final String CSS_FORMAT_STRING = "<tr><td class=\""+TIMECOL_CLASS+"\">%s</td><td class=\""+USERCOL_CLASS+"\">%s</td><td class=\""+MESSAGECOL_CLASS+"\">%s</td></tr>";
+	private final DateFormat df = new SimpleDateFormat("HH:mm:ss");
+	private synchronized void append(long timestamp, CharSequence usercol, String messagecol) {
+		String date = timestamp != -1 ? df.format(new Date(timestamp)) : ""; 
 		try {
-			document.insertBeforeEnd(table, String.format(CSS_FORMAT_STRING,usercol,formatLinebreaks(messagecol)));
+			document.insertBeforeEnd(table, String.format(CSS_FORMAT_STRING,date,usercol,formatLinebreaks(messagecol)));
 			// caret auto update doesn't work
 			textPane.setCaretPosition(document.getLength());
 		} catch(IOException | BadLocationException ex) {

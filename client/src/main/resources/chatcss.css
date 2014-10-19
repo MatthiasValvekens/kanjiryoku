@@ -10,7 +10,7 @@ p {
 	border-style: none;
 	font: Meiryo;
 	table-layout: fixed;
-	width: 300px;
+	width: 370px;
 }
 #chatTable td {
 	padding: 0px;
@@ -19,6 +19,11 @@ p {
 .usercol {
 	vertical-align: top;
 	font-weight: bold;
+	width: 70px;
+}
+.timecol {
+	vertical-align: top;
+	font-style: italic;
 	width: 70px;
 }
 .messagecol {

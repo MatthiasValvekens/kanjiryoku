@@ -12,6 +12,7 @@ public class PrivateMessageDialog extends SingleInputDialog {
 	private final String me;
 	private final ChatInterface chat;
 	private String message;
+	private long time;
 	public PrivateMessageDialog(Frame parent, ServerUplink serv, String username, ChatInterface chat) {
 		super(parent, "Send private message", String.format("To %s:",username), serv,true);
 		this.username = username;
@@ -23,12 +24,14 @@ public class PrivateMessageDialog extends SingleInputDialog {
 	@Override
 	protected NetworkMessage constructMessage() {
 		message = getInput();
-		return new NetworkMessage(ServerCommandList.MESSAGE,username,message);
+		NetworkMessage res = new NetworkMessage(ServerCommandList.MESSAGE,username,message);
+		time = res.timestamp;
+		return res;
 	}
 	
 	@Override
 	protected void tearDown() {
-		chat.displayUserMessage(me, String.format("(To %s) %s",username,message),false); // TODO : Is this the right design?
+		chat.displayUserMessage(time, me, String.format("(To %s) %s",username,message),false); // TODO : Is this the right design?
 	}
 
 }

@@ -41,23 +41,23 @@ public class AdminConsole implements UIBridge, ChatInterface {
 
 	@Override
 	public void setUsername(String username) {
-		displayServerMessage(String.format("Username set to %s",username));
+		displaySystemMessage(String.format("Username set to %s",username));
 		uplink.enqueueMessage(new NetworkMessage(ServerCommandList.ADMIN,System.currentTimeMillis()%10000,"BROADCAST","elloello")); // test
 	}
 
 	@Override
-	public void displayServerMessage(String message) {
+	public void displayServerMessage(long timestamp, String message) {
 		printMessage(Constants.SERVER_HANDLE, message);
 	}
 
 	@Override
-	public void displayGameMessage(String message) {
+	public void displayGameMessage(long timestamp, String message) {
 		displaySystemMessage("We shouldn't be receiving game messages. Logged");
 		log.warn("Game message received. This shouldn't happen.",message);
 	}
 
 	@Override
-	public void displayUserMessage(String from, String message, boolean broadcast) {
+	public void displayUserMessage(long timestamp, String from, String message, boolean broadcast) {
 		printMessage(String.format("[%s]",from),message);
 	}
 

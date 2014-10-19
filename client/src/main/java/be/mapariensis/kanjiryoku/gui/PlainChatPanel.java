@@ -33,14 +33,14 @@ public class PlainChatPanel extends JPanel implements ChatInterface {
 		add(textpanel,BorderLayout.CENTER);
 	}
 	@Override
-	public void displayServerMessage(String message) {
+	public void displayServerMessage(long timestamp, String message) {
 		synchronized(textpanel) {
 			textpanel.append(String.format("%s\t%s\n",Constants.SERVER_HANDLE,message));
 		}
 		
 	}
 	@Override
-	public void displayUserMessage(String from, String message, boolean broadcast) {
+	public void displayUserMessage(long timestamp, String from, String message, boolean broadcast) {
 		synchronized(textpanel) {
 			textpanel.append(String.format("[%s]\t%s\n",from,message));
 		}
@@ -73,7 +73,7 @@ public class PlainChatPanel extends JPanel implements ChatInterface {
 		}
 	}
 	@Override
-	public void displayGameMessage(String message) {
+	public void displayGameMessage(long timestamp, String message) {
 		synchronized(textpanel) {
 			textpanel.append(String.format("*game*\t%s\n",message));
 		}

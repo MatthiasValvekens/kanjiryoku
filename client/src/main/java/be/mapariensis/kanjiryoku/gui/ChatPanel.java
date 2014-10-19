@@ -23,7 +23,7 @@ public class ChatPanel extends JPanel {
 	private boolean firstManualCommandSent = false;
 	
 	public ChatPanel(final UIBridge bridge, JComponent chatRenderer) {
-		setPreferredSize(new Dimension(400,600));
+		setPreferredSize(new Dimension(600,600));
 		setLayout(new BorderLayout());
 		JScrollPane scrollPane = new JScrollPane(chatRenderer);
 		scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -49,8 +49,9 @@ public class ChatPanel extends JPanel {
 					input.setText("");
 					return;
 				}
-				bridge.getChat().displayUserMessage(bridge.getUplink().getUsername(),msg,true);
-				bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SESSIONMESSAGE, msg));
+				NetworkMessage nmsg = new NetworkMessage(ServerCommandList.SESSIONMESSAGE, msg);
+				bridge.getChat().displayUserMessage(nmsg.timestamp,bridge.getUplink().getUsername(),msg,true);
+				bridge.getUplink().enqueueMessage(nmsg);
 				input.setText("");
 			}
 		});
