@@ -61,7 +61,8 @@ public class ProblemCollectionUtils {
 			}
 		};
 	}
-	public static ProblemOrganizer buildKanjiryokuShindanOrganizer(String format, List<String> categoryNames, String digitFormat,int problemsPerCategory, int minDiff, int maxDiff, boolean resetDifficulty,Random rng, Charset enc) throws IOException, ParseException {
+	
+	public static List<RatedProblemList> readKanjiryokuShindanProblems(String format, List<String> categoryNames, String digitFormat,int minDiff, int maxDiff, Charset enc) throws ParseException {
 		ProblemParser parser = new KanjiryokuShindanParser();
 		List<RatedProblemList> cats = new ArrayList<RatedProblemList>(categoryNames.size());
 		for(String categoryName : categoryNames) {
@@ -83,9 +84,10 @@ public class ProblemCollectionUtils {
 			}
 			cats.add(new RatedProblemList(currentCategory));
 		}
-
-
-		return new CategoryOrganizer(cats, problemsPerCategory, rng,resetDifficulty,minDiff,maxDiff);
+		return cats;
+	}
+	public static ProblemOrganizer buildKanjiryokuShindanOrganizer(String format, List<String> categoryNames, String digitFormat,int problemsPerCategory, int minDiff, int maxDiff, boolean resetDifficulty,Random rng, Charset enc) throws IOException, ParseException {
+		return new CategoryOrganizer(readKanjiryokuShindanProblems(format, categoryNames, digitFormat, minDiff, maxDiff, enc), problemsPerCategory, rng,resetDifficulty,minDiff,maxDiff);
 	}
 	
 	public static String buildFilename(String format, String category, int difficulty, String digitFormat) {
