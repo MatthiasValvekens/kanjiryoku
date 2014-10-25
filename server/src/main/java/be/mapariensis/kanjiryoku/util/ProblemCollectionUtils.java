@@ -19,13 +19,12 @@ import org.apache.commons.lang3.text.StrSubstitutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.Constants;
 import be.mapariensis.kanjiryoku.config.ConfigFields;
 import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.problemsets.ProblemOrganizer;
 import be.mapariensis.kanjiryoku.problemsets.RatedProblem;
 import be.mapariensis.kanjiryoku.problemsets.RatedProblemList;
-import be.mapariensis.kanjiryoku.problemsets.organizers.CategoryOrganizer;
-import be.mapariensis.kanjiryoku.providers.KanjiryokuShindanParser;
 import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 public class ProblemCollectionUtils {
@@ -62,32 +61,25 @@ public class ProblemCollectionUtils {
 		};
 	}
 	
-	public static List<RatedProblemList> readKanjiryokuShindanProblems(String format, List<String> categoryNames, String digitFormat,int minDiff, int maxDiff, Charset enc) throws ParseException {
-		ProblemParser parser = new KanjiryokuShindanParser();
-		List<RatedProblemList> cats = new ArrayList<RatedProblemList>(categoryNames.size());
-		for(String categoryName : categoryNames) {
-			List<RatedProblem> currentCategory = new ArrayList<RatedProblem>();
-			for(int i = minDiff;i<=maxDiff;i++){
-				String fname=buildFilename(format, categoryName, i, digitFormat);
-				log.info("Loading problems from {}",fname);
-				List<String> strings;
-				try {
-					strings = Files.readAllLines(Paths.get(fname), enc);
-				} catch (IOException ex) {
-					log.warn("Failed to read file {}",fname);
-					continue;
-				}
-				for(String s : strings) {
-					if(!s.startsWith("//"))
-						currentCategory.add(new RatedProblem(parser.parseProblem(s), i));
-				}
+	
+	public static RatedProblemList readRatedProblems(ProblemParser parser, String format, String categoryName, String digitFormat,int minDiff, int maxDiff, Charset enc) throws ParseException {
+		List<RatedProblem> currentCategory = new ArrayList<RatedProblem>();
+		for(int i = minDiff;i<=maxDiff;i++){
+			String fname=buildFilename(format, categoryName, i, digitFormat);
+			log.info("Loading problems from {}",fname);
+			List<String> strings;
+			try {
+				strings = Files.readAllLines(Paths.get(fname), enc);
+			} catch (IOException ex) {
+				log.warn("Failed to read file {}",fname);
+				continue;
 			}
-			cats.add(new RatedProblemList(currentCategory));
-		}
-		return cats;
-	}
-	public static ProblemOrganizer buildKanjiryokuShindanOrganizer(String format, List<String> categoryNames, String digitFormat,int problemsPerCategory, int minDiff, int maxDiff, boolean resetDifficulty,Random rng, Charset enc) throws IOException, ParseException {
-		return new CategoryOrganizer(readKanjiryokuShindanProblems(format, categoryNames, digitFormat, minDiff, maxDiff, enc), problemsPerCategory, rng,resetDifficulty,minDiff,maxDiff);
+			for(String s : strings) {
+				if(!s.startsWith(Constants.COMMENT_PREFIX))
+					currentCategory.add(new RatedProblem(parser.parseProblem(s), i));
+			}
+		}		
+		return new RatedProblemList(currentCategory);
 	}
 	
 	public static String buildFilename(String format, String category, int difficulty, String digitFormat) {

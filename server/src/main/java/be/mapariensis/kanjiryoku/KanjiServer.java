@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.config.ConfigFields;
 import be.mapariensis.kanjiryoku.config.ConfigFileWatcher;
+import be.mapariensis.kanjiryoku.config.ServerConfigImpl;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.server.ConnectionMonitor;
 import be.mapariensis.kanjiryoku.util.IPropertiesImpl;
@@ -28,7 +29,7 @@ public class KanjiServer {
 		return config;
 	}
 	public static void main(String[] args) throws IOException, BadConfigurationException {
-		final IPropertiesImpl props = new IPropertiesImpl(readConfig());
+		final ServerConfigImpl props = new ServerConfigImpl(new IPropertiesImpl(readConfig()));
 		Runnable reconf = new Runnable() {
 			
 			@Override
@@ -41,7 +42,7 @@ public class KanjiServer {
 				}
 			}
 		};
-		ConnectionMonitor s = new ConnectionMonitor(props, reconf);
+		ConnectionMonitor s = new ConnectionMonitor(props);
 		ConfigFileWatcher watcher = new ConfigFileWatcher(reconf);
 		watcher.start();
 		s.start();

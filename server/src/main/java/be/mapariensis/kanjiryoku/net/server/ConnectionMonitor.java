@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 
 import static be.mapariensis.kanjiryoku.net.Constants.*;
 import be.mapariensis.kanjiryoku.config.ConfigFields;
-import be.mapariensis.kanjiryoku.cr.KanjiGuesserFactory;
+import be.mapariensis.kanjiryoku.config.ServerConfig;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
@@ -41,7 +41,6 @@ import be.mapariensis.kanjiryoku.net.model.UserStore;
 import be.mapariensis.kanjiryoku.net.server.handlers.AdminTaskExecutor;
 import be.mapariensis.kanjiryoku.net.util.MessageFragmentBuffer;
 import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
-import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class ConnectionMonitor extends Thread implements UserManager, Closeable {
 	private static final Logger log = LoggerFactory.getLogger(ConnectionMonitor.class);
@@ -54,11 +53,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final SessionManagerImpl sessman;
 	private final int bufferMax;
 	private final int usernameCharLimit;
-	private final Runnable rereadConfig;
-	private final IProperties config;
+	private final ServerConfig config;
 	// store message handlers for anonymous connections here until they register/identify
 	private final Map<SocketChannel,MessageHandler> strayHandlers = new ConcurrentHashMap<SocketChannel,MessageHandler>();
-	public ConnectionMonitor(IProperties config, Runnable rereadConfig) throws IOException, BadConfigurationException {
+	public ConnectionMonitor(ServerConfig config) throws IOException, BadConfigurationException {
 		this.config = config;
 		int port = config.getRequired(ConfigFields.PORT,Integer.class);
 		// get a socket
@@ -68,23 +66,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		int workerThreads = config.getTyped(ConfigFields.WORKER_THREADS, Integer.class,ConfigFields.WORKER_THREADS_DEFAULT);
 		bufferMax = config.getTyped(ConfigFields.WORKER_BUFFER_SIZE, Integer.class,ConfigFields.WORKER_BUFFER_SIZE_DEFAULT);
 		threadPool = Executors.newFixedThreadPool(workerThreads, new NetworkThreadFactory(bufferMax,selector));
-		
-		// load guesser factory
-		IProperties crSettings = config.getRequired(ConfigFields.CR_SETTINGS_HEADER,IProperties.class);
-		KanjiGuesserFactory factory;
-		String className = crSettings.getRequired(ConfigFields.GUESSER_FACTORY_CLASS, String.class);
-		try {
-			log.info("Loading guesser factory {}",className);
-			factory = (KanjiGuesserFactory) ConnectionMonitor.class.getClassLoader().loadClass(className).newInstance();
-		} catch (Exception ex) {
-			throw new BadConfigurationException("Failed to instantiate guesser factory.",ex);
-		}
-		sessman = new SessionManagerImpl(config,this,factory);
+		sessman = new SessionManagerImpl(config,this);
 		usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT, Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
-		this.rereadConfig = rereadConfig;
-		
-		
-		
 		setName("ConnectionMonitor:"+port);
 	}
 	@Override
@@ -338,12 +321,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		queueMessage(user.channel, message);
 	}
 	private static enum AdminCommand {
-		RECONF {
-			@Override
-			public Runnable getTask(User issuer, ConnectionMonitor mon, NetworkMessage command) {
-				return mon.rereadConfig;
-			}
-		}, BROADCAST {
+		BROADCAST {
 			@Override
 			public Runnable getTask(final User issuer, final ConnectionMonitor mon, final NetworkMessage command) throws ArgumentCountException {
 				if(command.argCount()<2) throw new ArgumentCountException(Type.TOO_FEW, BROADCAST);

@@ -57,6 +57,7 @@ public class KanjiryokuYojiWrapper implements ProblemParser {
 		@Override
 		public KanjiryokuYojiWrapper getParser(IProperties params)
 				throws BadConfigurationException {
+			if(params == null) throw new BadConfigurationException("KanjiryokuYojiWrapper requires parameters, but none were supplied.");
 			String dictfile = params.getRequired(PARAM_DICTFILE, String.class);
 			Charset enc = Charset.forName(params.getRequired(PARAM_ENCODING, String.class));
 			Random rng = new Random(params.getSafely(PARAM_SEED,Integer.class,(int)(System.currentTimeMillis()%10000)));

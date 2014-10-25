@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.config.ConfigFields;
+import be.mapariensis.kanjiryoku.config.ServerConfig;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesserFactory;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
@@ -22,19 +23,18 @@ public class SessionManagerImpl implements SessionManager {
 	private final List<Session> sessions = new ArrayList<Session>();
 	private final UserManager uman;
 	private final Object LOCK = new Object();
-	private final IProperties config;
-	private final KanjiGuesserFactory kgf;
-	public SessionManagerImpl(IProperties config, UserManager uman, KanjiGuesserFactory kgf) {
+	private final ServerConfig config;
+	public SessionManagerImpl(ServerConfig config, UserManager uman) {
 		this.uman = uman;
 		this.config = config;
-		this.kgf = kgf;
 	}
 	@Override
 	public Session startSession(User master, Game game) throws ServerException, BadConfigurationException {
 		IProperties gameSettings = config.getRequired(ConfigFields.GAME_SETTINGS_HEADER, IProperties.class).getRequired(game.name(), IProperties.class);
 		GameServerInterface host;
+		KanjiGuesserFactory kgf = config.getKanjiGuesserFactory();
 		try {
-			host = game.getServer(gameSettings, kgf.getGuesser(config.getRequired(ConfigFields.CR_SETTINGS_HEADER, IProperties.class)));
+			host = game.getServer(gameSettings, kgf.getGuesser(config.getRequired(ConfigFields.CR_SETTINGS_HEADER, IProperties.class)),config.getProblemSetManager());
 		} catch (IOException e) {
 			throw new ServerBackendException(e);
 		}

@@ -1,6 +1,7 @@
 Kanjiryoku server configuration
 ===============================
 
+(NOTE: This information is no longer accurate. It will be updated in the near future)
 
 The kanjiryoku server registers clients, manages sessions and broadcasts problems during game sessions. It is also fully responsible for character recognition and answer checking. Hence, assuming the standard Zinnia character recognition engine is used, the native libraries are only required to run the server. Dropping the relevant library files in the same folder as the server `.jar` should do the trick.
 

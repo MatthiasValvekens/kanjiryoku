@@ -40,10 +40,10 @@ public class ConfigFields {
 	public static final String CR_TOLERANCE = "answerTolerance";
 	public static final int CR_TOLERANCE_DEFAULT = 50;
 	
-	// Game-specific settings
-	public static final String GAME_SETTINGS_HEADER = "games";
-	
-	// TakingTurns
+	// Problem sets
+	public static final String PSET_SETTINGS_HEADER = "problemSets";
+	public static final String PARSER_FACTORY_CLASS = "parserFactoryClassName";
+	public static final String PARSER_FACTORY_SETTINGS = "parserFactoryConfig";
 	public static final String PROBLEMS_PER_CATEGORY = "problemsPerCategory";
 	public static final int PROBLEMS_PER_CATEGORY_DEFAULT = 5;
 	public static final String RESET_AFTER_CATEGORY_SWITCH = "resetDifficultyAfterCategorySwitch";
@@ -59,6 +59,14 @@ public class ConfigFields {
 	public static final String FILE_NAME_DIFFICULTY_FORMAT_DEFAULT = "%02d";
 	public static final String FILE_ENCODING = "fileEncoding";
 	public static final String FILE_ENCODING_DEFAULT = "UTF-8";
+	
+	// Game-specific settings
+	public static final String GAME_SETTINGS_HEADER = "games";
+	
+	
+	
+	// TakingTurns
+
 	public static final String ENABLE_BATON_PASS = "enableBatonPass";
 	public static final boolean ENABLE_BATON_PASS_DEFAULT = false;
 }
