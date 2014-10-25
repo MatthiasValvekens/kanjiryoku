@@ -11,4 +11,5 @@ public class Constants {
 	
 	public static final String SERVER_HANDLE = "*server*";
 	public static final String SYSTEM_HANDLE = "*system*";
+	public static final String COMMENT_PREFIX = "//";
 }

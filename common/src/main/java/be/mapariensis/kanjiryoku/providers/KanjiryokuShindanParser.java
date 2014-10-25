@@ -11,6 +11,7 @@ import be.mapariensis.kanjiryoku.model.KakiProblem;
 import be.mapariensis.kanjiryoku.model.ProblemWithBlank;
 import be.mapariensis.kanjiryoku.model.Word;
 import be.mapariensis.kanjiryoku.model.YomiProblem;
+import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class KanjiryokuShindanParser implements ProblemParser {
 	private static final Logger log = LoggerFactory.getLogger(KanjiryokuShindanParser.class);
@@ -103,5 +104,14 @@ public class KanjiryokuShindanParser implements ProblemParser {
 	private static boolean isKana(char c) {
 		Character.UnicodeBlock b = Character.UnicodeBlock.of(c);
 		return b==Character.UnicodeBlock.HIRAGANA || b==Character.UnicodeBlock.KATAKANA;
+	}
+	
+	public static class Factory implements ProblemParserFactory {
+
+		@Override
+		public KanjiryokuShindanParser getParser(IProperties params) {
+			return new KanjiryokuShindanParser();
+		}
+		
 	}
 }
