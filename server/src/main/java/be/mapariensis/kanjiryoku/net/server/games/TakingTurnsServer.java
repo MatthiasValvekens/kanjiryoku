@@ -227,6 +227,9 @@ public class TakingTurnsServer implements GameServerInterface {
 		session.broadcastMessage(submitter,new NetworkMessage(ClientCommandList.INPUT,uname,stroke));
 	}
 
+	private void broadcastSelection(User submitter, int selection) {
+		session.broadcastMessage(submitter, new NetworkMessage(ClientCommandList.INPUT,submitter.handle,selection));
+	}
 	
 	
 	private void broadcastClearInput(User submitter) {
@@ -282,6 +285,7 @@ public class TakingTurnsServer implements GameServerInterface {
 				int i = Integer.parseInt(msg.get(1));
 				if(i<0) throw new ProtocolSyntaxException();
 				multiProblemChoice = i;
+				broadcastSelection(source, i);
 			}
 		} catch(NumberFormatException ex) {
 			throw new ProtocolSyntaxException(ex);

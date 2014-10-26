@@ -35,8 +35,10 @@ public class TilePanel extends InputComponent implements MultipleChoiceInputInte
 			addMouseListener(new MouseAdapter() {
 				@Override
 				public void mouseClicked(MouseEvent ev) {
-					// TODO : interact with server here
-					optionSelected(id);
+					if(!locked) {
+						optionSelected(id);
+						ih.broadcastSelect(selectedTile);
+					}
 				}
 				
 				@Override
@@ -113,7 +115,6 @@ public class TilePanel extends InputComponent implements MultipleChoiceInputInte
 		Tile t = tiles.get(selectedTile = i);
 		t.selected = true;
 		t.repaint();
-		ih.broadcastSelect(selectedTile);
 	}
 	@Override
 	public void clearSelection() {
