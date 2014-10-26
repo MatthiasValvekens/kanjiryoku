@@ -205,7 +205,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				log.debug("Processing error",ex);
 				queueProcessingError(ch, ex);
 			} catch (IndexOutOfBoundsException ex){
-				log.debug("Badly formed command.");
+				log.warn("Badly formed command: {}",msg,ex);
 				queueProcessingError(ch, new ProtocolSyntaxException("Badly formed command",ex));
 			} catch (Exception e) {
 				log.error("Failed to process command.",e);

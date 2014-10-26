@@ -15,6 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JComponent;
+import javax.swing.SwingUtilities;
+
 import be.mapariensis.kanjiryoku.gui.utils.TextRendering;
 import be.mapariensis.kanjiryoku.net.input.InputComponent;
 import be.mapariensis.kanjiryoku.net.input.MultipleChoiceInputHandler;
@@ -111,6 +113,7 @@ public class TilePanel extends InputComponent implements MultipleChoiceInputInte
 		Tile t = tiles.get(selectedTile = i);
 		t.selected = true;
 		t.repaint();
+		ih.broadcastSelect(selectedTile);
 	}
 	@Override
 	public void clearSelection() {
@@ -122,19 +125,29 @@ public class TilePanel extends InputComponent implements MultipleChoiceInputInte
 		selectedTile = -1;
 	}
 	private List<Tile> tiles;
+	
 	@Override
-	public void setOptions(List<String> tiles) {
-		rowcount = (int) Math.ceil(Math.sqrt(tiles.size()));
-		GridLayout layout = new GridLayout(rowcount, rowcount, 0, 0);
-		setLayout(layout);
-		this.tiles = new ArrayList<Tile>(tiles.size());
-		for(int i = 0;i<tiles.size();i++) {
-			Tile t = new Tile(tiles.get(i),i);
-			add(t);
-			this.tiles.add(t);
-		}
-		revalidate();
-		repaint();
+	public void setOptions(final List<String> tiles) {
+		SwingUtilities.invokeLater(new Runnable(){
+
+			@Override
+			public void run() {
+				removeAll();
+				rowcount = (int) Math.ceil(Math.sqrt(tiles.size()));
+				GridLayout layout = new GridLayout(rowcount, rowcount, 0, 0);
+				setLayout(layout);
+				TilePanel.this.tiles = new ArrayList<Tile>(tiles.size());
+				for(int i = 0;i<tiles.size();i++) {
+					Tile t = new Tile(tiles.get(i),i);
+					add(t);
+					TilePanel.this.tiles.add(t);
+				}
+				revalidate();
+				repaint();
+			}
+			
+		});
+
 	}
 	
 

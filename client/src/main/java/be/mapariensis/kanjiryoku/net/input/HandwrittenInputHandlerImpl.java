@@ -6,6 +6,7 @@ import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.gui.DrawingPanelInterface;
 import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.model.InputMethod;
+import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
@@ -53,5 +54,10 @@ public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 	@Override
 	public void submit() {
 		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT, dpi.getWidth(),dpi.getHeight()));
+	}
+
+	@Override
+	public void prepareProblemPosition(Problem p, int position) {
+		// nothing to do
 	}
 }

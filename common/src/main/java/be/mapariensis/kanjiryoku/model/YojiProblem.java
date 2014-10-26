@@ -20,7 +20,8 @@ public class YojiProblem extends KakiProblem implements MultipleChoiceOptions {
 	public YojiProblem(Word yoji, List<List<String>> options) {
 		super(Arrays.asList(yoji), 0);
 		this.options = options;
-		if(yoji.main.length() != 4 || options.size()>4) throw new IllegalArgumentException("A yoji problem must have length 4.");
+		if(yoji.main.length() != 4) throw new IllegalArgumentException("A yoji problem must have length 4.");
+		if(options.size()==0) throw new IllegalArgumentException("A yoji problem must have at least one option available.");
 	}
 
 	@Override

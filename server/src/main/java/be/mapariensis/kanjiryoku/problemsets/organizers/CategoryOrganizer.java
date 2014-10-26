@@ -67,14 +67,14 @@ public class CategoryOrganizer implements ProblemOrganizer {
 	}
 	
 	private static class IntegerSpiral implements Iterator<Integer> {
-		final int center, min,max;
+		final int min,max;
 		int curStep = 0;
 		int curSign = -1;
-		
+		int prev;
 		private IntegerSpiral(int center, int min, int max) {
-			this.center = center;
 			this.min = min;
 			this.max = max;
+			this.prev = center;
 		}
 		@Override
 		public boolean hasNext() {
@@ -87,10 +87,11 @@ public class CategoryOrganizer implements ProblemOrganizer {
 			int retval = computeNext();
 			curStep++;
 			curSign = -curSign;
+			prev = retval;
 			return retval;
 		}
 		private int computeNext() {
-			return center+curSign*curStep;
+			return prev+curSign*curStep;
 		}
 		@Override
 		public void remove() {

@@ -70,7 +70,7 @@ public class KanjiryokuShindanParser implements ProblemParser {
 			parserPos = nextItem;
 		}
 		if(blankPos == -1) {
-			log.error("No blank in problem {}",input);
+			log.error("No blank in problem \"{}\"",input);
 			throw new ParseException("No blank in problem",-1);
 		}
 		return yomi ? new YomiProblem(words, blankPos) : new KakiProblem(words, blankPos);

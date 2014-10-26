@@ -71,7 +71,7 @@ public class ProblemCollectionUtils {
 			try {
 				strings = Files.readAllLines(Paths.get(fname), enc);
 			} catch (IOException ex) {
-				log.warn("Failed to read file {}",fname);
+				log.warn("Failed to read file {}",fname,ex);
 				continue;
 			}
 			for(String s : strings) {

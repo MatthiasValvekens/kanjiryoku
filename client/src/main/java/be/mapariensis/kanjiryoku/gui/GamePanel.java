@@ -5,6 +5,8 @@ import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.lang.reflect.InvocationTargetException;
+
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -74,6 +76,8 @@ public class GamePanel extends JPanel implements GameClientInterface {
 			}
 			if(++inputCounter == problemPanel.getSolution().length()) {
 				inputContainer.endProblem();
+			} else {
+				inputContainer.prepareProblemPosition(problemPanel.getProblem(), inputCounter);
 			}
 		} else {
 			problemPanel.setLastWrongInput(inputChar);
@@ -85,14 +89,20 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		inputCounter = 0;
 		inputContainer.clearLocalInput();
 		problemPanel.setProblem(p);
-		SwingUtilities.invokeLater(new Runnable() {
+		try {
+			SwingUtilities.invokeAndWait(new Runnable() {
 
-			@Override
-			public void run() {
-				inputContainer.setInputMethod(p != null ? p.getInputMethod() : null);
-			}
-		});
-		
+				@Override
+				public void run() {
+					inputContainer.setInputMethod(p != null ? p.getInputMethod() : null);
+				}
+			});
+		} catch (InvocationTargetException e) {
+			log.warn(e.getMessage(),e);
+		} catch (InterruptedException e) {
+			log.warn(e.getMessage(),e);
+		}
+		inputContainer.prepareProblemPosition(p, 0);
 	}
 	
 

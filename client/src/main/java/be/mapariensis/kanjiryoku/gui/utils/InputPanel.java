@@ -19,6 +19,7 @@ import be.mapariensis.kanjiryoku.gui.DrawPanel;
 import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.gui.TilePanel;
 import be.mapariensis.kanjiryoku.model.InputMethod;
+import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.input.InputComponent;
 import be.mapariensis.kanjiryoku.net.input.InputHandler;
@@ -136,6 +137,13 @@ public class InputPanel extends JPanel implements InputHandler {
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		fader.paint(g);
+	}
+
+	@Override
+	public void prepareProblemPosition(Problem p,int position) {
+		if(currentComponent != null && currentComponent.getInputHandler() != null)
+			currentComponent.getInputHandler().prepareProblemPosition(p,position);
+		else log.warn("Attempted prepare, but no input handler was available.");
 	}
 	
 }

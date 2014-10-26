@@ -9,6 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import be.mapariensis.kanjiryoku.Constants;
 import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.model.Word;
@@ -18,7 +21,7 @@ import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class KanjiryokuYojiWrapper implements ProblemParser {
 	public static final String PARAM_DICTFILE = "dictfile";
-	public static final String PARAM_ENCODING = "encoding";
+	public static final String PARAM_ENCODING = "dictEncoding";
 	public static final String PARAM_SEED = "seed";
 	public static final String PARAM_OPTIONTOTAL = "optionCount";
 	public static final int PARAM_OPTIONTOTAL_DEFAULT = 4;
@@ -36,7 +39,7 @@ public class KanjiryokuYojiWrapper implements ProblemParser {
 		Problem p = kparser.parseProblem(input);
 		// sanity checks, extract the first (and only) word
 		Word w;
-		if(p.words.size() != 1 || (w = p.words.get(0)).main.length()!=4) throw new ParseException("Not a Yoji problem", 0);
+		if(p.words.size() != 1 || (w = p.words.get(0)).main.length()!=4) throw new ParseException("Not a Yoji problem: "+p.words, 0);
 		
 		// TODO : pick options that actually make sense for the "wrong" suggestions
 		List<List<String>> options = new ArrayList<List<String>>(4);
@@ -50,18 +53,22 @@ public class KanjiryokuYojiWrapper implements ProblemParser {
 					myoptions.add(new String(new char[] {kanjilist.charAt(rng.nextInt(kanjilist.length()))}));
 				}
 			}
+			options.add(myoptions);
 		}
 		return new YojiProblem(w, options);
 	}
 	public static class Factory implements ProblemParserFactory {
+		private static final Logger log = LoggerFactory.getLogger(Factory.class);
 		@Override
 		public KanjiryokuYojiWrapper getParser(IProperties params)
 				throws BadConfigurationException {
 			if(params == null) throw new BadConfigurationException("KanjiryokuYojiWrapper requires parameters, but none were supplied.");
 			String dictfile = params.getRequired(PARAM_DICTFILE, String.class);
 			Charset enc = Charset.forName(params.getRequired(PARAM_ENCODING, String.class));
-			Random rng = new Random(params.getSafely(PARAM_SEED,Integer.class,(int)(System.currentTimeMillis()%10000)));
+			int seed = params.getSafely(PARAM_SEED,Integer.class,(int)(System.currentTimeMillis()%10000));
+			Random rng = new Random(seed);
 			int optiontotal = params.getSafely(PARAM_OPTIONTOTAL,Integer.class,PARAM_OPTIONTOTAL_DEFAULT);
+			log.info("Building yojijukugo parser with seed {} and dictionary {}",seed,dictfile);
 			StringBuilder dict = new StringBuilder();
 			
 			// build kanji list
