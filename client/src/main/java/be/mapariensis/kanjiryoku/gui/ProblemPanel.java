@@ -98,7 +98,7 @@ public class ProblemPanel extends JPanel{
 		lastWrongInput = null;
 		if(counter>actualSolution.length()) throw new IllegalStateException("Too many input submissions");
 		char added = actualSolution.charAt(counter);
-		log.info("Adding new character "+added);
+		log.debug("Adding new character {}",added);
 		this.correctInputs.add(added);
 		counter++;
 		repaint();

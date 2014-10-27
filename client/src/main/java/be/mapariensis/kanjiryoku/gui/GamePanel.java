@@ -114,7 +114,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 	
 	@Override
 	public void setLock(boolean locked) {
-		log.info("Panel lock set to {}", locked ? "locked" : "released");
+		log.debug("Panel lock set to {}", locked ? "locked" : "released");
 		this.locked = locked;
 		inputContainer.setLock(locked);
 		submitButton.setEnabled(!locked);

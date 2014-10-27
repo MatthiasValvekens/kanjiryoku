@@ -55,7 +55,7 @@ public class CategoryOrganizer implements ProblemOrganizer {
 		// iterate through possible difficulty levels
 		do {
 			int difficulty = iter.next();
-			restrictedScope = scope.extractDifficulty(difficulty);
+			restrictedScope = scope.extractDifficulty(difficulty); // FIXME : check corner cases, something fishy is going on
 		} while(iter.hasNext() && restrictedScope.isEmpty());
 		// restrictedScope now contains all problems of suitable difficulty
 		if(restrictedScope.isEmpty()) throw new IllegalStateException();

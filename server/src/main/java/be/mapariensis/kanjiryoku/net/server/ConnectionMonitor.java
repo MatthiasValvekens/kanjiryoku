@@ -115,7 +115,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						try {
 							Object attachment = key.attachment();
 							if(!(attachment instanceof MessageFragmentBuffer)) {
-								log.info("No message fragment buffer in key attachment. Aborting");
+								log.debug("No message fragment buffer in key attachment. Aborting");
 								key.cancel();
 								break;
 							}
@@ -205,7 +205,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				log.debug("Processing error",ex);
 				queueProcessingError(ch, ex);
 			} catch (IndexOutOfBoundsException ex){
-				log.warn("Badly formed command: {}",msg,ex);
+				log.debug("Badly formed command: {}",msg,ex);
 				queueProcessingError(ch, new ProtocolSyntaxException("Badly formed command",ex));
 			} catch (Exception e) {
 				log.error("Failed to process command.",e);

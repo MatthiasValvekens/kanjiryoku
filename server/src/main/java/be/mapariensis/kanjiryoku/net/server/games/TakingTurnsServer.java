@@ -126,7 +126,7 @@ public class TakingTurnsServer implements GameServerInterface {
 	}
 	
 	private void nextProblem(Problem nextProblem) throws ServerBackendException {
-		log.info("Next problem");
+		log.debug("Next problem");
 		problemPosition = 0;
 		if(currentProblem == nextProblem) problemRepetitions++;
 		else problemRepetitions = 0;
@@ -147,7 +147,7 @@ public class TakingTurnsServer implements GameServerInterface {
 	@Override
 	public void clearInput(User submitter) throws GameFlowException {
 		if(submitter != null && !submitter.equals(currentPlayer)) throw new GameFlowException("Only the current player can clear the screen.");
-		log.info("Clearing input.");
+		log.debug("Clearing input.");
 		localClear();
 		broadcastClearInput(submitter);
 	}
@@ -166,14 +166,14 @@ public class TakingTurnsServer implements GameServerInterface {
 		
 		@Override
 		public void afterAnswer() throws ServerException {
-			log.info("All users answered. Moving on.");
+			log.debug("All users answered. Moving on.");
 			if(doBatonPass || problemSource.hasNext()) {
 				synchronized(submitLock) {
 					// baton pass ?
 					nextProblem(doBatonPass ? currentProblem : problemSource.next(answer));
 				}
 			} else {
-				log.info("No problems left");
+				log.debug("No problems left");
 				gameRunning = false;
 				TakingTurnsServer.this.finished(stats());
 			}
@@ -185,7 +185,7 @@ public class TakingTurnsServer implements GameServerInterface {
 	@Override
 	public void skipProblem(User submitter) throws GameFlowException {
 		if(submitter != null && !submitter.equals(currentPlayer)) throw new GameFlowException("Only the current player can decide to skip a problem.");
-		log.info("Skipping problem.");
+		log.debug("Skipping problem.");
 		ti.currentUserStats().skipped++;
 		boolean batonPass = enableBatonPass && (problemRepetitions<ti.players.size()-1);
 		AnswerFeedbackHandler rh = new NextTurnHandler(false,batonPass);
@@ -252,13 +252,13 @@ public class TakingTurnsServer implements GameServerInterface {
 	private void handwrittenSubmit(NetworkMessage msg, User source) throws ProtocolSyntaxException, GameFlowException {
 		try {
 			if(msg.argCount() == 3) {
-				log.info("Finalizing input...");
+				log.debug("Finalizing input...");
 				// submit all strokes
 				int width = Integer.parseInt(msg.get(1));
 				int height = Integer.parseInt(msg.get(2));
 				if(strokes.size() == 0) throw new GameFlowException("No input.");
 				List<Character> chars =guess.guess(width, height, strokes);
-				log.info("Retrieved {} characters",chars.size());
+				log.trace("Retrieved {} characters",chars.size());
 				checkAnswer(chars,source);
 				localClear();
 			}
@@ -278,7 +278,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		try {
 			if(msg.argCount() == 1) {
 				if(multiProblemChoice == -1) throw new GameFlowException("No input.");
-				log.info("Submitting multiple choice answer");
+				log.debug("Submitting multiple choice answer");
 				char c = multiProblemOptions.get(multiProblemChoice).charAt(0); // FIXME remove the charAt 0 once I properly generalize the solution model
 				checkAnswer(Arrays.asList(c),source);
 			} else if(msg.argCount() == 2) {
@@ -315,7 +315,7 @@ public class TakingTurnsServer implements GameServerInterface {
 			rh = new NextTurnHandler(true,false);
 			ti.currentUserStats().correct++;
 		}
-		log.info("Delivering answer "+res);
+		log.debug("Delivering answer "+res);
 		deliverAnswer(source, answer, res,rh);
 		if(rh == null) broadcastClearInput(null); // do not clear on final input
 	}
