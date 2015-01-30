@@ -46,5 +46,6 @@ public class KanjiServer {
 		ConfigFileWatcher watcher = new ConfigFileWatcher(reconf);
 		watcher.start();
 		s.start();
+		s.close();
 	}
 }
