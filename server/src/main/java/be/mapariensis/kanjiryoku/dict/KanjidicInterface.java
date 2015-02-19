@@ -2,7 +2,7 @@ package be.mapariensis.kanjiryoku.dict;
 
 import java.util.Set;
 
-import be.mapariensis.kanjiryoku.config.ServerConfig;
+import be.mapariensis.kanjiryoku.util.IProperties;
 
 public interface KanjidicInterface {
 	public Set<String> getOn(char kanji) throws DictionaryAccessException;
@@ -16,7 +16,7 @@ public interface KanjidicInterface {
 			throws DictionaryAccessException;
 
 	public static interface Factory {
-		public KanjidicInterface setUp(ServerConfig conf)
+		public KanjidicInterface setUp(IProperties conf)
 				throws DictionaryAccessException;
 	}
 }
