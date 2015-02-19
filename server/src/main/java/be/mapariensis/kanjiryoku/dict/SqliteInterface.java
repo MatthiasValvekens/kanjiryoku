@@ -25,6 +25,7 @@ public class SqliteInterface implements KanjidicInterface {
 	public static final String SEARCH_BY_ON = "searchByOn";
 	public static final String QUERY_ON_READINGS = "queryOnReadings";
 	public static final String QUERY_KUN_READINGS = "queryKunReadings";
+	public static final String SELECT_RANDOM = "selectRandom";
 	public static final String FIND_SIMILAR = "findSimilar";
 	public static final String DBFILE = "dbFile";
 	public static final String QUERYFILE = "queryFile";
@@ -40,13 +41,15 @@ public class SqliteInterface implements KanjidicInterface {
 
 	}
 
+	private final String repr;
 	private final Connection conn;
 	private final String searchByOn, searchByKun, queryOnReadings,
-			queryKunReadings, findSimilar;
+			queryKunReadings, findSimilar, selectRandom;
 
 	protected SqliteInterface(String dbFile, String queryFile)
 			throws BadConfigurationException, DictionaryAccessException {
-
+		repr = String.format("[%s: dbFile=%s, queryFile=%s]",
+				SqliteInterface.class.getCanonicalName(), dbFile, queryFile);
 		// read queries
 		String config;
 		try {
@@ -79,6 +82,7 @@ public class SqliteInterface implements KanjidicInterface {
 		queryKunReadings = queryConfig.getRequired(QUERY_KUN_READINGS,
 				String.class);
 		findSimilar = queryConfig.getRequired(FIND_SIMILAR, String.class);
+		selectRandom = queryConfig.getRequired(SELECT_RANDOM, String.class);
 	}
 
 	private PreparedStatement setUpQuery(String query)
@@ -166,6 +170,30 @@ public class SqliteInterface implements KanjidicInterface {
 			} catch (Exception e) {
 				log.error("Failed to close resource", e);
 			}
+		}
+	}
+
+	@Override
+	public String toString() {
+		return repr;
+	}
+
+	@Override
+	public Set<Character> randomKanji() throws DictionaryAccessException {
+		try (PreparedStatement ps = setUpQuery(selectRandom)) {
+			try (ResultSet res = ps.executeQuery()) {
+				Set<Character> results = new HashSet<Character>();
+				while (res.next()) {
+					String s = res.getString(1);
+					if (s.length() > 1)
+						throw new DictionaryAccessException(
+								"Expected string of length 1, but got " + s);
+					results.add(s.charAt(0));
+				}
+				return results;
+			}
+		} catch (SQLException e) {
+			throw new DictionaryAccessException(e);
 		}
 	}
 }

@@ -20,6 +20,8 @@ public interface KanjidicInterface extends AutoCloseable {
 	public Set<Character> getSimilar(char kanji)
 			throws DictionaryAccessException;
 
+	public Set<Character> randomKanji() throws DictionaryAccessException;
+
 	public static interface Factory {
 		public KanjidicInterface setUp(IProperties conf)
 				throws DictionaryAccessException, BadConfigurationException;

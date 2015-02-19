@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,10 +49,10 @@ public class KanjiServer {
 				}
 			}
 		};
+		@SuppressWarnings("resource")
 		ConnectionMonitor s = new ConnectionMonitor(props);
 		ConfigFileWatcher watcher = new ConfigFileWatcher(reconf);
 		watcher.start();
 		s.start();
-		s.close();
 	}
 }
