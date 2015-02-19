@@ -26,12 +26,15 @@ public class User {
 	private Session session;
 	private final List<ClientResponseHandler> activeResponseHandlers = new LinkedList<ClientResponseHandler>();
 	private final Object sessionLock = new Object();
+
 	public User(String handle, SocketChannel channel, MessageHandler outbox) {
-		if(handle == null || outbox == null) throw new IllegalArgumentException();
+		if (handle == null || outbox == null)
+			throw new IllegalArgumentException();
 		this.handle = handle;
 		this.channel = channel;
 		this.outbox = outbox;
 	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -39,6 +42,7 @@ public class User {
 		result = prime * result + ((handle == null) ? 0 : handle.hashCode());
 		return result;
 	}
+
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -55,92 +59,115 @@ public class User {
 			return false;
 		return true;
 	}
+
 	public Session getSession() {
-		synchronized(sessionLock) {
+		synchronized (sessionLock) {
 			return session;
 		}
 	}
+
 	public Object sessionLock() {
 		return sessionLock;
 	}
-	
-	
+
 	public void joinSession(Session sess) throws SessionException {
-		synchronized(sessionLock) {
-			if(session != null) throw new SessionException(String.format("User %s is in a session already", this.handle));
+		synchronized (sessionLock) {
+			if (session != null)
+				throw new SessionException(String.format(
+						"User %s is in a session already", this.handle));
 			else {
 				session = sess;
 			}
 		}
 	}
+
 	public void leaveSession() {
 		try {
 			outbox.enqueue(new NetworkMessage(ClientCommandList.RESETUI));
-		} catch(CancelledKeyException e) {}
-		synchronized(sessionLock) {
+		} catch (CancelledKeyException e) {
+		}
+		synchronized (sessionLock) {
 			session = null;
 		}
 	}
+
 	public boolean hasActiveResponseHandlers() {
-		synchronized(activeResponseHandlers) {
+		synchronized (activeResponseHandlers) {
 			return !activeResponseHandlers.isEmpty();
 		}
 	}
+
 	public void enqueueActiveResponseHandler(ClientResponseHandler hand) {
-		synchronized(activeResponseHandlers) {
+		synchronized (activeResponseHandlers) {
 			activeResponseHandlers.add(hand);
 
 		}
 	}
 
-	public void consumeActiveResponseHandler(NetworkMessage msg) throws ServerException {
+	public void consumeActiveResponseHandler(NetworkMessage msg)
+			throws ServerException {
 		int passedId;
 		try {
 			passedId = Integer.valueOf(msg.get(1));
 		} catch (IndexOutOfBoundsException ex) {
-			// the servercommand class should check this, but an extra safety measure never hurts
-			throw new ArgumentCountException(ArgumentCountException.Type.TOO_FEW, ServerCommandList.RESPOND);
+			// the servercommand class should check this, but an extra safety
+			// measure never hurts
+			throw new ArgumentCountException(
+					ArgumentCountException.Type.TOO_FEW,
+					ServerCommandList.RESPOND);
 		} catch (RuntimeException ex) {
 			throw new ProtocolSyntaxException(ex);
 		}
-		if(passedId == -1) return;
-		// there should only be a handful of active rh's at any one time, so linear search is more than good enough
-		synchronized(activeResponseHandlers) {
-			for(ClientResponseHandler rh : activeResponseHandlers) {
-				if(rh.id == passedId) {
-					rh.handle(this, msg); // don't mind if this takes long, rh's should be queued anyway
+		if (passedId == -1)
+			return;
+		// there should only be a handful of active rh's at any one time, so
+		// linear search is more than good enough
+		synchronized (activeResponseHandlers) {
+			for (ClientResponseHandler rh : activeResponseHandlers) {
+				if (rh.id == passedId) {
+					rh.handle(this, msg); // don't mind if this takes long, rh's
+											// should be queued anyway
 					activeResponseHandlers.remove(rh);
 					return;
 				}
 			}
 		}
-		throw new CommandQueueingException(String.format("No response handler with id %i", passedId));
+		throw new CommandQueueingException(String.format(
+				"No response handler with id %i", passedId));
 	}
-	
+
 	public void purgeResponseHandlers() {
-		synchronized(activeResponseHandlers) {
+		synchronized (activeResponseHandlers) {
 			activeResponseHandlers.clear();
 		}
 	}
-	
+
 	@Override
 	public void finalize() {
-		if(channel.isOpen()) {
-			log.warn("User {} is being garbage collected, but channel is still open!", handle);
+		if (channel.isOpen()) {
+			log.warn(
+					"User {} is being garbage collected, but channel is still open!",
+					handle);
 			try {
-				NetworkMessage.signalProcessingError(channel,new ServerException("You have been GC'd, page the devs.", ServerException.ERROR_GENERIC));
+				NetworkMessage.signalProcessingError(channel,
+						new ServerException(
+								"You have been GC'd, page the devs.",
+								ServerException.ERROR_GENERIC));
 				channel.close();
-			} catch (Exception e) {}
+			} catch (Exception e) {
+			}
 		}
 	}
-	
+
 	@Override
 	public String toString() {
 		try {
-			return String.format("%s, %s",handle,channel.getRemoteAddress().toString());
+			return String.format("%s, %s", handle, channel.getRemoteAddress()
+					.toString());
 		} catch (IOException e) {
-			return String.format("%s, address could not be determined.",handle);
-		} 
+			return String
+					.format("%s, address could not be determined.", handle);
+		}
 	}
-	
+
 }

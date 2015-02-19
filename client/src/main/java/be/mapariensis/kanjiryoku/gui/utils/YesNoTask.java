@@ -11,8 +11,9 @@ public class YesNoTask implements Runnable {
 	private final NetworkMessage ifNo, ifYes;
 	private final JComponent parent;
 	private final ServerUplink uplink;
-	public YesNoTask(JComponent parent, ServerUplink uplink, String question, NetworkMessage ifYes,
-			NetworkMessage ifNo) {
+
+	public YesNoTask(JComponent parent, ServerUplink uplink, String question,
+			NetworkMessage ifYes, NetworkMessage ifNo) {
 		this.question = question;
 		this.ifNo = ifNo;
 		this.ifYes = ifYes;
@@ -22,8 +23,9 @@ public class YesNoTask implements Runnable {
 
 	@Override
 	public void run() {
-		int res = JOptionPane.showConfirmDialog(parent, question,"Server prompt",JOptionPane.YES_NO_OPTION);
+		int res = JOptionPane.showConfirmDialog(parent, question,
+				"Server prompt", JOptionPane.YES_NO_OPTION);
 		uplink.enqueueMessage(res == JOptionPane.YES_OPTION ? ifYes : ifNo);
 	}
-	
+
 }

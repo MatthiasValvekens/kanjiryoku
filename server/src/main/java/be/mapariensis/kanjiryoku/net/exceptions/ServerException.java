@@ -1,6 +1,5 @@
 package be.mapariensis.kanjiryoku.net.exceptions;
 
-
 public class ServerException extends ClientServerException {
 
 	public ServerException(String message, int errorCode) {

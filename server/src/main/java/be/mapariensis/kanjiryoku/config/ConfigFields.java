@@ -6,7 +6,7 @@ import java.util.List;
 public class ConfigFields {
 	public static final String CONFIG_FILE_NAME = "kanjiryoku.cfg";
 	public static final String CONFIG_FILE_DIR = ".";
-	
+
 	/**
 	 * The port number to listen on.
 	 */
@@ -20,26 +20,26 @@ public class ConfigFields {
 	 * The size of the ByteBuffer attached to each worker thread (default 2KB).
 	 */
 	public static final String WORKER_BUFFER_SIZE = "workerBufferSize";
-	public static final int WORKER_BUFFER_SIZE_DEFAULT = 2048;	
-	
+	public static final int WORKER_BUFFER_SIZE_DEFAULT = 2048;
+
 	public static final String USERNAME_LIMIT = "usernameCharLimit";
 	public static final int USERNAME_LIMIT_DEFAULT = 10;
-	
+
 	public static final String ENABLE_ADMIN = "enableAdminCommands";
 	public static final boolean ENABLE_ADMIN_DEFAULT = false;
-	
+
 	public static final String ADMIN_WHITELIST = "adminWhitelist";
-	public static final List<String> ADMIN_WHITELIST_DEFAULT = Collections.emptyList();
-	
-	
+	public static final List<String> ADMIN_WHITELIST_DEFAULT = Collections
+			.emptyList();
+
 	// CR-related settings
-	
+
 	public static final String CR_SETTINGS_HEADER = "engine";
-	public static final String GUESSER_FACTORY_CLASS = "guesserFactoryClassName";	
+	public static final String GUESSER_FACTORY_CLASS = "guesserFactoryClassName";
 	public static final String MODEL_FILE = "writingModelPath";
 	public static final String CR_TOLERANCE = "answerTolerance";
 	public static final int CR_TOLERANCE_DEFAULT = 50;
-	
+
 	// Problem sets
 	public static final String PSET_SETTINGS_HEADER = "problemSets";
 	public static final String PARSER_FACTORY_CLASS = "parserFactoryClassName";
@@ -59,15 +59,12 @@ public class ConfigFields {
 	public static final String FILE_NAME_DIFFICULTY_FORMAT_DEFAULT = "%02d";
 	public static final String FILE_ENCODING = "fileEncoding";
 	public static final String FILE_ENCODING_DEFAULT = "UTF-8";
-	
+
 	// Game-specific settings
 	public static final String GAME_SETTINGS_HEADER = "games";
-	
-	
-	
+
 	// TakingTurns
 
 	public static final String ENABLE_BATON_PASS = "enableBatonPass";
 	public static final boolean ENABLE_BATON_PASS_DEFAULT = false;
 }
-

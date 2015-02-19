@@ -9,16 +9,19 @@ public class StandardHistoryImpl implements History {
 	private final Object LOCK = new Object();
 	private final int size;
 	private int entryCount = 0;
+
 	public StandardHistoryImpl(int size) {
 		this.contents = new ArrayDeque<String>(size);
 		this.rest = new ArrayDeque<String>(size);
 		this.size = size;
 	}
+
 	@Override
 	public String back() {
-		synchronized(LOCK) {
-			if(contents.isEmpty()) {
-				return rest.isEmpty() ? "" : rest.peek(); // stay on the last item
+		synchronized (LOCK) {
+			if (contents.isEmpty()) {
+				return rest.isEmpty() ? "" : rest.peek(); // stay on the last
+															// item
 			} else {
 				String thing = contents.pop();
 				rest.push(thing);
@@ -29,8 +32,8 @@ public class StandardHistoryImpl implements History {
 
 	@Override
 	public String forward() {
-		synchronized(LOCK) {
-			if(rest.isEmpty()) {
+		synchronized (LOCK) {
+			if (rest.isEmpty()) {
 				return "";
 			} else {
 				String thing = rest.pop();
@@ -42,8 +45,8 @@ public class StandardHistoryImpl implements History {
 
 	@Override
 	public void resetPointer() {
-		synchronized(LOCK) {
-			while(!rest.isEmpty()) {
+		synchronized (LOCK) {
+			while (!rest.isEmpty()) {
 				contents.push(rest.pop());
 			}
 		}
@@ -51,10 +54,11 @@ public class StandardHistoryImpl implements History {
 
 	@Override
 	public void add(String command) {
-		synchronized(LOCK) {
+		synchronized (LOCK) {
 			resetPointer();
-			if(!contents.isEmpty() && contents.peek().equals(command)) return;
-			if(entryCount==size) {
+			if (!contents.isEmpty() && contents.peek().equals(command))
+				return;
+			if (entryCount == size) {
 				contents.pollLast(); // remove element from tail
 			} else {
 				entryCount++;
@@ -65,7 +69,7 @@ public class StandardHistoryImpl implements History {
 
 	@Override
 	public void clear() {
-		synchronized(LOCK) {
+		synchronized (LOCK) {
 			contents.clear();
 			rest.clear();
 		}

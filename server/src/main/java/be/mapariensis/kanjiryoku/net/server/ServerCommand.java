@@ -27,65 +27,86 @@ import be.mapariensis.kanjiryoku.net.server.handlers.SessionInvitationHandler;
 public enum ServerCommand {
 	BYE {
 		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
 			userman.deregister(client);
 		}
-	}, REGISTER {
+	},
+	REGISTER {
 
 		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
 			throw new UnsupportedOperationException();
 			// Register is a special case
 		}
-		
-	}, MESSAGE {
+
+	},
+	MESSAGE {
 
 		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
 			try {
 				String handle = message.get(1);
-				NetworkMessage pm = new NetworkMessage(ClientCommandList.FROM,client.handle,message.get(2),false);
+				NetworkMessage pm = new NetworkMessage(ClientCommandList.FROM,
+						client.handle, message.get(2), false);
 				User other = userman.getUser(handle);
 				userman.messageUser(other, pm);
 			} catch (IndexOutOfBoundsException ex) {
 				throw new ProtocolSyntaxException(ex);
 			}
 		}
-	}, SESSIONMESSAGE {
+	},
+	SESSIONMESSAGE {
 		@Override
 		public void execute(NetworkMessage message, User client,
 				UserManager userman, SessionManager sessman)
 				throws ServerException {
 			NetworkMessage msg;
 			try {
-				msg = new NetworkMessage(ClientCommandList.FROM,client.handle,message.get(1),true);
+				msg = new NetworkMessage(ClientCommandList.FROM, client.handle,
+						message.get(1), true);
 			} catch (IndexOutOfBoundsException ex) {
 				throw new ProtocolSyntaxException(ex);
 			}
-			synchronized(client.sessionLock()) {
+			synchronized (client.sessionLock()) {
 				Session sess;
-				if((sess = client.getSession()) == null) {
+				if ((sess = client.getSession()) == null) {
 					userman.lobbyBroadcast(client, msg);
 					return;
 				}
 				sess.broadcastMessage(client, msg);
 			}
 		}
-	}, RESPOND {
+	},
+	RESPOND {
 		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
-			if(message.argCount()<2) throw new ArgumentCountException(ArgumentCountException.Type.TOO_FEW,RESPOND);
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			if (message.argCount() < 2)
+				throw new ArgumentCountException(
+						ArgumentCountException.Type.TOO_FEW, RESPOND);
 			client.consumeActiveResponseHandler(message);
 		}
-		
-	}, STARTSESSION {
+
+	},
+	STARTSESSION {
 
 		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
 				throws ServerException, BadConfigurationException {
-			//enforce arglen
-			if(message.argCount() < 2) throw new ArgumentCountException(ArgumentCountException.Type.TOO_FEW, STARTSESSION);
-			if(client.getSession() != null) throw new SessionException("Can't do that while in a session.");
+			// enforce arglen
+			if (message.argCount() < 2)
+				throw new ArgumentCountException(
+						ArgumentCountException.Type.TOO_FEW, STARTSESSION);
+			if (client.getSession() != null)
+				throw new SessionException("Can't do that while in a session.");
 			String gameName = message.get(1).toUpperCase();
 			Game game;
 			try {
@@ -94,99 +115,132 @@ public enum ServerCommand {
 				throw new UnsupportedGameException(gameName);
 			}
 			Session sess = sessman.startSession(client, game);
-			userman.humanMessage(client, String.format("Started session of %s.",game.toString()));
-			
+			userman.humanMessage(client,
+					String.format("Started session of %s.", game.toString()));
+
 			List<User> users = new ArrayList<User>(message.argCount());
 			users.add(client);
 			ClientResponseHandler rh = new SessionInvitationHandler(sess);
-			NetworkMessage invite = new NetworkMessage(ClientCommandList.INVITE, rh.id, game,String.valueOf(sess.getId()), client.handle);
-			
-			for(int i = 2; i<message.argCount();i++) {
+			NetworkMessage invite = new NetworkMessage(
+					ClientCommandList.INVITE, rh.id, game, String.valueOf(sess
+							.getId()), client.handle);
+
+			for (int i = 2; i < message.argCount(); i++) {
 				User u;
 				try {
 					u = userman.getUser(message.get(i));
-					if(u.equals(client)) continue; // self-invites are pretty useless
+					if (u.equals(client))
+						continue; // self-invites are pretty useless
 				} catch (UserManagementException e) {
-					userman.messageUser(client,e.protocolMessage);
+					userman.messageUser(client, e.protocolMessage);
 					continue;
 				}
 				users.add(u);
-				//dispatch invite
-				userman.messageUser(u,invite,rh);
-				
-			}	
-		}		
-	}, INVITE {
+				// dispatch invite
+				userman.messageUser(u, invite, rh);
+
+			}
+		}
+	},
+	INVITE {
 		@Override
-		public void execute(NetworkMessage message, User client,UserManager userman, SessionManager sessman) throws ServerException {
-			if(message.argCount() < 2) throw new ArgumentCountException(ArgumentCountException.Type.TOO_FEW, INVITE);
-			synchronized(client.sessionLock()) {
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			if (message.argCount() < 2)
+				throw new ArgumentCountException(
+						ArgumentCountException.Type.TOO_FEW, INVITE);
+			synchronized (client.sessionLock()) {
 				Session sess;
-				if((sess = client.getSession()) == null) throw new SessionException("You are not currently in a session.");
-				if(!sess.isMaster(client)) throw new SessionException("Only the session master can invite people.");
+				if ((sess = client.getSession()) == null)
+					throw new SessionException(
+							"You are not currently in a session.");
+				if (!sess.isMaster(client))
+					throw new SessionException(
+							"Only the session master can invite people.");
 				ClientResponseHandler rh = new SessionInvitationHandler(sess);
-				NetworkMessage invite = new NetworkMessage(ClientCommandList.INVITE, rh.id,sess.getGame().getGame(),String.valueOf(sess.getId()), client.handle);
-				for(int i = 1; i<message.argCount();i++) {
+				NetworkMessage invite = new NetworkMessage(
+						ClientCommandList.INVITE, rh.id, sess.getGame()
+								.getGame(), String.valueOf(sess.getId()),
+						client.handle);
+				for (int i = 1; i < message.argCount(); i++) {
 					User u;
 					try {
 						u = userman.getUser(message.get(i));
-						if(u.equals(client)) continue; // self-invites are pretty useless
+						if (u.equals(client))
+							continue; // self-invites are pretty useless
 						userman.messageUser(u, invite, rh);
 					} catch (UserManagementException e) {
-						userman.messageUser(client,e.protocolMessage);
+						userman.messageUser(client, e.protocolMessage);
 						continue;
 					}
 				}
 			}
-			
-		}
-	}, KICK {
 
-		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
-			synchronized(client.sessionLock()) {
-				Session sess;
-				if((sess = client.getSession()) == null) throw new SessionException("You are not currently in a session.");
-				if(!sess.isMaster(client)) throw new SessionException("Only the session master can kick people.");
-				for(int i = 1; i<message.argCount();i++) {
-					User u;
-					try {
-						u = userman.getUser(message.get(i));
-						sess.kickUser(client,u);
-					} catch (UserManagementException | SessionException e) {
-						userman.messageUser(client,e.protocolMessage);
-						continue;
-					}
-				}
-			}
-		}		
-	}, LEAVE {
+		}
+	},
+	KICK {
 
 		@Override
 		public void execute(NetworkMessage message, User client,
 				UserManager userman, SessionManager sessman)
 				throws ServerException {
-			synchronized(client.sessionLock()) {
-				if(client.getSession() == null) throw new SessionException("You are not currently in a session.");
+			synchronized (client.sessionLock()) {
+				Session sess;
+				if ((sess = client.getSession()) == null)
+					throw new SessionException(
+							"You are not currently in a session.");
+				if (!sess.isMaster(client))
+					throw new SessionException(
+							"Only the session master can kick people.");
+				for (int i = 1; i < message.argCount(); i++) {
+					User u;
+					try {
+						u = userman.getUser(message.get(i));
+						sess.kickUser(client, u);
+					} catch (UserManagementException | SessionException e) {
+						userman.messageUser(client, e.protocolMessage);
+						continue;
+					}
+				}
+			}
+		}
+	},
+	LEAVE {
+
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			synchronized (client.sessionLock()) {
+				if (client.getSession() == null)
+					throw new SessionException(
+							"You are not currently in a session.");
 				sessman.removeUser(client);
 				userman.humanMessage(client, "You have left the session.");
 			}
 		}
-		
-	}, WHOAMI {
+
+	},
+	WHOAMI {
 		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
 				throws ServerException {
-			if(message.argCount() > 2) throw new ArgumentCountException(Type.TOO_MANY,WHOAMI);
-			if(message.argCount() == 1) {
-				message = message.concatenate(ResponseHandler.DEFAULT_HANDLER_ID);
+			if (message.argCount() > 2)
+				throw new ArgumentCountException(Type.TOO_MANY, WHOAMI);
+			if (message.argCount() == 1) {
+				message = message
+						.concatenate(ResponseHandler.DEFAULT_HANDLER_ID);
 			}
 			ArrayList<String> args = new ArrayList<String>(4);
-			args.add(message.get(1)); // we don't really care what the ID is, as long as it is passed back to the client
+			args.add(message.get(1)); // we don't really care what the ID is, as
+										// long as it is passed back to the
+										// client
 			args.add(client.handle);
-			synchronized(client.sessionLock()) {
+			synchronized (client.sessionLock()) {
 				Session sess = client.getSession();
-				if(sess != null) {
+				if (sess != null) {
 					args.add(String.valueOf(sess.getId()));
 					args.add(String.valueOf(sess.isMaster(client)));
 					args.add(sess.getGame().getGame().toString());
@@ -196,103 +250,128 @@ public enum ServerCommand {
 					args.add(Constants.NONE);
 				}
 			}
-			userman.messageUser(client, new NetworkMessage(ClientCommandList.RESPOND,args));
+			userman.messageUser(client, new NetworkMessage(
+					ClientCommandList.RESPOND, args));
 		}
-	}, SUBMIT {
+	},
+	SUBMIT {
 
 		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
 				throws ServerException {
-			synchronized(client.sessionLock()) {
+			synchronized (client.sessionLock()) {
 				Session sess = client.getSession();
-				if(sess == null || !sess.getGame().running()) throw new SessionException("No game running.");
+				if (sess == null || !sess.getGame().running())
+					throw new SessionException("No game running.");
 				sess.getGame().submit(message, client);
 			}
 		}
-		
-	}, SKIPPROBLEM {
+
+	},
+	SKIPPROBLEM {
 
 		@Override
 		public void execute(NetworkMessage message, User client,
 				UserManager userman, SessionManager sessman)
 				throws ServerException {
-			synchronized(client.sessionLock()) {
+			synchronized (client.sessionLock()) {
 				Session sess = client.getSession();
-				if(sess == null || !sess.getGame().running()) throw new SessionException("No game running.");
+				if (sess == null || !sess.getGame().running())
+					throw new SessionException("No game running.");
 				sess.getGame().skipProblem(client);
 			}
 		}
-		
-	}, CLEAR {
+
+	},
+	CLEAR {
 		@Override
 		public void execute(NetworkMessage message, User client,
 				UserManager userman, SessionManager sessman)
 				throws ServerException {
-			synchronized(client.sessionLock()) {
+			synchronized (client.sessionLock()) {
 				Session sess = client.getSession();
-				if(sess == null || !sess.getGame().running()) throw new SessionException("No game running.");
+				if (sess == null || !sess.getGame().running())
+					throw new SessionException("No game running.");
 				sess.getGame().clearInput(client);
 			}
 		}
-	}, KILLSESSION {
-
-		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman)
-				throws ServerException {
-			synchronized(client.sessionLock()) {
-				Session sess = client.getSession();
-				if(sess == null) throw new SessionException("No active session.");
-				if(!sess.isMaster(client)) throw new SessionException("Only the session master can kill sessions");
-				sessman.destroySession(sess);
-			}			
-		}
-		
-	}, STARTGAME {
-
-		@Override
-		public void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException {
-			synchronized(client.sessionLock()) {
-				Session sess = client.getSession();
-				if(sess == null) throw new SessionException("No active session.");
-				if(!sess.isMaster(client)) throw new SessionException("Only the session master can start the game");
-				sess.start();
-			}
-		}	
-	}, LISTGAMES {
+	},
+	KILLSESSION {
 
 		@Override
 		public void execute(NetworkMessage message, User client,
 				UserManager userman, SessionManager sessman)
 				throws ServerException {
-			if(message.argCount() > 2) throw new ArgumentCountException(Type.TOO_MANY,LISTGAMES);
-			if(message.argCount() == 1) {
-				message = message.concatenate(ResponseHandler.DEFAULT_HANDLER_ID);
+			synchronized (client.sessionLock()) {
+				Session sess = client.getSession();
+				if (sess == null)
+					throw new SessionException("No active session.");
+				if (!sess.isMaster(client))
+					throw new SessionException(
+							"Only the session master can kill sessions");
+				sessman.destroySession(sess);
+			}
+		}
+
+	},
+	STARTGAME {
+
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			synchronized (client.sessionLock()) {
+				Session sess = client.getSession();
+				if (sess == null)
+					throw new SessionException("No active session.");
+				if (!sess.isMaster(client))
+					throw new SessionException(
+							"Only the session master can start the game");
+				sess.start();
+			}
+		}
+	},
+	LISTGAMES {
+
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			if (message.argCount() > 2)
+				throw new ArgumentCountException(Type.TOO_MANY, LISTGAMES);
+			if (message.argCount() == 1) {
+				message = message
+						.concatenate(ResponseHandler.DEFAULT_HANDLER_ID);
 			}
 			int responseCode;
 			try {
 				responseCode = Integer.parseInt(message.get(1));
-			} catch(RuntimeException ex) {
+			} catch (RuntimeException ex) {
 				throw new ProtocolSyntaxException(ex);
 			}
-			//send the list of games as a JSON list
+			// send the list of games as a JSON list
 			JSONArray arr = new JSONArray();
-			for(Game g : Game.values()) {
+			for (Game g : Game.values()) {
 				JSONObject wrapper = new JSONObject();
 				wrapper.put(Constants.GAMELIST_JSON_NAME, g.name());
 				wrapper.put(Constants.GAMELIST_JSON_HUMANNAME, g.toString());
 				arr.put(wrapper);
 			}
-			
-			userman.messageUser(client, new NetworkMessage(ClientCommandList.RESPOND,responseCode,arr));
+
+			userman.messageUser(client, new NetworkMessage(
+					ClientCommandList.RESPOND, responseCode, arr));
 		}
-		
-	}, ADMIN {
+
+	},
+	ADMIN {
 
 		@Override
 		public void execute(NetworkMessage message, User client,
 				UserManager userman, SessionManager sessman)
 				throws ServerException {
-			if(message.argCount() < 3) throw new ArgumentCountException(Type.TOO_FEW, ADMIN);
+			if (message.argCount() < 3)
+				throw new ArgumentCountException(Type.TOO_FEW, ADMIN);
 			NetworkMessage commandPart = message.truncate(2);
 			int id;
 			try {
@@ -300,10 +379,12 @@ public enum ServerCommand {
 			} catch (RuntimeException ex) {
 				throw new ProtocolSyntaxException(ex);
 			}
-			userman.adminCommand(client,id,commandPart);
+			userman.adminCommand(client, id, commandPart);
 		}
-		
+
 	};
-	
-	public abstract void execute(NetworkMessage message, User client, UserManager userman, SessionManager sessman) throws ServerException, BadConfigurationException;
+
+	public abstract void execute(NetworkMessage message, User client,
+			UserManager userman, SessionManager sessman)
+			throws ServerException, BadConfigurationException;
 }

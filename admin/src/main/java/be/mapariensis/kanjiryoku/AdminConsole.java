@@ -18,9 +18,12 @@ import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public class AdminConsole implements UIBridge, ChatInterface {
-	private static final Logger log = LoggerFactory.getLogger(AdminConsole.class);
+	private static final Logger log = LoggerFactory
+			.getLogger(AdminConsole.class);
 	private final ServerUplink uplink;
-	public AdminConsole(InetAddress addr,int port, String username) throws IOException {
+
+	public AdminConsole(InetAddress addr, int port, String username)
+			throws IOException {
 		this.uplink = new ServerUplink(addr, port, username, this);
 	}
 
@@ -41,8 +44,9 @@ public class AdminConsole implements UIBridge, ChatInterface {
 
 	@Override
 	public void setUsername(String username) {
-		displaySystemMessage(String.format("Username set to %s",username));
-		uplink.enqueueMessage(new NetworkMessage(ServerCommandList.ADMIN,System.currentTimeMillis()%10000,"BROADCAST","elloello")); // test
+		displaySystemMessage(String.format("Username set to %s", username));
+		uplink.enqueueMessage(new NetworkMessage(ServerCommandList.ADMIN,
+				System.currentTimeMillis() % 10000, "BROADCAST", "elloello")); // test
 	}
 
 	@Override
@@ -53,31 +57,33 @@ public class AdminConsole implements UIBridge, ChatInterface {
 	@Override
 	public void displayGameMessage(long timestamp, String message) {
 		displaySystemMessage("We shouldn't be receiving game messages. Logged");
-		log.warn("Game message received. This shouldn't happen.",message);
+		log.warn("Game message received. This shouldn't happen.", message);
 	}
 
 	@Override
-	public void displayUserMessage(long timestamp, String from, String message, boolean broadcast) {
-		printMessage(String.format("[%s]",from),message);
+	public void displayUserMessage(long timestamp, String from, String message,
+			boolean broadcast) {
+		printMessage(String.format("[%s]", from), message);
 	}
 
 	@Override
 	public void displayErrorMessage(int errorId, String message) {
-		printMessage(String.format("Error E%03d",errorId),message);
-		
+		printMessage(String.format("Error E%03d", errorId), message);
+
 	}
 
 	@Override
 	public void displayErrorMessage(ClientServerException ex) {
-		displayErrorMessage(ex.errorCode,ex.getMessage());
+		displayErrorMessage(ex.errorCode, ex.getMessage());
 	}
 
 	@Override
 	public void displaySystemMessage(String message) {
-		printMessage(Constants.SYSTEM_HANDLE,message);
+		printMessage(Constants.SYSTEM_HANDLE, message);
 	}
+
 	private void printMessage(String origin, String message) {
-		System.out.println(String.format("%s\t%s",origin,message));
+		System.out.println(String.format("%s\t%s", origin, message));
 	}
 
 	@Override
@@ -90,19 +96,24 @@ public class AdminConsole implements UIBridge, ChatInterface {
 	@Override
 	public ServerResponseHandler getDefaultResponseHandler() {
 		return new ServerResponseHandler() {
-			
+
 			@Override
 			public void handle(NetworkMessage msg) throws ClientException {
-				printMessage("Response",msg.toString());
+				printMessage("Response", msg.toString());
 			}
 		};
 	}
+
 	public void start() {
 		uplink.start();
 	}
-	public static void main(String[] args) throws UnknownHostException, IOException {
+
+	public static void main(String[] args) throws UnknownHostException,
+			IOException {
 		// Placeholder
-		AdminConsole console = new AdminConsole(InetAddress.getByName("127.0.0.1"),9630,"admin"+(System.currentTimeMillis()%10000));
+		AdminConsole console = new AdminConsole(
+				InetAddress.getByName("127.0.0.1"), 9630, "admin"
+						+ (System.currentTimeMillis() % 10000));
 		console.start();
 	}
 }

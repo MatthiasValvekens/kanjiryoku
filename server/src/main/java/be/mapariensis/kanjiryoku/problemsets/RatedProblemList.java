@@ -8,6 +8,7 @@ import java.util.ListIterator;
 
 public class RatedProblemList implements List<RatedProblem> {
 	private final List<RatedProblem> backend;
+
 	/**
 	 * Input list should be sorted.
 	 */
@@ -139,31 +140,34 @@ public class RatedProblemList implements List<RatedProblem> {
 	public <T> T[] toArray(T[] a) {
 		return backend.toArray(a);
 	}
-	
+
 	public List<RatedProblem> extractDifficulty(int difficulty) {
 		int lower = indexedBinarySearch(difficulty);
-		if(lower < 0) return Collections.emptyList();
-		int upper = indexedBinarySearch(difficulty+1);
-		if(upper < 0) upper = backend.size();
-		if(upper <= lower) throw new IllegalStateException();
+		if (lower < 0)
+			return Collections.emptyList();
+		int upper = indexedBinarySearch(difficulty + 1);
+		if (upper < 0)
+			upper = backend.size();
+		if (upper <= lower)
+			throw new IllegalStateException();
 		return backend.subList(lower, upper);
 	}
-	
-    private int indexedBinarySearch(int key) {
-        int low = 0;
-        int high = this.size()-1;
 
-        while (low <= high) {
-            int mid = (low + high) >>> 1;
-            RatedProblem midVal = this.get(mid);
-            int cmp = Integer.compare(midVal.difficulty, key);
-            if (cmp < 0)
-                low = mid + 1;
-            else if (cmp > 0)
-                high = mid - 1;
-            else
-                return mid; // key found
-        }
-        return -(low + 1);  // key not found
-    }
+	private int indexedBinarySearch(int key) {
+		int low = 0;
+		int high = this.size() - 1;
+
+		while (low <= high) {
+			int mid = (low + high) >>> 1;
+			RatedProblem midVal = this.get(mid);
+			int cmp = Integer.compare(midVal.difficulty, key);
+			if (cmp < 0)
+				low = mid + 1;
+			else if (cmp > 0)
+				high = mid - 1;
+			else
+				return mid; // key found
+		}
+		return -(low + 1); // key not found
+	}
 }

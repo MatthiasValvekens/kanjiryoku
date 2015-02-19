@@ -4,7 +4,7 @@ import java.lang.Character.UnicodeBlock;
 
 public class UnicodeBlockFilter implements Filter<Character> {
 	private final UnicodeBlock block;
-	
+
 	public UnicodeBlockFilter(UnicodeBlock block) {
 		this.block = block;
 	}

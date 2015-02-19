@@ -3,10 +3,12 @@ package be.mapariensis.kanjiryoku.cr;
 public class Dot {
 	public final int x;
 	public final int y;
+
 	public Dot(int x, int y) {
 		this.x = x;
 		this.y = y;
 	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -15,6 +17,7 @@ public class Dot {
 		result = prime * result + y;
 		return result;
 	}
+
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -30,8 +33,9 @@ public class Dot {
 			return false;
 		return true;
 	}
+
 	@Override
 	public String toString() {
-		return "<"+x+","+y+">";
+		return "<" + x + "," + y + ">";
 	}
 }

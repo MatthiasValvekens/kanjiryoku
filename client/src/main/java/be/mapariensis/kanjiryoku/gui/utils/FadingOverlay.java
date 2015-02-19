@@ -20,7 +20,7 @@ public class FadingOverlay {
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			opacity += 0.1;
-			if(opacity >= 1) {
+			if (opacity >= 1) {
 				hide = true;
 				timer.stop();
 				timer = null;
@@ -29,31 +29,36 @@ public class FadingOverlay {
 		}
 	};
 	private Timer timer;
-	public FadingOverlay(JComponent component,Image image) {
+
+	public FadingOverlay(JComponent component, Image image) {
 		this.image = image;
 		this.component = component;
 	}
 
 	public void startFade(boolean block) {
-		if(image == null) return;
+		if (image == null)
+			return;
 		opacity = 0;
 		hide = false;
-		if(timer != null && timer.isRunning()) timer.stop();
+		if (timer != null && timer.isRunning())
+			timer.stop();
 		timer = new Timer(INTERVAL, updater);
 		timer.start();
-		if(block) {
-			while(timer != null && timer.isRunning()) {
+		if (block) {
+			while (timer != null && timer.isRunning()) {
 				try {
-					Thread.sleep(2*INTERVAL);
-				} catch (InterruptedException e) {	}
+					Thread.sleep(2 * INTERVAL);
+				} catch (InterruptedException e) {
+				}
 			}
 		}
 	}
 
-	
 	public void paint(Graphics g) {
-		if(hide || image == null) return;
-		((Graphics2D) g).setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,opacity));
+		if (hide || image == null)
+			return;
+		((Graphics2D) g).setComposite(AlphaComposite.getInstance(
+				AlphaComposite.SRC_OVER, opacity));
 		g.drawImage(image, 0, 0, component);
 	}
 }

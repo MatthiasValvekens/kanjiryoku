@@ -4,14 +4,15 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public class ServerCommunicationException extends ClientException {
 	public ServerCommunicationException(String message) {
-		super(message,ERROR_SERVER_COMM);
+		super(message, ERROR_SERVER_COMM);
 	}
-	
+
 	public ServerCommunicationException(NetworkMessage msg) {
-		this("Error while processing data from server: "+msg);
+		this("Error while processing data from server: " + msg);
 	}
 
 	public ServerCommunicationException(RuntimeException ex) {
-		super("Runtime exception raised while processing server data",ex,ERROR_GENERIC);
+		super("Runtime exception raised while processing server data", ex,
+				ERROR_GENERIC);
 	}
 }

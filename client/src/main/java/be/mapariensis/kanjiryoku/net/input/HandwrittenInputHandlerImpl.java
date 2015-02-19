@@ -15,13 +15,16 @@ import be.mapariensis.kanjiryoku.util.ParsingUtils;
 public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 	private final DrawingPanelInterface dpi;
 	private final UIBridge bridge;
-	public HandwrittenInputHandlerImpl(DrawingPanelInterface dpi, UIBridge bridge) {
+
+	public HandwrittenInputHandlerImpl(DrawingPanelInterface dpi,
+			UIBridge bridge) {
 		this.dpi = dpi;
 		this.bridge = bridge;
 	}
 
 	@Override
-	public void receiveMessage(String user, NetworkMessage msg) throws ServerCommunicationException {
+	public void receiveMessage(String user, NetworkMessage msg)
+			throws ServerCommunicationException {
 		List<Dot> stroke;
 		try {
 			stroke = ParsingUtils.parseDots(msg.get(0));
@@ -30,10 +33,11 @@ public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 		}
 		dpi.drawStroke(stroke);
 	}
-	
+
 	@Override
 	public void sendStroke(List<Dot> dots) {
-		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT,dots));
+		bridge.getUplink().enqueueMessage(
+				new NetworkMessage(ServerCommandList.SUBMIT, dots));
 	}
 
 	@Override
@@ -43,7 +47,8 @@ public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 
 	@Override
 	public void broadcastClearInput() {
-		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.CLEAR));
+		bridge.getUplink().enqueueMessage(
+				new NetworkMessage(ServerCommandList.CLEAR));
 	}
 
 	@Override
@@ -53,7 +58,9 @@ public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 
 	@Override
 	public void submit() {
-		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT, dpi.getWidth(),dpi.getHeight()));
+		bridge.getUplink().enqueueMessage(
+				new NetworkMessage(ServerCommandList.SUBMIT, dpi.getWidth(),
+						dpi.getHeight()));
 	}
 
 	@Override

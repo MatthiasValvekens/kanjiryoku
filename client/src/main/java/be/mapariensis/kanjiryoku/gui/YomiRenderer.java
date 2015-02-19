@@ -11,21 +11,15 @@ public class YomiRenderer extends YomiKakiRenderer {
 		return YomiProblem.class;
 	}
 
-
-
 	@Override
 	protected MistakeMarker getMistakeMarker() {
 		return MistakeMarker.FURIGANA;
 	}
 
-
-
 	@Override
 	protected String getBlankRuby(String sequenced, Word w) {
 		return sequenced;
 	}
-
-
 
 	@Override
 	protected String getBlankMain(String sequenced, Word w) {

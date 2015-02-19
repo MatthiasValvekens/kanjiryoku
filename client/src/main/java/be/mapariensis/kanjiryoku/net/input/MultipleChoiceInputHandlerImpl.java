@@ -14,26 +14,29 @@ public class MultipleChoiceInputHandlerImpl implements
 		MultipleChoiceInputHandler {
 	private final UIBridge bridge;
 	private final MultipleChoiceInputInterface choices;
+
 	public MultipleChoiceInputHandlerImpl(UIBridge bridge,
 			MultipleChoiceInputInterface choices) {
 		this.bridge = bridge;
 		this.choices = choices;
 	}
+
 	@Override
 	public void receiveMessage(String user, NetworkMessage msg)
 			throws ServerCommunicationException {
 		ClientCommand.checkArgs(msg, 1);
 		try {
 			int selectionId = Integer.parseInt(msg.get(0));
-			choices.optionSelected(selectionId);			
-		} catch(RuntimeException ex) {
+			choices.optionSelected(selectionId);
+		} catch (RuntimeException ex) {
 			throw new ServerCommunicationException(msg);
 		}
 	}
 
 	@Override
 	public void broadcastClearInput() {
-		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.CLEAR));
+		bridge.getUplink().enqueueMessage(
+				new NetworkMessage(ServerCommandList.CLEAR));
 	}
 
 	@Override
@@ -48,16 +51,19 @@ public class MultipleChoiceInputHandlerImpl implements
 
 	@Override
 	public void submit() {
-		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT));
+		bridge.getUplink().enqueueMessage(
+				new NetworkMessage(ServerCommandList.SUBMIT));
 	}
 
 	@Override
 	public void broadcastSelect(int choice) {
-		bridge.getUplink().enqueueMessage(new NetworkMessage(ServerCommandList.SUBMIT,choice));
+		bridge.getUplink().enqueueMessage(
+				new NetworkMessage(ServerCommandList.SUBMIT, choice));
 	}
+
 	@Override
-	public void prepareProblemPosition(Problem p,int position) {
-		choices.setOptions(((MultipleChoiceOptions)p).getOptions(position));
+	public void prepareProblemPosition(Problem p, int position) {
+		choices.setOptions(((MultipleChoiceOptions) p).getOptions(position));
 	}
 
 }

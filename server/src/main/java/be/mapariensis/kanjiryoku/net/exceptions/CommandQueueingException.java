@@ -14,5 +14,4 @@ public class CommandQueueingException extends ServerException {
 		super(cause, ERROR_QUEUE);
 	}
 
-
 }

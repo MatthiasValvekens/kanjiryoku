@@ -13,57 +13,75 @@ public final class UserStore implements Iterable<User> {
 	private final Map<SocketChannel, User> userConnMap = new ConcurrentHashMap<SocketChannel, User>();
 	private final Map<String, User> userNameMap = new ConcurrentHashMap<String, User>();
 	private final Object LOCK = new Object();
+
 	public void addUser(User u) throws UserManagementException {
-		synchronized(LOCK) {
+		synchronized (LOCK) {
 			User other;
-			if((other = userConnMap.get(u.channel))!=null) throw new UserManagementException(String.format("Connection already bound to user \"%s\"",other.handle));
-			if(userNameMap.containsKey(u.handle)) throw new UserManagementException("User name taken.");
+			if ((other = userConnMap.get(u.channel)) != null)
+				throw new UserManagementException(
+						String.format(
+								"Connection already bound to user \"%s\"",
+								other.handle));
+			if (userNameMap.containsKey(u.handle))
+				throw new UserManagementException("User name taken.");
 			userConnMap.put(u.channel, u);
-			userNameMap.put(u.handle,u);
+			userNameMap.put(u.handle, u);
 		}
 	}
+
 	public void removeUser(User u) {
-		if(u==null) return;
-		synchronized(LOCK) {
+		if (u == null)
+			return;
+		synchronized (LOCK) {
 			userConnMap.remove(u.channel);
 			userNameMap.remove(u.handle);
 		}
 	}
-	
+
 	public User requireUser(String name) throws UserManagementException {
 		User u = getUser(name);
-		if(u == null) throw new UserManagementException(String.format("No user named %s",name));
+		if (u == null)
+			throw new UserManagementException(String.format("No user named %s",
+					name));
 		return u;
 	}
+
 	public User requireUser(SocketChannel peer) throws UserManagementException {
 		User u = getUser(peer);
-		if(u == null) throw new UserManagementException("No user bound to this peer.");
+		if (u == null)
+			throw new UserManagementException("No user bound to this peer.");
 		return u;
 	}
-	
+
 	public User getUser(String name) {
 		return userNameMap.get(name);
 	}
+
 	public User getUser(SocketChannel peer) {
 		return userConnMap.get(peer);
 	}
+
 	public MessageHandler getOutbox(SocketChannel channel) {
 		User u = userConnMap.get(channel);
-		return u==null ? null : u.outbox;
+		return u == null ? null : u.outbox;
 	}
-	public MessageHandler requireOutbox(SocketChannel channel) throws UserManagementException {
+
+	public MessageHandler requireOutbox(SocketChannel channel)
+			throws UserManagementException {
 		MessageHandler h = userConnMap.get(channel).outbox;
-		if(h==null) throw new UserManagementException("No user bound to this peer.");
-		else return h;
+		if (h == null)
+			throw new UserManagementException("No user bound to this peer.");
+		else
+			return h;
 	}
-	
+
 	@Override
 	public Iterator<User> iterator() {
 		LinkedList<User> list = new LinkedList<User>();
-		synchronized(LOCK) {
+		synchronized (LOCK) {
 			list.addAll(userNameMap.values());
 		}
 		return list.iterator();
 	}
-	
+
 }
