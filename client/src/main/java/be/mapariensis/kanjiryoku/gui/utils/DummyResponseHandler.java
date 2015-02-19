@@ -7,12 +7,14 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public class DummyResponseHandler extends ServerResponseHandler {
 	private final ChatInterface chat;
+
 	public DummyResponseHandler(ChatInterface chat) {
 		this.chat = chat;
 	}
+
 	@Override
 	public void handle(NetworkMessage msg) throws ClientException {
-		chat.displayServerMessage(msg.timestamp,msg.toString(2));
+		chat.displayServerMessage(msg.timestamp, msg.toString(2));
 	}
 
 }

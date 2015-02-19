@@ -5,13 +5,14 @@ import be.mapariensis.kanjiryoku.providers.KanjiryokuShindanParser;
 import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 public enum ParserName {
-	
-	KS_PARSER {		
+
+	KS_PARSER {
 		@Override
 		public KanjiryokuShindanParser getParser() {
 			return ksp;
 		}
-	}, YOJI_PARSER {
+	},
+	YOJI_PARSER {
 		@Override
 		public ProblemParser getParser() {
 			return yojiParser;
@@ -19,5 +20,6 @@ public enum ParserName {
 	};
 	private static KanjiryokuShindanParser ksp = new KanjiryokuShindanParser();
 	private static ProblemParser yojiParser = new JSONYojiParser();
+
 	public abstract ProblemParser getParser();
 }

@@ -14,5 +14,4 @@ public class ClientException extends ClientServerException {
 		super(cause, errorCode);
 	}
 
-
 }

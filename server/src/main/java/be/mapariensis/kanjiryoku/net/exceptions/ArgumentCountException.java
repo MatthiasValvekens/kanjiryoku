@@ -4,13 +4,14 @@ public class ArgumentCountException extends ProtocolSyntaxException {
 	public enum Type {
 		TOO_FEW, UNEQUAL, TOO_MANY
 	}
+
 	public ArgumentCountException(Type type, Object command) {
 		super(buildMessage(type, String.valueOf(command)));
 	}
-	
+
 	private static String buildMessage(Type type, String command) {
 		StringBuilder sb = new StringBuilder();
-		switch(type){
+		switch (type) {
 		case TOO_FEW:
 			sb.append("Too few arguments for command ");
 			break;

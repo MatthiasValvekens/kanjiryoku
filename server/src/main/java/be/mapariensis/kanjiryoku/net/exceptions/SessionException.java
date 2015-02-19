@@ -1,6 +1,5 @@
 package be.mapariensis.kanjiryoku.net.exceptions;
 
-
 // TODO server error codes
 public class SessionException extends ServerException {
 
@@ -15,5 +14,5 @@ public class SessionException extends ServerException {
 	public SessionException(Throwable cause) {
 		super(cause, ERROR_SESSION_ISSUE);
 	}
-	
+
 }

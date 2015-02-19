@@ -13,25 +13,34 @@ public class PrivateMessageDialog extends SingleInputDialog {
 	private final ChatInterface chat;
 	private String message;
 	private long time;
-	public PrivateMessageDialog(Frame parent, ServerUplink serv, String username, ChatInterface chat) {
-		super(parent, "Send private message", String.format("To %s:",username), serv,true);
+
+	public PrivateMessageDialog(Frame parent, ServerUplink serv,
+			String username, ChatInterface chat) {
+		super(parent, "Send private message",
+				String.format("To %s:", username), serv, true);
 		this.username = username;
 		this.chat = chat;
 		this.me = serv.getUsername();
 	}
 
-
 	@Override
 	protected NetworkMessage constructMessage() {
 		message = getInput();
-		NetworkMessage res = new NetworkMessage(ServerCommandList.MESSAGE,username,message);
+		NetworkMessage res = new NetworkMessage(ServerCommandList.MESSAGE,
+				username, message);
 		time = res.timestamp;
 		return res;
 	}
-	
+
 	@Override
 	protected void tearDown() {
-		chat.displayUserMessage(time, me, String.format("(To %s) %s",username,message),false); // TODO : Is this the right design?
+		chat.displayUserMessage(time, me,
+				String.format("(To %s) %s", username, message), false); // TODO
+																		// : Is
+																		// this
+																		// the
+																		// right
+																		// design?
 	}
 
 }

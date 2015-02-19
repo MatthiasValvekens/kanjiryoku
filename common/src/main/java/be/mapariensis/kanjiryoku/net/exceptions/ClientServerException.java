@@ -17,37 +17,44 @@ public class ClientServerException extends Exception {
 	public static final int ERROR_GAME_INTERNAL = 7;
 	public static final int ERROR_SERVER_COMM = 8;
 	public static final int ERROR_SERVER_CONFIG = 9;
-	
+
 	public final int errorCode;
 	public final NetworkMessage protocolMessage;
+
 	public ClientServerException(String message, int errorCode) {
-		this(message,null,errorCode);
+		this(message, null, errorCode);
 	}
 
 	public ClientServerException(Throwable cause, int errorCode) {
-		this(cause==null ? null : cause.getMessage(),cause,errorCode);
+		this(cause == null ? null : cause.getMessage(), cause, errorCode);
 	}
 
 	public ClientServerException(String message, Throwable cause, int errorCode) {
-		this(new NetworkMessage(formatErrorCode(errorCode),message),cause,errorCode);
+		this(new NetworkMessage(formatErrorCode(errorCode), message), cause,
+				errorCode);
 	}
-	private ClientServerException(NetworkMessage message, Throwable cause, int errorCode) {
+
+	private ClientServerException(NetworkMessage message, Throwable cause,
+			int errorCode) {
 		super(message.toString(), cause);
 		this.errorCode = errorCode;
 		this.protocolMessage = message;
 	}
-	
+
 	public static String formatErrorCode(int errorCode) {
 		return String.format("E%03d", errorCode);
 	}
+
 	public static int parseErrorCode(String in) throws ParseException {
 		try {
 			return Integer.valueOf(in.substring(1));
 		} catch (NumberFormatException ex) {
-			throw new ParseException("Invalid error code",1);
+			throw new ParseException("Invalid error code", 1);
 		}
 	}
+
 	private static final Pattern errorPattern = Pattern.compile("E\\d\\d\\d");
+
 	public static boolean isError(String message) {
 		return errorPattern.matcher(message).matches();
 	}

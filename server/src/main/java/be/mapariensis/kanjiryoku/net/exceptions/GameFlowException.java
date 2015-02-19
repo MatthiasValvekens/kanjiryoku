@@ -14,5 +14,4 @@ public class GameFlowException extends ServerException {
 		super(cause, ERROR_GAME_INTERNAL);
 	}
 
-
 }

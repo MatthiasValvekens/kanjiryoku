@@ -26,15 +26,14 @@ public interface ServerConfig {
 	public long getTimeMillis(String key, long defaultVal)
 			throws BadConfigurationException;
 
-	public long getTimeMillis(String key)
-			throws BadConfigurationException;
+	public long getTimeMillis(String key) throws BadConfigurationException;
 
 	public Set<String> keySet();
 
 	public boolean containsKey(String key);
 
 	public ProblemSetManager getProblemSetManager();
-	
+
 	public KanjiGuesserFactory getKanjiGuesserFactory();
 
 }

@@ -18,49 +18,67 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public class PlainChatPanel extends JPanel implements ChatInterface {
 	private final JTextArea textpanel = new JTextArea();
-	private final Executor promptThreads = Executors.newSingleThreadExecutor(); // ensure only one prompt can exist at a time
-	private final ServerResponseHandler dumpToChat = new DummyResponseHandler(this);
+	private final Executor promptThreads = Executors.newSingleThreadExecutor(); // ensure
+																				// only
+																				// one
+																				// prompt
+																				// can
+																				// exist
+																				// at
+																				// a
+																				// time
+	private final ServerResponseHandler dumpToChat = new DummyResponseHandler(
+			this);
 	private final UIBridge bridge;
-	
+
 	public PlainChatPanel(UIBridge bridge) {
 		this.bridge = bridge;
 		textpanel.setEditable(false);
 		textpanel.setLineWrap(true);
-		textpanel.setFont(new Font("Serif",Font.PLAIN,13));
-		DefaultCaret caret = (DefaultCaret)textpanel.getCaret();
+		textpanel.setFont(new Font("Serif", Font.PLAIN, 13));
+		DefaultCaret caret = (DefaultCaret) textpanel.getCaret();
 		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 		setLayout(new BorderLayout());
-		add(textpanel,BorderLayout.CENTER);
+		add(textpanel, BorderLayout.CENTER);
 	}
+
 	@Override
 	public void displayServerMessage(long timestamp, String message) {
-		synchronized(textpanel) {
-			textpanel.append(String.format("%s\t%s\n",Constants.SERVER_HANDLE,message));
+		synchronized (textpanel) {
+			textpanel.append(String.format("%s\t%s\n", Constants.SERVER_HANDLE,
+					message));
 		}
-		
+
 	}
+
 	@Override
-	public void displayUserMessage(long timestamp, String from, String message, boolean broadcast) {
-		synchronized(textpanel) {
-			textpanel.append(String.format("[%s]\t%s\n",from,message));
+	public void displayUserMessage(long timestamp, String from, String message,
+			boolean broadcast) {
+		synchronized (textpanel) {
+			textpanel.append(String.format("[%s]\t%s\n", from, message));
 		}
 	}
+
 	@Override
 	public void displayErrorMessage(int errorId, String message) {
-		synchronized(textpanel) {
-			textpanel.append(String.format("Error E%03d\t%s\n",errorId,message));
+		synchronized (textpanel) {
+			textpanel.append(String.format("Error E%03d\t%s\n", errorId,
+					message));
 		}
 	}
 
 	@Override
 	public void yesNoPrompt(String question, NetworkMessage ifYes,
 			NetworkMessage ifNo) {
-		promptThreads.execute(new YesNoTask(this,bridge.getUplink(),question, ifYes,ifNo));
+		promptThreads.execute(new YesNoTask(this, bridge.getUplink(), question,
+				ifYes, ifNo));
 	}
+
 	@Override
 	public void displayErrorMessage(ClientServerException ex) {
 		displayErrorMessage(ex.errorCode, ex.getMessage());
 	}
+
 	@Override
 	public ServerResponseHandler getDefaultResponseHandler() {
 		return dumpToChat;
@@ -68,14 +86,15 @@ public class PlainChatPanel extends JPanel implements ChatInterface {
 
 	@Override
 	public void displaySystemMessage(String message) {
-		synchronized(textpanel) {
-			textpanel.append(String.format("*system*\t%s\n",message));
+		synchronized (textpanel) {
+			textpanel.append(String.format("*system*\t%s\n", message));
 		}
 	}
+
 	@Override
 	public void displayGameMessage(long timestamp, String message) {
-		synchronized(textpanel) {
-			textpanel.append(String.format("*game*\t%s\n",message));
+		synchronized (textpanel) {
+			textpanel.append(String.format("*game*\t%s\n", message));
 		}
 	}
 }

@@ -26,51 +26,66 @@ public class KanjiryokuYojiWrapper implements ProblemParser {
 	public static final String PARAM_OPTIONTOTAL = "optionCount";
 	public static final int PARAM_OPTIONTOTAL_DEFAULT = 4;
 	private final KanjiryokuShindanParser kparser = new KanjiryokuShindanParser();
-	private final String kanjilist; // TODO : this is a temporary workaround 
+	private final String kanjilist; // TODO : this is a temporary workaround
 	private final Random rng;
 	private final int optiontotal;
+
 	public KanjiryokuYojiWrapper(String kanjilist, Random rng, int optiontotal) {
 		this.kanjilist = kanjilist;
 		this.rng = rng;
 		this.optiontotal = optiontotal;
 	}
+
 	@Override
 	public Problem parseProblem(String input) throws ParseException {
 		Problem p = kparser.parseProblem(input);
 		// sanity checks, extract the first (and only) word
 		Word w;
-		if(p.words.size() != 1 || (w = p.words.get(0)).main.length()!=4) throw new ParseException("Not a Yoji problem: "+p.words, 0);
-		
-		// TODO : pick options that actually make sense for the "wrong" suggestions
+		if (p.words.size() != 1 || (w = p.words.get(0)).main.length() != 4)
+			throw new ParseException("Not a Yoji problem: " + p.words, 0);
+
+		// TODO : pick options that actually make sense for the "wrong"
+		// suggestions
 		List<List<String>> options = new ArrayList<List<String>>(4);
-		for(int i = 0; i<4; i++) {
+		for (int i = 0; i < 4; i++) {
 			List<String> myoptions = new ArrayList<String>(optiontotal);
 			int correctPosition = rng.nextInt(optiontotal);
-			for(int j = 0; j<optiontotal; j++) {
-				if(j == correctPosition) {
-					myoptions.add(new String(new char[] {w.main.charAt(i)}));
+			for (int j = 0; j < optiontotal; j++) {
+				if (j == correctPosition) {
+					myoptions.add(new String(new char[] { w.main.charAt(i) }));
 				} else {
-					myoptions.add(new String(new char[] {kanjilist.charAt(rng.nextInt(kanjilist.length()))}));
+					myoptions.add(new String(new char[] { kanjilist.charAt(rng
+							.nextInt(kanjilist.length())) }));
 				}
 			}
 			options.add(myoptions);
 		}
 		return new YojiProblem(w, options);
 	}
+
 	public static class Factory implements ProblemParserFactory {
-		private static final Logger log = LoggerFactory.getLogger(Factory.class);
+		private static final Logger log = LoggerFactory
+				.getLogger(Factory.class);
+
 		@Override
 		public KanjiryokuYojiWrapper getParser(IProperties params)
 				throws BadConfigurationException {
-			if(params == null) throw new BadConfigurationException("KanjiryokuYojiWrapper requires parameters, but none were supplied.");
+			if (params == null)
+				throw new BadConfigurationException(
+						"KanjiryokuYojiWrapper requires parameters, but none were supplied.");
 			String dictfile = params.getRequired(PARAM_DICTFILE, String.class);
-			Charset enc = Charset.forName(params.getRequired(PARAM_ENCODING, String.class));
-			int seed = params.getSafely(PARAM_SEED,Integer.class,(int)(System.currentTimeMillis()%10000));
+			Charset enc = Charset.forName(params.getRequired(PARAM_ENCODING,
+					String.class));
+			int seed = params.getSafely(PARAM_SEED, Integer.class,
+					(int) (System.currentTimeMillis() % 10000));
 			Random rng = new Random(seed);
-			int optiontotal = params.getSafely(PARAM_OPTIONTOTAL,Integer.class,PARAM_OPTIONTOTAL_DEFAULT);
-			log.info("Building yojijukugo parser with seed {} and dictionary {}",seed,dictfile);
+			int optiontotal = params.getSafely(PARAM_OPTIONTOTAL,
+					Integer.class, PARAM_OPTIONTOTAL_DEFAULT);
+			log.info(
+					"Building yojijukugo parser with seed {} and dictionary {}",
+					seed, dictfile);
 			StringBuilder dict = new StringBuilder();
-			
+
 			// build kanji list
 			List<String> strings;
 			try {
@@ -78,13 +93,13 @@ public class KanjiryokuYojiWrapper implements ProblemParser {
 			} catch (IOException ex) {
 				throw new BadConfigurationException(ex);
 			}
-			for(String s : strings) {
-				if(!s.startsWith(Constants.COMMENT_PREFIX)) {
+			for (String s : strings) {
+				if (!s.startsWith(Constants.COMMENT_PREFIX)) {
 					dict.append(s);
 				}
 			}
-			return new KanjiryokuYojiWrapper(dict.toString(),rng,optiontotal);
+			return new KanjiryokuYojiWrapper(dict.toString(), rng, optiontotal);
 		}
-		
+
 	}
 }

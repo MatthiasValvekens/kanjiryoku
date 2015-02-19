@@ -1,17 +1,20 @@
 package be.mapariensis.kanjiryoku.model;
 
-
 public class Word {
 	public final String furigana;
 	public final String main;
+
 	public Word(String main) {
-		this(main,"");
+		this(main, "");
 	}
-	public Word(String main,String furigana) {
+
+	public Word(String main, String furigana) {
 		this.furigana = furigana != null ? furigana : "";
-		if(main == null) throw new IllegalArgumentException("Main part must not be null");
+		if (main == null)
+			throw new IllegalArgumentException("Main part must not be null");
 		this.main = main;
 	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -21,6 +24,7 @@ public class Word {
 		result = prime * result + ((main == null) ? 0 : main.hashCode());
 		return result;
 	}
+
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -42,10 +46,11 @@ public class Word {
 			return false;
 		return true;
 	}
+
 	@Override
 	public String toString() {
-		return "<"+main+","+furigana+">";
-		
+		return "<" + main + "," + furigana + ">";
+
 	}
-	
+
 }

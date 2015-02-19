@@ -31,29 +31,35 @@ public class MainWindow extends JFrame implements GUIBridge {
 	private final GamePanel gci;
 	private final String serverInfoString;
 	private final JMenuBar menuBar;
-	public MainWindow(InetAddress addr, int port, String username) throws IOException {
-		this.serverInfoString = String.format("(%s:%s)",addr,port);
-		setTitle(String.format("Kanjiryoku - %s",this.serverInfoString));
+
+	public MainWindow(InetAddress addr, int port, String username)
+			throws IOException {
+		this.serverInfoString = String.format("(%s:%s)", addr, port);
+		setTitle(String.format("Kanjiryoku - %s", this.serverInfoString));
 		setLayout(new FlowLayout());
 		String css;
-		try(InputStream in = MainWindow.class.getClassLoader().getResourceAsStream(CSS_FILE)) {
-			BufferedReader r = new BufferedReader(new InputStreamReader(in,Charset.forName("UTF-8")));
+		try (InputStream in = MainWindow.class.getClassLoader()
+				.getResourceAsStream(CSS_FILE)) {
+			BufferedReader r = new BufferedReader(new InputStreamReader(in,
+					Charset.forName("UTF-8")));
 			StringBuilder sb = new StringBuilder();
 			String line;
-			while((line = r.readLine()) != null) sb.append(line).append('\n');
+			while ((line = r.readLine()) != null)
+				sb.append(line).append('\n');
 			css = sb.toString();
 		} catch (RuntimeException ex) {
-			throw new IOException("Runtime exception while reading css file.",ex);
+			throw new IOException("Runtime exception while reading css file.",
+					ex);
 		}
-		final HTMLChatPanel chatComponent = new HTMLChatPanel(this,css);
+		final HTMLChatPanel chatComponent = new HTMLChatPanel(this, css);
 		chat = chatComponent;
-		add(new ChatPanel(this,chatComponent));
+		add(new ChatPanel(this, chatComponent));
 		serv = new ServerUplink(addr, port, username, this);
 		gci = new GamePanel(this);
 		add(gci);
 		serv.start();
 		setResizable(false);
-		
+
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 		// clean up on close
 		addWindowListener(new WindowAdapter() {
@@ -72,7 +78,7 @@ public class MainWindow extends JFrame implements GUIBridge {
 		sessionMenu.add(new JMenuItem(new AbstractAction("Create") {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				new CreateSessionDialog(MainWindow.this,serv).setVisible(true);
+				new CreateSessionDialog(MainWindow.this, serv).setVisible(true);
 			}
 		}));
 
@@ -81,54 +87,61 @@ public class MainWindow extends JFrame implements GUIBridge {
 		sessionAdminMenu.add(new JMenuItem(new AbstractAction("Invite") {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				new SingleInputDialog(MainWindow.this,"Invite a user","Please provide a username",serv,true) {
+				new SingleInputDialog(MainWindow.this, "Invite a user",
+						"Please provide a username", serv, true) {
 					@Override
 					protected NetworkMessage constructMessage() {
-						return new NetworkMessage(ServerCommandList.INVITE,getInput());
-					}
-				}.setVisible(true);
-			}			
-		}));
-		sessionAdminMenu.add(new JMenuItem(new AbstractAction("Kick"){
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				new SingleInputDialog(MainWindow.this,"Kick a user","Please provide a username",serv,true) {
-					@Override
-					protected NetworkMessage constructMessage() {
-						return new NetworkMessage(ServerCommandList.KICK,getInput());
+						return new NetworkMessage(ServerCommandList.INVITE,
+								getInput());
 					}
 				}.setVisible(true);
 			}
 		}));
-		sessionAdminMenu.add(new JMenuItem(new AbstractAction("Kill session"){
+		sessionAdminMenu.add(new JMenuItem(new AbstractAction("Kick") {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new SingleInputDialog(MainWindow.this, "Kick a user",
+						"Please provide a username", serv, true) {
+					@Override
+					protected NetworkMessage constructMessage() {
+						return new NetworkMessage(ServerCommandList.KICK,
+								getInput());
+					}
+				}.setVisible(true);
+			}
+		}));
+		sessionAdminMenu.add(new JMenuItem(new AbstractAction("Kill session") {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if(JOptionPane.showConfirmDialog(MainWindow.this,
-						"Are you sure you want to kill the current session?","Confirm session kill",JOptionPane.YES_NO_OPTION)==JOptionPane.YES_OPTION) {
-					serv.enqueueMessage(new NetworkMessage(ServerCommandList.KILLSESSION));
+				if (JOptionPane.showConfirmDialog(MainWindow.this,
+						"Are you sure you want to kill the current session?",
+						"Confirm session kill", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+					serv.enqueueMessage(new NetworkMessage(
+							ServerCommandList.KILLSESSION));
 				}
 			}
-			
+
 		}));
 		sessionMenu.addSeparator();
-		sessionMenu.add(new JMenuItem(new AbstractAction("Leave"){
+		sessionMenu.add(new JMenuItem(new AbstractAction("Leave") {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				serv.enqueueMessage(new NetworkMessage(ServerCommandList.LEAVE));
 			}
 		}));
-		
+
 		// game menu
 		JMenu gameMenu = new JMenu("Game");
 		menuBar.add(gameMenu);
 		gameMenu.add(new JMenuItem(new AbstractAction("Start game") {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				serv.enqueueMessage(new NetworkMessage(ServerCommandList.STARTGAME));
+				serv.enqueueMessage(new NetworkMessage(
+						ServerCommandList.STARTGAME));
 			}
 		}));
-		
+
 		// client menu
 		JMenu clientMenu = new JMenu("Client");
 		menuBar.add(clientMenu);
@@ -136,11 +149,11 @@ public class MainWindow extends JFrame implements GUIBridge {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				chatComponent.clear();				
+				chatComponent.clear();
 			}
-			
+
 		}));
-		
+
 		setJMenuBar(menuBar);
 		toggleMenuBar(false);
 		pack();
@@ -160,16 +173,18 @@ public class MainWindow extends JFrame implements GUIBridge {
 	public ChatInterface getChat() {
 		return chat;
 	}
+
 	@Override
 	public void setUsername(String username) {
-		setTitle(String.format("Kanjiryoku - %s %s",username,serverInfoString));
+		setTitle(String
+				.format("Kanjiryoku - %s %s", username, serverInfoString));
 		serv.setUsername(username);
 		toggleMenuBar(true);
 	}
-	
+
 	private void toggleMenuBar(boolean enable) {
 		int count = menuBar.getMenuCount();
-		for(int i = 0;i<count;i++) {
+		for (int i = 0; i < count; i++) {
 			menuBar.getMenu(i).setEnabled(enable);
 		}
 	}
