@@ -18,9 +18,7 @@ import be.mapariensis.kanjiryoku.util.IPropertiesImpl;
 public class KanjiServer {
 	private static final Logger log = LoggerFactory
 			.getLogger(KanjiServer.class);
-	private static final Path configFile = Paths.get(
-			ConfigFields.CONFIG_FILE_DIR)
-			.resolve(ConfigFields.CONFIG_FILE_NAME);
+	private static Path configFile;
 
 	private static synchronized String readConfig() throws IOException {
 		String config;
@@ -28,13 +26,27 @@ public class KanjiServer {
 			config = new String(Files.readAllBytes(configFile));
 		} catch (Exception ex) {
 			throw new IOException("Failed to read configuration file "
-					+ ConfigFields.CONFIG_FILE_NAME, ex);
+					+ configFile.toString(), ex);
 		}
 		return config;
 	}
 
 	public static void main(String[] args) throws IOException,
 			BadConfigurationException {
+		// Check for config file on command line
+		switch (args.length) {
+		case 0:
+			configFile = Paths.get(ConfigFields.CONFIG_FILE_NAME);
+			break;
+		case 1:
+			configFile = Paths.get(args[0]);
+			break;
+		default:
+			System.err
+					.println("Too many arguments.\n"
+							+ "You may optionally pass a configuration file name on the command line. "
+							+ "The default is " + ConfigFields.CONFIG_FILE_NAME);
+		}
 		final ServerConfigImpl props = new ServerConfigImpl(
 				new IPropertiesImpl(readConfig()));
 		Runnable reconf = new Runnable() {
@@ -51,7 +63,7 @@ public class KanjiServer {
 		};
 		@SuppressWarnings("resource")
 		ConnectionMonitor s = new ConnectionMonitor(props);
-		ConfigFileWatcher watcher = new ConfigFileWatcher(reconf);
+		ConfigFileWatcher watcher = new ConfigFileWatcher(reconf, configFile);
 		watcher.start();
 		s.start();
 	}

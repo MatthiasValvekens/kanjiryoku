@@ -4,8 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class ConfigFields {
-	public static final String CONFIG_FILE_NAME = "kanjiryoku.cfg";
-	public static final String CONFIG_FILE_DIR = ".";
+	public static final String CONFIG_FILE_NAME = "./kanjiryoku.cfg";
 
 	/**
 	 * The port number to listen on.
