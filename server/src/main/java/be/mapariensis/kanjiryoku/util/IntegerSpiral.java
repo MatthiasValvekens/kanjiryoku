@@ -23,13 +23,19 @@ public class IntegerSpiral implements Iterator<Integer> {
 
 	@Override
 	public boolean hasNext() {
-		return hasMore && (hasMore = computeNext());
+		if (!hasMore)
+			return false;
+		if (cacheStale) {
+			return hasMore = computeNext();
+		} else {
+			return true;
+		}
 	}
 
 	@Override
 	public Integer next() {
 		// the hasNext() call also computes and caches the next element
-		if (cacheStale && !hasNext())
+		if (!hasNext())
 			throw new NoSuchElementException();
 		curStep++;
 		curSign = -curSign;
@@ -40,9 +46,9 @@ public class IntegerSpiral implements Iterator<Integer> {
 
 	// Compute the next element, and return false if iterator is exhausted
 	private boolean computeNext() {
+		cacheStale = false;
 		int next = prev + curSign * curStep;
 		if (next >= min && next <= max) {
-			cacheStale = false;
 			this.next = next;
 			return true;
 		} else {
@@ -51,7 +57,6 @@ public class IntegerSpiral implements Iterator<Integer> {
 			curStep++;
 			int nextnext = next + curSign * curStep;
 			if (nextnext >= min && nextnext <= max) {
-				cacheStale = false;
 				this.next = nextnext;
 				return true;
 			}
