@@ -8,6 +8,7 @@ import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.problemsets.ProblemOrganizer;
 import be.mapariensis.kanjiryoku.problemsets.RatedProblem;
 import be.mapariensis.kanjiryoku.problemsets.RatedProblemList;
+import be.mapariensis.kanjiryoku.util.IntegerSpiral;
 
 public class CategoryOrganizer implements ProblemOrganizer {
 	public final List<RatedProblemList> cats;
@@ -65,70 +66,17 @@ public class CategoryOrganizer implements ProblemOrganizer {
 		// iterate through possible difficulty levels
 		do {
 			int difficulty = iter.next();
-			restrictedScope = scope.extractDifficulty(difficulty); // FIXME :
-																	// check
-																	// corner
-																	// cases,
-																	// something
-																	// fishy is
-																	// going on
+			// FIXME : check corner cases, something fishy is going on
+			restrictedScope = scope.extractDifficulty(difficulty);
 		} while (iter.hasNext() && restrictedScope.isEmpty());
 		// restrictedScope now contains all problems of suitable difficulty
 		if (restrictedScope.isEmpty())
 			throw new IllegalStateException();
-		return restrictedScope.remove(rng.nextInt(restrictedScope.size())).problem; // return
-																					// a
-																					// problem
-																					// and
-																					// remove
-																					// it
-																					// from
-																					// the
-																					// set
-																					// of
-																					// candidates
+		// return a problem and remove it from the set of candidates
+		return restrictedScope.remove(rng.nextInt(restrictedScope.size())).problem;
 	}
 
 	private static int restrict(int x, int min, int max) {
 		return Math.max(min, Math.min(x, max));
 	}
-
-	private static class IntegerSpiral implements Iterator<Integer> {
-		final int min, max;
-		int curStep = 0;
-		int curSign = -1;
-		int prev;
-
-		private IntegerSpiral(int center, int min, int max) {
-			this.min = min;
-			this.max = max;
-			this.prev = center;
-		}
-
-		@Override
-		public boolean hasNext() {
-			int next = computeNext();
-			return next >= min && next <= max;
-		}
-
-		@Override
-		public Integer next() {
-			int retval = computeNext();
-			curStep++;
-			curSign = -curSign;
-			prev = retval;
-			return retval;
-		}
-
-		private int computeNext() {
-			return prev + curSign * curStep;
-		}
-
-		@Override
-		public void remove() {
-			return;
-		}
-
-	}
-
 }
