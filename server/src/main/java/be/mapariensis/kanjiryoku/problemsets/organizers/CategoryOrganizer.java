@@ -1,32 +1,36 @@
 package be.mapariensis.kanjiryoku.problemsets.organizers;
 
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Random;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.problemsets.ProblemOrganizer;
-import be.mapariensis.kanjiryoku.problemsets.RatedProblem;
 import be.mapariensis.kanjiryoku.problemsets.RatedProblemList;
-import be.mapariensis.kanjiryoku.util.IntegerSpiral;
 
 public class CategoryOrganizer implements ProblemOrganizer {
-	public final List<RatedProblemList> cats;
+	Logger log = LoggerFactory.getLogger(CategoryOrganizer.class);
+	private final List<SingleCategoryOrganizer> cats;
 
-	public final int perCategory;
 	private int curCatIx = 0;
-	private int problemsSet = 0;
 	private int difficulty;
 	private final boolean resetDifficulty;
-	private final Random rng;
 	private final int minDifficulty, maxDifficulty;
+
+	private boolean hasMore = true;
 
 	public CategoryOrganizer(List<RatedProblemList> cats, int perCategory,
 			Random rng, boolean resetDifficulty, int minDifficulty,
 			int maxDifficulty) {
-		this.cats = cats;
-		this.perCategory = perCategory;
-		this.rng = rng;
+		this.cats = new ArrayList<SingleCategoryOrganizer>(cats.size());
+		for (RatedProblemList rpl : cats) {
+			this.cats.add(new SingleCategoryOrganizer(rpl, perCategory, rng,
+					minDifficulty, maxDifficulty));
+		}
 		this.resetDifficulty = resetDifficulty;
 		this.minDifficulty = minDifficulty;
 		this.maxDifficulty = maxDifficulty;
@@ -35,45 +39,41 @@ public class CategoryOrganizer implements ProblemOrganizer {
 
 	@Override
 	public boolean hasNext() {
-		if (problemsSet < Math.min(perCategory, cats.get(curCatIx).size()))
+		if (hasMore == false)
+			return false;
+
+		if (cats.get(curCatIx).hasNext())
 			return true;
+
 		// end of category reached
-		return curCatIx < cats.size() - 1
-				&& Math.min(perCategory, cats.get(curCatIx + 1).size()) > 0;
+		log.debug("No more problems in current category.");
+		if (resetDifficulty) {
+			difficulty = minDifficulty;
+		}
+		while (curCatIx < cats.size() - 1) {
+			curCatIx++;
+			// difficulty SHOULD not matter for hasNext
+			// but it's better to play it safe
+			SingleCategoryOrganizer sco = cats.get(curCatIx);
+			sco.setDifficulty(difficulty);
+			if (cats.get(curCatIx).hasNext())
+				return true;
+		}
+		// no non-empty categories found. Bail
+		return (hasMore = false);
 	}
 
 	@Override
 	public Problem next(boolean lastAnswer) {
+		// check & cache
+		if (!hasNext())
+			throw new NoSuchElementException();
+		// category may report different difficulty level, depending on
+		// circumstances
 		difficulty = restrict(difficulty + (lastAnswer ? 1 : -1),
 				minDifficulty, maxDifficulty);
-		if (!hasNext())
-			throw new IllegalStateException();
-		if (problemsSet < Math.min(perCategory, cats.get(curCatIx).size())) {
-			// next problem in category
-			problemsSet++;
-		} else {
-			// hasNext returned true, so this will work
-			curCatIx++; // move to next category
-			problemsSet = 1;
-			if (resetDifficulty)
-				difficulty = minDifficulty;
-		}
-		// find a problem of the appropriate difficulty
-		RatedProblemList scope = cats.get(curCatIx);
-		Iterator<Integer> iter = new IntegerSpiral(difficulty, minDifficulty,
-				maxDifficulty);
-		List<RatedProblem> restrictedScope;
-		// iterate through possible difficulty levels
-		do {
-			int difficulty = iter.next();
-			// FIXME : check corner cases, something fishy is going on
-			restrictedScope = scope.extractDifficulty(difficulty);
-		} while (iter.hasNext() && restrictedScope.isEmpty());
-		// restrictedScope now contains all problems of suitable difficulty
-		if (restrictedScope.isEmpty())
-			throw new IllegalStateException();
-		// return a problem and remove it from the set of candidates
-		return restrictedScope.remove(rng.nextInt(restrictedScope.size())).problem;
+		return cats.get(curCatIx).next(lastAnswer);
+
 	}
 
 	private static int restrict(int x, int min, int max) {
