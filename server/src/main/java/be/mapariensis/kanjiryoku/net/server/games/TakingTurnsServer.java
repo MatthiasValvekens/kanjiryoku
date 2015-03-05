@@ -45,6 +45,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		int correct, skipped;
 	}
 
+	// TURN ITERATOR LOGIC
 	private static class TurnIterator {
 		private int ix = 0;
 		private final List<User> players;
@@ -66,6 +67,47 @@ public class TakingTurnsServer implements GameServerInterface {
 			return ++ix == players.size() ? players.get(ix = 0) : players
 					.get(ix);
 		}
+	}
+
+	// END-OF-TURN CALLBACK
+	private class NextTurnHandler extends AnswerFeedbackHandler {
+		final boolean answer;
+
+		NextTurnHandler(boolean answer) {
+			super(ti.players);
+			this.answer = answer;
+		}
+
+		@Override
+		public void afterAnswer() throws ServerException {
+			log.debug("All users answered. Moving on.");
+			if (problemSource.hasNext()) {
+				synchronized (submitLock) {
+					nextProblem(problemSource.next(answer));
+				}
+			} else {
+				log.debug("No problems left");
+				gameRunning = false;
+				TakingTurnsServer.this.finished(stats());
+			}
+		}
+
+	}
+
+	private class BatonPassHandler extends AnswerFeedbackHandler {
+
+		public BatonPassHandler() {
+			super(ti.players);
+		}
+
+		@Override
+		protected void afterAnswer() throws ServerException {
+			log.debug("Baton pass.");
+			synchronized (submitLock) {
+				nextProblem(currentProblem);
+			}
+		}
+
 	}
 
 	private volatile boolean gameRunning = false;
@@ -173,46 +215,6 @@ public class TakingTurnsServer implements GameServerInterface {
 	private void localClear() {
 		strokes.clear();
 		multiProblemChoice = -1;
-	}
-
-	private class NextTurnHandler extends AnswerFeedbackHandler {
-		final boolean answer;
-
-		NextTurnHandler(boolean answer) {
-			super(ti.players);
-			this.answer = answer;
-		}
-
-		@Override
-		public void afterAnswer() throws ServerException {
-			log.debug("All users answered. Moving on.");
-			if (problemSource.hasNext()) {
-				synchronized (submitLock) {
-					nextProblem(problemSource.next(answer));
-				}
-			} else {
-				log.debug("No problems left");
-				gameRunning = false;
-				TakingTurnsServer.this.finished(stats());
-			}
-		}
-
-	}
-
-	private class BatonPassHandler extends AnswerFeedbackHandler {
-
-		public BatonPassHandler() {
-			super(ti.players);
-		}
-
-		@Override
-		protected void afterAnswer() throws ServerException {
-			log.debug("Baton pass.");
-			synchronized (submitLock) {
-				nextProblem(currentProblem);
-			}
-		}
-
 	}
 
 	@Override
