@@ -220,6 +220,10 @@ public class TakingTurnsServer implements GameServerInterface {
 		if (submitter != null && !submitter.equals(currentPlayer))
 			throw new GameFlowException(
 					"Only the current player can decide to skip a problem.");
+		doSkipProblem(submitter);
+	}
+
+	private void doSkipProblem(User submitter) {
 		log.debug("Skipping problem.");
 		ti.currentUserStats().skipped++;
 		// If there are still players left, try a baton pass
@@ -368,6 +372,12 @@ public class TakingTurnsServer implements GameServerInterface {
 				&& currentProblem.getFullSolution().length() == nextPosition()) {
 			rh = new NextTurnHandler(true);
 			ti.currentUserStats().correct++;
+		} else if (!answer
+				&& currentProblem.getInputMethod() == InputMethod.MULTIPLE_CHOICE) {
+			// Mistakes on multiple choice problems are not allowed
+			// Count this as a skip
+			doSkipProblem(source);
+			return;
 		}
 		log.debug("Delivering answer " + res);
 		deliverAnswer(source, answer, res, rh);
