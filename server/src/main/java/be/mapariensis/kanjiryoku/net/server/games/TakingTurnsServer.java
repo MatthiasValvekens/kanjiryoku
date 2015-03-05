@@ -45,6 +45,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		int correct, skipped;
 	}
 
+	// TURN ITERATOR LOGIC
 	private static class TurnIterator {
 		private int ix = 0;
 		private final List<User> players;
@@ -66,6 +67,47 @@ public class TakingTurnsServer implements GameServerInterface {
 			return ++ix == players.size() ? players.get(ix = 0) : players
 					.get(ix);
 		}
+	}
+
+	// END-OF-TURN CALLBACK
+	private class NextTurnHandler extends AnswerFeedbackHandler {
+		final boolean answer;
+
+		NextTurnHandler(boolean answer) {
+			super(ti.players);
+			this.answer = answer;
+		}
+
+		@Override
+		public void afterAnswer() throws ServerException {
+			log.debug("All users answered. Moving on.");
+			if (problemSource.hasNext()) {
+				synchronized (submitLock) {
+					nextProblem(problemSource.next(answer));
+				}
+			} else {
+				log.debug("No problems left");
+				gameRunning = false;
+				TakingTurnsServer.this.finished(stats());
+			}
+		}
+
+	}
+
+	private class BatonPassHandler extends AnswerFeedbackHandler {
+
+		public BatonPassHandler() {
+			super(ti.players);
+		}
+
+		@Override
+		protected void afterAnswer() throws ServerException {
+			log.debug("Baton pass.");
+			synchronized (submitLock) {
+				nextProblem(currentProblem);
+			}
+		}
+
 	}
 
 	private volatile boolean gameRunning = false;
@@ -175,43 +217,23 @@ public class TakingTurnsServer implements GameServerInterface {
 		multiProblemChoice = -1;
 	}
 
-	private class NextTurnHandler extends AnswerFeedbackHandler {
-		final boolean answer, doBatonPass;
-
-		NextTurnHandler(boolean answer, boolean doBatonPass) {
-			super(ti.players);
-			this.answer = answer;
-			this.doBatonPass = doBatonPass;
-		}
-
-		@Override
-		public void afterAnswer() throws ServerException {
-			log.debug("All users answered. Moving on.");
-			if (doBatonPass || problemSource.hasNext()) {
-				synchronized (submitLock) {
-					// baton pass ?
-					nextProblem(doBatonPass ? currentProblem : problemSource
-							.next(answer));
-				}
-			} else {
-				log.debug("No problems left");
-				gameRunning = false;
-				TakingTurnsServer.this.finished(stats());
-			}
-		}
-
-	}
-
 	@Override
 	public void skipProblem(User submitter) throws GameFlowException {
 		if (submitter != null && !submitter.equals(currentPlayer))
 			throw new GameFlowException(
 					"Only the current player can decide to skip a problem.");
+		doSkipProblem(submitter);
+	}
+
+	private void doSkipProblem(User submitter) {
 		log.debug("Skipping problem.");
 		ti.currentUserStats().skipped++;
+		// If there are still players left, try a baton pass
+		// If not, drop the problem
 		boolean batonPass = enableBatonPass
 				&& (problemRepetitions < ti.players.size() - 1);
-		AnswerFeedbackHandler rh = new NextTurnHandler(false, batonPass);
+		AnswerFeedbackHandler rh = batonPass ? new BatonPassHandler()
+				: new NextTurnHandler(false);
 		problemSkipped(submitter, batonPass, rh);
 	}
 
@@ -222,7 +244,7 @@ public class TakingTurnsServer implements GameServerInterface {
 			Statistics stats = ti.stats.get(i);
 			JSONObject o = new JSONObject();
 			o.put("Correct answers", stats.correct);
-			o.put("Skipped problems", stats.skipped);
+			o.put("Failed problems", stats.skipped);
 			res.put(uname, o);
 		}
 		return res;
@@ -350,8 +372,14 @@ public class TakingTurnsServer implements GameServerInterface {
 		// move on to next position in problem
 		if (answer
 				&& currentProblem.getFullSolution().length() == nextPosition()) {
-			rh = new NextTurnHandler(true, false);
+			rh = new NextTurnHandler(true);
 			ti.currentUserStats().correct++;
+		} else if (!answer
+				&& currentProblem.getInputMethod() == InputMethod.MULTIPLE_CHOICE) {
+			// Mistakes on multiple choice problems are not allowed
+			// Count this as a skip
+			doSkipProblem(source);
+			return;
 		}
 		log.debug("Delivering answer " + res);
 		deliverAnswer(source, answer, res, rh);

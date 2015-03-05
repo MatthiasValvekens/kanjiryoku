@@ -200,7 +200,7 @@ public enum ClientCommand {
 				throw new ServerCommunicationException(ex);
 			}
 			bridge.getChat().displayGameMessage(msg.timestamp,
-					String.format("User %s skipped the problem.", msg.get(1)));
+					String.format("User %s failed the problem.", msg.get(1)));
 			if (!batonPass)
 				bridge.getChat().displayGameMessage(
 						msg.timestamp,
