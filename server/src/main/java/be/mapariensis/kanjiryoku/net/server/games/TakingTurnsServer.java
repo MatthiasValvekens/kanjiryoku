@@ -242,7 +242,7 @@ public class TakingTurnsServer implements GameServerInterface {
 			Statistics stats = ti.stats.get(i);
 			JSONObject o = new JSONObject();
 			o.put("Correct answers", stats.correct);
-			o.put("Skipped problems", stats.skipped);
+			o.put("Failed problems", stats.skipped);
 			res.put(uname, o);
 		}
 		return res;
