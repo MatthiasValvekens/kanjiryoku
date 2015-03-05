@@ -176,27 +176,40 @@ public class TakingTurnsServer implements GameServerInterface {
 	}
 
 	private class NextTurnHandler extends AnswerFeedbackHandler {
-		final boolean answer, doBatonPass;
+		final boolean answer;
 
-		NextTurnHandler(boolean answer, boolean doBatonPass) {
+		NextTurnHandler(boolean answer) {
 			super(ti.players);
 			this.answer = answer;
-			this.doBatonPass = doBatonPass;
 		}
 
 		@Override
 		public void afterAnswer() throws ServerException {
 			log.debug("All users answered. Moving on.");
-			if (doBatonPass || problemSource.hasNext()) {
+			if (problemSource.hasNext()) {
 				synchronized (submitLock) {
-					// baton pass ?
-					nextProblem(doBatonPass ? currentProblem : problemSource
-							.next(answer));
+					nextProblem(problemSource.next(answer));
 				}
 			} else {
 				log.debug("No problems left");
 				gameRunning = false;
 				TakingTurnsServer.this.finished(stats());
+			}
+		}
+
+	}
+
+	private class BatonPassHandler extends AnswerFeedbackHandler {
+
+		public BatonPassHandler() {
+			super(ti.players);
+		}
+
+		@Override
+		protected void afterAnswer() throws ServerException {
+			log.debug("Baton pass.");
+			synchronized (submitLock) {
+				nextProblem(currentProblem);
 			}
 		}
 
@@ -209,9 +222,12 @@ public class TakingTurnsServer implements GameServerInterface {
 					"Only the current player can decide to skip a problem.");
 		log.debug("Skipping problem.");
 		ti.currentUserStats().skipped++;
+		// If there are still players left, try a baton pass
+		// If not, drop the problem
 		boolean batonPass = enableBatonPass
 				&& (problemRepetitions < ti.players.size() - 1);
-		AnswerFeedbackHandler rh = new NextTurnHandler(false, batonPass);
+		AnswerFeedbackHandler rh = batonPass ? new BatonPassHandler()
+				: new NextTurnHandler(false);
 		problemSkipped(submitter, batonPass, rh);
 	}
 
@@ -350,7 +366,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		// move on to next position in problem
 		if (answer
 				&& currentProblem.getFullSolution().length() == nextPosition()) {
-			rh = new NextTurnHandler(true, false);
+			rh = new NextTurnHandler(true);
 			ti.currentUserStats().correct++;
 		}
 		log.debug("Delivering answer " + res);
