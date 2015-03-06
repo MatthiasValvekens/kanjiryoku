@@ -11,8 +11,8 @@ import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
-import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
@@ -20,8 +20,6 @@ import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.ResponseHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
-import be.mapariensis.kanjiryoku.net.server.SessionManager;
-import be.mapariensis.kanjiryoku.net.server.UserManager;
 import be.mapariensis.kanjiryoku.net.server.handlers.SessionInvitationHandler;
 
 public enum ServerCommand {
@@ -120,26 +118,7 @@ public enum ServerCommand {
 
 			List<User> users = new ArrayList<User>(message.argCount());
 			users.add(client);
-			ClientResponseHandler rh = new SessionInvitationHandler(sess);
-			NetworkMessage invite = new NetworkMessage(
-					ClientCommandList.INVITE, rh.id, game, String.valueOf(sess
-							.getId()), client.handle);
-
-			for (int i = 2; i < message.argCount(); i++) {
-				User u;
-				try {
-					u = userman.getUser(message.get(i));
-					if (u.equals(client))
-						continue; // self-invites are pretty useless
-				} catch (UserManagementException e) {
-					userman.messageUser(client, e.protocolMessage);
-					continue;
-				}
-				users.add(u);
-				// dispatch invite
-				userman.messageUser(u, invite, rh);
-
-			}
+			dispatchInvites(message.truncate(2), userman, client, sess);
 		}
 	},
 	INVITE {
@@ -158,23 +137,7 @@ public enum ServerCommand {
 				if (!sess.isMaster(client))
 					throw new SessionException(
 							"Only the session master can invite people.");
-				ClientResponseHandler rh = new SessionInvitationHandler(sess);
-				NetworkMessage invite = new NetworkMessage(
-						ClientCommandList.INVITE, rh.id, sess.getGame()
-								.getGame(), String.valueOf(sess.getId()),
-						client.handle);
-				for (int i = 1; i < message.argCount(); i++) {
-					User u;
-					try {
-						u = userman.getUser(message.get(i));
-						if (u.equals(client))
-							continue; // self-invites are pretty useless
-						userman.messageUser(u, invite, rh);
-					} catch (UserManagementException e) {
-						userman.messageUser(client, e.protocolMessage);
-						continue;
-					}
-				}
+				dispatchInvites(message.truncate(1), userman, client, sess);
 			}
 
 		}
@@ -387,4 +350,29 @@ public enum ServerCommand {
 	public abstract void execute(NetworkMessage message, User client,
 			UserManager userman, SessionManager sessman)
 			throws ServerException, BadConfigurationException;
+
+	private static void dispatchInvites(Iterable<String> usernames,
+			UserManager userman, User client, Session sess) {
+		ClientResponseHandler rh = new SessionInvitationHandler(sess);
+		NetworkMessage invite = new NetworkMessage(ClientCommandList.INVITE,
+				rh.id, sess.getGame().getGame(), String.valueOf(sess.getId()),
+				client.handle);
+		for (String username : usernames) {
+			User u;
+			try {
+				u = userman.getUser(username);
+				if (u.equals(client))
+					continue; // self-invites are pretty useless
+				else if (u.getSession() != null) {
+					userman.humanMessage(client, String.format(
+							"User %s is already in a session.", u.handle));
+					continue;
+				}
+				userman.messageUser(u, invite, rh);
+			} catch (UserManagementException e) {
+				userman.messageUser(client, e.protocolMessage);
+				continue;
+			}
+		}
+	}
 }
