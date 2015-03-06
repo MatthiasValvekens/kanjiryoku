@@ -12,7 +12,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-	<currentVersion>0.1-SNAPSHOT</currentVersion>
+	<currentVersion>0.2-SNAPSHOT</currentVersion>
   </properties>
   <dependencies>
     <dependency>
