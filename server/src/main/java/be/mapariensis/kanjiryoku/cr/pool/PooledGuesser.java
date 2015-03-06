@@ -10,6 +10,7 @@ import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.config.ConfigFields;
 import be.mapariensis.kanjiryoku.cr.Dot;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesser;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesserFactory;
@@ -19,11 +20,6 @@ import be.mapariensis.kanjiryoku.util.IProperties;
 public class PooledGuesser implements KanjiGuesser {
 	private static final Logger log = LoggerFactory
 			.getLogger(PooledGuesser.class);
-
-	public static final String MAX_IDLE = "maxIdleGuessers";
-	public static final String MAX_TOTAL = "maxTotalGuessers";
-	public static final String MIN_IDLE = "minIdleGuessers";
-	public static final String MAX_WAIT = "poolTimeout";
 
 	public static final int MAX_IDLE_DEFAULT = 8;
 	public static final int MAX_TOTAL_DEFAULT = 10;
@@ -69,14 +65,14 @@ public class PooledGuesser implements KanjiGuesser {
 		this.pof = new KanjiGuesserFactoryWrapper(backendFactory,
 				factoryConfiguration);
 		GenericObjectPoolConfig config = new GenericObjectPoolConfig();
-		int maxidle = poolConfiguration.getTyped(MAX_IDLE, Integer.class,
-				MAX_IDLE_DEFAULT);
-		int minidle = poolConfiguration.getTyped(MIN_IDLE, Integer.class,
-				MIN_IDLE_DEFAULT);
-		int maxtotal = poolConfiguration.getTyped(MAX_TOTAL, Integer.class,
-				MAX_TOTAL_DEFAULT);
-		long maxWaitMillis = poolConfiguration.getTyped(MAX_WAIT, Long.class,
-				MAX_WAIT_DEFAULT);
+		int maxidle = poolConfiguration.getTyped(ConfigFields.MAX_IDLE,
+				Integer.class, MAX_IDLE_DEFAULT);
+		int minidle = poolConfiguration.getTyped(ConfigFields.MIN_IDLE,
+				Integer.class, MIN_IDLE_DEFAULT);
+		int maxtotal = poolConfiguration.getTyped(ConfigFields.MAX_TOTAL,
+				Integer.class, MAX_TOTAL_DEFAULT);
+		long maxWaitMillis = poolConfiguration.getTyped(ConfigFields.MAX_WAIT,
+				Long.class, MAX_WAIT_DEFAULT);
 		config.setBlockWhenExhausted(true);
 		config.setMaxWaitMillis(maxWaitMillis);
 		config.setMaxIdle(maxidle);

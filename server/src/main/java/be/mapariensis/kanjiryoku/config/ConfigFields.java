@@ -39,6 +39,12 @@ public class ConfigFields {
 	public static final String CR_TOLERANCE = "answerTolerance";
 	public static final int CR_TOLERANCE_DEFAULT = 50;
 
+	// Pooling settings
+	public static final String MAX_IDLE = "maxIdleGuessers";
+	public static final String MAX_TOTAL = "maxTotalGuessers";
+	public static final String MIN_IDLE = "minIdleGuessers";
+	public static final String MAX_WAIT = "poolTimeout";
+
 	// Problem sets
 	public static final String PSET_SETTINGS_HEADER = "problemSets";
 	public static final String PARSER_FACTORY_CLASS = "parserFactoryClassName";
