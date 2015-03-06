@@ -40,10 +40,12 @@ public class ConfigFields {
 	public static final int CR_TOLERANCE_DEFAULT = 50;
 
 	// Pooling settings
-	public static final String MAX_IDLE = "maxIdleGuessers";
-	public static final String MAX_TOTAL = "maxTotalGuessers";
-	public static final String MIN_IDLE = "minIdleGuessers";
+	public static final String MAX_IDLE = "maxIdle";
+	public static final String MAX_TOTAL = "maxTotal";
+	public static final String MIN_IDLE = "minIdle";
 	public static final String MAX_WAIT = "poolTimeout";
+	public static final String BACKEND_FACTORY = "backendFactory";
+	public static final String BACKEND_CONFIG = "backendConfig";
 
 	// Problem sets
 	public static final String PSET_SETTINGS_HEADER = "problemSets";
