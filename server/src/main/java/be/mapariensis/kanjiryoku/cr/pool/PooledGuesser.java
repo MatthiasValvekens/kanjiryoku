@@ -26,21 +26,19 @@ public class PooledGuesser implements KanjiGuesser {
 	public static final int MIN_IDLE_DEFAULT = 0;
 	public static final long MAX_WAIT_DEFAULT = 1000L;
 
-	public static final String BACKEND_FACTORY = "backendFactory";
-	public static final String BACKEND_CONFIG = "backendConfig";
-
 	public static final class Factory implements KanjiGuesserFactory {
 
 		@SuppressWarnings("unchecked")
 		@Override
 		public KanjiGuesser getGuesser(IProperties config)
 				throws BadConfigurationException, IOException {
-			String bfcn = config.getRequired(BACKEND_FACTORY, String.class);
+			String bfcn = config.getRequired(ConfigFields.BACKEND_FACTORY,
+					String.class);
 			Class<? extends KanjiGuesserFactory> kgfc;
 			try {
 				kgfc = (Class<? extends KanjiGuesserFactory>) getClass()
 						.getClassLoader().loadClass(bfcn);
-			} catch (ClassNotFoundException e) {
+			} catch (ClassNotFoundException | ClassCastException e) {
 				throw new BadConfigurationException(e);
 			}
 			KanjiGuesserFactory kgf;
@@ -49,8 +47,8 @@ public class PooledGuesser implements KanjiGuesser {
 			} catch (InstantiationException | IllegalAccessException e) {
 				throw new BadConfigurationException(e);
 			}
-			IProperties backendConfig = config.getRequired(BACKEND_CONFIG,
-					IProperties.class);
+			IProperties backendConfig = config.getRequired(
+					ConfigFields.BACKEND_CONFIG, IProperties.class);
 			return new PooledGuesser(kgf, backendConfig, config);
 		}
 
