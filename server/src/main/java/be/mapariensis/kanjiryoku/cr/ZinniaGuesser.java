@@ -112,4 +112,9 @@ public class ZinniaGuesser implements KanjiGuesser {
 	@Override
 	public void close() {
 	}
+
+	@Override
+	public boolean isOpen() {
+		return true;
+	}
 }

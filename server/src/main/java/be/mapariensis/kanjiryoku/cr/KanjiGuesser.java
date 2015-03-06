@@ -15,4 +15,6 @@ public interface KanjiGuesser extends AutoCloseable {
 
 	@Override
 	public void close();
+
+	public boolean isOpen();
 }
