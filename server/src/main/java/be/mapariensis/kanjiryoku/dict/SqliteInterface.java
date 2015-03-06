@@ -196,4 +196,16 @@ public class SqliteInterface implements KanjidicInterface {
 			throw new DictionaryAccessException(e);
 		}
 	}
+
+	@Override
+	public boolean isOpen() {
+		try {
+			return !conn.isClosed();
+		} catch (SQLException e) {
+			log.error(
+					"Failed to check whether database connection still open.",
+					e);
+			return false;
+		}
+	}
 }

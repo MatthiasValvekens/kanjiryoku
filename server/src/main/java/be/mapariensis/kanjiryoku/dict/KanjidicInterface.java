@@ -104,4 +104,9 @@ public interface KanjidicInterface extends AutoCloseable {
 	 */
 	@Override
 	public void close() throws IOException;
+
+	/**
+	 * Check whether the dictionary handle is still open.
+	 */
+	public boolean isOpen();
 }
