@@ -92,4 +92,36 @@ See `kanjiryoku.cfg.sample`.
 
 Problem definition language
 ============================
-Coming soon
+
+A "given" word is marked as follows:
+```
+［reading］kanji
+［ひと］人
+［しょくひん］食品
+```
+For reading problems, the "test" word is marked as follows:
+```
+（reading）｛kanji｝
+（ご）｛五｝
+（しおり）｛栞｝
+```
+For writing problems, the "test" word is marked as follows:
+```
+｛reading｝（kanji）
+｛まる｝（丸）
+｛ほたる｝（蛍）
+```
+
+Some examples of reading problems:
+```
+（ほし）｛星｝が［ひか］光る
+［かん］関（税）｛税｝［きょく］局
+```
+
+Some examples of writing problems:
+```
+［に］二｛そく｝（束）［さんもん］三文
+［くちぎたな］口汚く｛ののし｝（罵）る
+```
+
+For the purposes of this discussion, yojijukugo problems are considered writing problems.
