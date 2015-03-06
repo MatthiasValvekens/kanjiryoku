@@ -1,6 +1,19 @@
 package be.mapariensis.kanjiryoku.config;
 
-import static be.mapariensis.kanjiryoku.config.ConfigFields.*;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.CATEGORY_LIST;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.FILE_ENCODING;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.FILE_ENCODING_DEFAULT;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.FILE_NAME_DIFFICULTY_FORMAT;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.FILE_NAME_DIFFICULTY_FORMAT_DEFAULT;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.FILE_NAME_FORMAT;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.MAX_DIFFICULTY;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.MAX_DIFFICULTY_DEFAULT;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.MIN_DIFFICULTY;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.MIN_DIFFICULTY_DEFAULT;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.PROBLEMS_PER_CATEGORY;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.PROBLEMS_PER_CATEGORY_DEFAULT;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.PSET_SETTINGS_HEADER;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.RESET_AFTER_CATEGORY_SWITCH;
 
 import java.util.Set;
 

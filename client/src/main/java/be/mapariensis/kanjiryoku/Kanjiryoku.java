@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku;
 
 import java.io.IOException;
 import java.net.InetAddress;
+
 import javax.swing.JFrame;
 
 import org.slf4j.Logger;
@@ -15,7 +16,6 @@ public class Kanjiryoku {
 	private static final boolean SKIP_CONNECT_SCREEN = false; // for testing
 																// purposes
 
-	// TODO : allow
 	public static void main(String[] args) {
 		if (SKIP_CONNECT_SCREEN) {
 			JFrame frame;
