@@ -1,0 +1,49 @@
+{
+	"port": 9630,
+	"engine": 
+		{
+			"guesserFactoryClassName": "be.mapariensis.kanjiryoku.cr.pool.PooledGuesser$Factory",
+			"backendFactory": "be.mapariensis.kanjiryoku.cr.ZinniaGuesser$Factory",
+			"backendConfig": {"writingModelPath": "data/writingmodel/hw-ja.model"}
+		},
+	"usernameCharLimit": 10,
+	"problemSets":
+		{
+			"filePathPattern" : "data/problems/problem_${category}_${difficulty}.txt",
+			"problemsPerCategory": 5,
+			"minimalDifficulty": 4,
+			"maximalDifficulty": 10,
+			"fileEncoding": "Shift-JIS",
+			"categories": {
+				"yomi": {"parserFactoryClassName": "be.mapariensis.kanjiryoku.providers.KanjiryokuShindanParser$Factory"},
+				"kaki": {"parserFactoryClassName": "be.mapariensis.kanjiryoku.providers.KanjiryokuShindanParser$Factory"},
+				"yoji": 
+					{
+						"parserFactoryClassName": "be.mapariensis.kanjiryoku.providers.KanjiryokuYojiWrapper$Factory",
+						"filePathPattern" : "data/problems/yojijyukugo_${category}.txt",
+						"fileEncoding": "UTF-8",
+						"parserFactoryConfig":
+							{
+								"kanjidicConfig":
+									{
+										"backendFactory": "be.mapariensis.kanjiryoku.dict.SqliteInterface$Factory",
+										"interfaceClassName": "be.mapariensis.kanjiryoku.dict.pool.PooledDictionary$Factory",
+										"backendConfig": 
+											{
+												"dbFile": "kanjidic.sqlite3",
+												"queryFile": "queries.cfg"
+											}
+									}
+							}
+					}
+			}
+		},
+	"games" : 
+		{
+			"TAKINGTURNS" :
+				{
+					"categories": ["yomi","kaki","yomi"],
+					"enableBatonPass": true,					
+				}
+		}
+}
