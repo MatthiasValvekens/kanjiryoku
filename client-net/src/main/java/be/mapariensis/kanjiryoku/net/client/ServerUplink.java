@@ -4,7 +4,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -25,7 +24,6 @@ import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.model.MessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
-import be.mapariensis.kanjiryoku.net.util.MessageFragmentBuffer;
 
 public class ServerUplink extends Thread implements Closeable {
 	private static final Logger log = LoggerFactory
@@ -71,7 +69,6 @@ public class ServerUplink extends Thread implements Closeable {
 			channel.configureBlocking(false);
 			key = channel.register(selector, SelectionKey.OP_READ
 					| SelectionKey.OP_WRITE);
-			key.attach(new MessageFragmentBuffer(BUFFER_MAX));
 			messageHandler = new MessageHandler(key, BUFFER_MAX);
 		} catch (IOException e) {
 			log.error("Failed to connect.", e);
@@ -80,7 +77,6 @@ public class ServerUplink extends Thread implements Closeable {
 					"Could not connect to server.");
 			return;
 		}
-		ByteBuffer messageBuffer = ByteBuffer.allocateDirect(BUFFER_MAX);
 		while (keepOn) {
 			int readyCount;
 			try {
@@ -101,19 +97,8 @@ public class ServerUplink extends Thread implements Closeable {
 			}
 			if (key.isReadable()) {
 				final List<NetworkMessage> msgs;
-				Object attachment = key.attachment();
-				if (!(attachment instanceof MessageFragmentBuffer)) {
-					log.info("No message fragment buffer in key attachment. Aborting");
-					key.cancel();
-					bridge.getChat().displaySystemMessage(
-							"Client-side network error. Aborting.");
-					bridge.getClient().setLock(true);
-					close();
-					break;
-				}
 				try {
-					msgs = NetworkMessage.readRaw(channel, messageBuffer,
-							(MessageFragmentBuffer) attachment);
+					msgs = messageHandler.readRaw();
 				} catch (IOException ex) { // FIXME : figure out a way to deal
 											// with forcefully closed
 											// connections, and then downgrade

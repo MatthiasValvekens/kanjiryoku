@@ -1,10 +1,18 @@
 package be.mapariensis.kanjiryoku.net.model;
 
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.WritableByteChannel;
+import java.nio.charset.CharsetDecoder;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -22,6 +30,7 @@ public class MessageHandler implements Runnable, Closeable {
 	private final SelectionKey key;
 	private static final byte[] GOODBYE = ServerCommandList.BYE.toString()
 			.getBytes();
+	private final Object readLock = new Object();
 	private final ByteBuffer netIn, netOut;
 
 	public MessageHandler(SelectionKey key, int bufsize) {
@@ -60,7 +69,7 @@ public class MessageHandler implements Runnable, Closeable {
 				try {
 					while (!messages.isEmpty()) {
 						byte[] msg = messages.poll();
-						sendMessageNow(msg, netOut);
+						sendMessageNow(msg);
 					}
 				} catch (IOException e) {
 					log.error("I/O failure while sending messages", e);
@@ -78,16 +87,82 @@ public class MessageHandler implements Runnable, Closeable {
 		key.selector().wakeup();
 	}
 
-	private void sendMessageNow(byte[] msg, ByteBuffer messageBuffer)
-			throws IOException {
-		NetworkMessage.sendRaw((WritableByteChannel) key.channel(),
-				messageBuffer, msg);
+	private void sendMessageNow(byte[] message) throws IOException {
+		for (byte b : message) {
+			if (b == NetworkMessage.EOM)
+				throw new IOException("EOM byte is illegal in messages.");
+		}
+		netOut.clear();
+		netOut.put(message);
+		netOut.put(NetworkMessage.EOM);
+		netOut.flip();
+		WritableByteChannel ch = (WritableByteChannel) key.channel();
+		synchronized (key) {
+			ch.write(netOut);
+		}
+	}
+
+	private final CharsetDecoder decoder = Constants.ENCODING.newDecoder();
+
+	public List<NetworkMessage> readRaw() throws IOException, EOFException {
+		synchronized (readLock) {
+			int bytesRead;
+			ReadableByteChannel ch = (ReadableByteChannel) key.channel();
+			synchronized (key) {
+				bytesRead = ch.read(netIn);
+			}
+			if (bytesRead == -1)
+				throw new EOFException();
+			if (bytesRead == 0)
+				return Arrays.asList(new NetworkMessage());
+
+			// need to remember this for later
+			int finalPosition = netIn.position();
+			netIn.limit(finalPosition);
+			// search backwards until we find the first EOM
+			int lastEom;
+			for (lastEom = netIn.limit() - 1; lastEom >= 0; lastEom--) {
+				netIn.position(lastEom);
+				if (netIn.get() == NetworkMessage.EOM)
+					break;
+			}
+			// no full message received
+			// the position is now at 0
+			if (lastEom == -1) {
+				netIn.compact();
+				return Collections.emptyList();
+			}
+			// the position is one byte after the last EOM
+			// so we can flip, and compact in the end
+			netIn.flip();
+
+			// decode the input into network messages
+			CharBuffer decodedInput = CharBuffer.allocate(bytesRead);
+			// there should not be any incomplete characters,
+			// after all, we cut off at the last EOM
+			decoder.decode(netIn, decodedInput, true);
+			decoder.flush(decodedInput);
+			decodedInput.flip();
+			List<NetworkMessage> result = new ArrayList<NetworkMessage>();
+			while (decodedInput.position() < decodedInput.limit()) {
+				// buildArgs stops when the limit is reached, or when it
+				// reaches EOM
+				result.add(NetworkMessage.buildArgs(decodedInput));
+			}
+			decoder.reset();
+
+			// prepare netIn buffer for next read
+			netIn.limit(finalPosition);
+			netIn.compact();
+
+			return result;
+		}
 	}
 
 	@Override
 	public void close() throws IOException {
 		synchronized (key) {
-			sendMessageNow(GOODBYE, ByteBuffer.allocate(GOODBYE.length + 1));
+			sendMessageNow(GOODBYE);
 		}
 	}
 }

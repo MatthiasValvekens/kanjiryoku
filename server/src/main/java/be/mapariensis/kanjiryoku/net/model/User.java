@@ -5,6 +5,7 @@ import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -149,10 +150,6 @@ public class User {
 					"User {} is being garbage collected, but channel is still open!",
 					handle);
 			try {
-				NetworkMessage.signalProcessingError(channel,
-						new ServerException(
-								"You have been GC'd, page the devs.",
-								ServerException.ERROR_GENERIC));
 				channel.close();
 			} catch (Exception e) {
 			}
