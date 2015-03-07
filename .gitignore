@@ -22,4 +22,4 @@ test_*
 .settings/
 .project
 .classpath
-server/data/
+data/
