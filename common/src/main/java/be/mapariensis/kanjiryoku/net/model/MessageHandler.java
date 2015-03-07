@@ -13,8 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
-import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
-import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 
 public class MessageHandler implements Runnable, Closeable {
 	private static final Logger log = LoggerFactory
@@ -24,11 +22,14 @@ public class MessageHandler implements Runnable, Closeable {
 	private final SelectionKey key;
 	private static final byte[] GOODBYE = ServerCommandList.BYE.toString()
 			.getBytes();
+	private final ByteBuffer netIn, netOut;
 
-	public MessageHandler(SelectionKey key) {
+	public MessageHandler(SelectionKey key, int bufsize) {
 		if (key == null)
 			throw new IllegalArgumentException();
 		this.key = key;
+		this.netIn = ByteBuffer.allocate(bufsize);
+		this.netOut = ByteBuffer.allocate(bufsize);
 	}
 
 	public void enqueue(NetworkMessage message) {
@@ -57,11 +58,9 @@ public class MessageHandler implements Runnable, Closeable {
 			sendingNow = true;
 			if (key.isValid() && key.isWritable()) {
 				try {
-					ByteBuffer messageBuffer = ((NetworkThreadFactory.NetworkThread) Thread
-							.currentThread()).getBuffer();
 					while (!messages.isEmpty()) {
 						byte[] msg = messages.poll();
-						sendMessageNow(msg, messageBuffer);
+						sendMessageNow(msg, netOut);
 					}
 				} catch (IOException e) {
 					log.error("I/O failure while sending messages", e);

@@ -13,6 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +26,6 @@ import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.model.MessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.util.MessageFragmentBuffer;
-import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 
 public class ServerUplink extends Thread implements Closeable {
 	private static final Logger log = LoggerFactory
@@ -55,9 +55,7 @@ public class ServerUplink extends Thread implements Closeable {
 		this.port = port;
 		this.bridge = bridge;
 		this.username = username;
-		threadPool = Executors
-				.newSingleThreadExecutor(new NetworkThreadFactory(BUFFER_MAX,
-						selector));
+		threadPool = Executors.newSingleThreadExecutor();
 	}
 
 	public void setUsername(String username) {
@@ -74,7 +72,7 @@ public class ServerUplink extends Thread implements Closeable {
 			key = channel.register(selector, SelectionKey.OP_READ
 					| SelectionKey.OP_WRITE);
 			key.attach(new MessageFragmentBuffer(BUFFER_MAX));
-			messageHandler = new MessageHandler(key);
+			messageHandler = new MessageHandler(key, BUFFER_MAX);
 		} catch (IOException e) {
 			log.error("Failed to connect.", e);
 			close();
