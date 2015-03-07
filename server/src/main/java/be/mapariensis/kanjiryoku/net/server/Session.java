@@ -58,9 +58,9 @@ public class Session {
 		synchronized (LOCK) {
 			if (u.getSession() == this)
 				return;
-			users.add(u);
-			if (u.getSession() != this)
+			else
 				u.joinSession(this);
+			users.add(u);
 			broadcastHumanMessage(u,
 					String.format("User %s has joined the session.", u.handle));
 			uman.humanMessage(u, "Joined session.");
