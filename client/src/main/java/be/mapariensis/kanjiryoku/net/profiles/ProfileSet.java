@@ -49,14 +49,24 @@ public class ProfileSet extends AbstractListModel<String> {
 		profileNames.addAll(profiles.keySet());
 	}
 
-	public void addProfile(String profileName, String host, int port,
+	public void replaceProfile(String oldProfile, String newProfileName,
+			String host, int port, String username) {
+		profiles.remove(oldProfile);
+		profileNames.remove(oldProfile);
+		putProfile(newProfileName, host, port, username);
+	}
+
+	public void putProfile(String newProfileName, String host, int port,
 			String username) {
-		profiles.put(profileName, new Profile(host, port, username));
-		profileNames.add(profileName);
+		if (!profiles.containsKey(newProfileName))
+			profileNames.add(newProfileName);
+		profiles.put(newProfileName, new Profile(host, port, username));
 		fireContentsChanged(this, 0, profileNames.size());
 	}
 
 	public void removeProfile(String profileName) {
+		if (profileName == null)
+			return;
 		profiles.remove(profileName);
 		profileNames.remove(profileName);
 		fireContentsChanged(this, 0, profileNames.size());

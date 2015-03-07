@@ -20,7 +20,7 @@ public class Kanjiryoku {
 	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);
 	private static final String CONFIG_FILE_NAME = "kanjiclient.cfg";
 
-	public static final String FONT_FAMILY = "Tahoma";
+	public static final String FONT_FAMILY = "Meiryo";
 	public static final int FONT_SIZE = 15;
 
 	public static void main(String[] args) {

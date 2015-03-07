@@ -83,7 +83,7 @@ public class InitWindow {
 		gbc.gridy = 0;
 		gbc.insets = new Insets(0, 0, 0, 10);
 		gbc.weightx = 0.5;
-		frame.add(new JLabel("Connection profile"), gbc);
+		frame.add(new JLabel("Select server"), gbc);
 
 		gbc.gridheight = 3;
 		gbc.gridwidth = 2;
@@ -129,17 +129,42 @@ public class InitWindow {
 		};
 		frame.add(new JButton(connectAction), buttonConstraints);
 		Action addAction = new AbstractAction("Add") {
-
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				new CreateConnectionDialog(frame, profiles).setVisible(true);
+			}
+		};
+		Action editAction = new AbstractAction("Edit") {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String selection = profileList.getSelectedValue();
+				if (selection == null)
+					return;
+				new CreateConnectionDialog(frame, profiles, selection)
+						.setVisible(true);
+			}
+		};
+		Action deleteAction = new AbstractAction("Delete") {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String selection = profileList.getSelectedValue();
+				if (selection == null)
+					return;
+				int response = JOptionPane.showConfirmDialog(frame,
+						"Are you sure?", "Delete", JOptionPane.YES_NO_OPTION,
+						JOptionPane.QUESTION_MESSAGE);
+				if (response == JOptionPane.YES_OPTION)
+					profiles.removeProfile(selection);
 			}
 		};
 		buttonConstraints.gridx = 2;
 		buttonConstraints.gridy = 1;
 		buttonConstraints.fill = GridBagConstraints.NONE;
 		frame.add(new JButton(addAction), buttonConstraints);
-
+		buttonConstraints.gridy++;
+		frame.add(new JButton(editAction), buttonConstraints);
+		buttonConstraints.gridy++;
+		frame.add(new JButton(deleteAction), buttonConstraints);
 		frame.pack();
 	}
 

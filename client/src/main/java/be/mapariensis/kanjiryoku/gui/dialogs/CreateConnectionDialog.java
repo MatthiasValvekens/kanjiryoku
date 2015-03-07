@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.profiles.ProfileSet;
+import be.mapariensis.kanjiryoku.net.profiles.ProfileSet.Profile;
 
 public class CreateConnectionDialog extends JDialog {
 	private static final Logger log = LoggerFactory
@@ -28,6 +29,11 @@ public class CreateConnectionDialog extends JDialog {
 	private static final int FIELD_LEN = 20;
 
 	public CreateConnectionDialog(JFrame parent, final ProfileSet profiles) {
+		this(parent, profiles, null);
+	}
+
+	public CreateConnectionDialog(JFrame parent, final ProfileSet profiles,
+			final String initialProfile) {
 		super(parent, "Register connection profile", true);
 		setLayout(new GridBagLayout());
 		setResizable(false);
@@ -77,7 +83,7 @@ public class CreateConnectionDialog extends JDialog {
 		buttonConstraints.gridy = labelConstraints.gridy;
 		buttonConstraints.weightx = 0.5;
 		buttonConstraints.insets = new Insets(10, 0, 0, 0);
-		Action addAction = new AbstractAction("Add") {
+		Action addAction = new AbstractAction("Confirm") {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -87,8 +93,7 @@ public class CreateConnectionDialog extends JDialog {
 				try {
 					if (user.isEmpty() || profile.isEmpty())
 						throw new RuntimeException("Required field empty");
-
-					profiles.addProfile(profile, host,
+					profiles.replaceProfile(initialProfile, profile, host,
 							Integer.valueOf(port.getText()), user);
 					setVisible(false);
 					dispose();
@@ -102,6 +107,17 @@ public class CreateConnectionDialog extends JDialog {
 		};
 		add(new JButton(addAction), buttonConstraints);
 		username.addActionListener(addAction);
+
+		// initialize fields when appropriate
+		if (initialProfile != null) {
+			Profile p = profiles.get(initialProfile);
+			if (p != null) {
+				profileName.setText(initialProfile);
+				hostname.setText(p.host);
+				port.setText(Integer.toString(p.port));
+				username.setText(p.username);
+			}
+		}
 		pack();
 	}
 
