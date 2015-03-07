@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
+
 import javax.swing.AbstractAction;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -18,6 +19,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 
+import be.mapariensis.kanjiryoku.Kanjiryoku;
 import be.mapariensis.kanjiryoku.gui.dialogs.CreateSessionDialog;
 import be.mapariensis.kanjiryoku.gui.dialogs.SingleInputDialog;
 import be.mapariensis.kanjiryoku.net.client.ServerUplink;
@@ -36,6 +38,7 @@ public class MainWindow extends JFrame implements GUIBridge {
 			throws IOException {
 		this.serverInfoString = String.format("(%s:%s)", addr, port);
 		setTitle(String.format("Kanjiryoku - %s", this.serverInfoString));
+		setIconImage(Kanjiryoku.ICON);
 		setLayout(new FlowLayout());
 		String css;
 		try (InputStream in = MainWindow.class.getClassLoader()

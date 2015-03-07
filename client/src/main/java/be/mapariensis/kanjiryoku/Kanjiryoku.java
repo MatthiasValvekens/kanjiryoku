@@ -1,10 +1,13 @@
 package be.mapariensis.kanjiryoku;
 
 import java.awt.Font;
+import java.awt.Image;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import javax.imageio.ImageIO;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.plaf.FontUIResource;
@@ -19,9 +22,22 @@ import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 public class Kanjiryoku {
 	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);
 	private static final String CONFIG_FILE_NAME = "kanjiclient.cfg";
+	public static final String ICON_FILE = "icon.png";
+	public static final Image ICON;
 
 	public static final String FONT_FAMILY = "Meiryo";
 	public static final int FONT_SIZE = 15;
+
+	static {
+		Image thing = null;
+		try (InputStream is = InitWindow.class.getClassLoader()
+				.getResourceAsStream(ICON_FILE)) {
+			thing = ImageIO.read(is);
+		} catch (IOException | IllegalArgumentException e) {
+			log.warn("Failed to read icon file", e);
+		}
+		ICON = thing;
+	}
 
 	public static void main(String[] args) {
 		// Check for config file on command line

@@ -27,6 +27,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.Kanjiryoku;
 import be.mapariensis.kanjiryoku.config.ConfigManager;
 import be.mapariensis.kanjiryoku.config.ConfigManager.ConfigListener;
 import be.mapariensis.kanjiryoku.gui.dialogs.CreateConnectionDialog;
@@ -37,9 +38,11 @@ import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class InitWindow {
 	private static final Logger log = LoggerFactory.getLogger(InitWindow.class);
-	private final JFrame frame = new JFrame("Connect to Kanjiryoku server");
-	private final ProfileSet profiles;
+
 	public static final String PROFILE_SET_KEY = "profiles";
+
+	private final JFrame frame;
+	private final ProfileSet profiles;
 	private final JButton editButton, deleteButton, connectButton;
 
 	private class ConfigListenerProxy implements ListDataListener {
@@ -68,6 +71,9 @@ public class InitWindow {
 	}
 
 	private InitWindow(ConfigManager manager) throws BadConfigurationException {
+		frame = new JFrame("Connect to Kanjiryoku server");
+		frame.setIconImage(Kanjiryoku.ICON);
+
 		IProperties profileProperties = manager.getCurrentConfig().getTyped(
 				PROFILE_SET_KEY, IProperties.class);
 		if (profileProperties != null) {
