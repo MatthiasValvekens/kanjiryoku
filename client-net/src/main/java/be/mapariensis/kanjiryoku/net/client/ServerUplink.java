@@ -4,7 +4,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -13,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,8 +24,6 @@ import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.model.MessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
-import be.mapariensis.kanjiryoku.net.util.MessageFragmentBuffer;
-import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 
 public class ServerUplink extends Thread implements Closeable {
 	private static final Logger log = LoggerFactory
@@ -55,9 +53,7 @@ public class ServerUplink extends Thread implements Closeable {
 		this.port = port;
 		this.bridge = bridge;
 		this.username = username;
-		threadPool = Executors
-				.newSingleThreadExecutor(new NetworkThreadFactory(BUFFER_MAX,
-						selector));
+		threadPool = Executors.newSingleThreadExecutor();
 	}
 
 	public void setUsername(String username) {
@@ -73,8 +69,7 @@ public class ServerUplink extends Thread implements Closeable {
 			channel.configureBlocking(false);
 			key = channel.register(selector, SelectionKey.OP_READ
 					| SelectionKey.OP_WRITE);
-			key.attach(new MessageFragmentBuffer(BUFFER_MAX));
-			messageHandler = new MessageHandler(key);
+			messageHandler = new MessageHandler(key, BUFFER_MAX);
 		} catch (IOException e) {
 			log.error("Failed to connect.", e);
 			close();
@@ -82,7 +77,6 @@ public class ServerUplink extends Thread implements Closeable {
 					"Could not connect to server.");
 			return;
 		}
-		ByteBuffer messageBuffer = ByteBuffer.allocateDirect(BUFFER_MAX);
 		while (keepOn) {
 			int readyCount;
 			try {
@@ -103,19 +97,8 @@ public class ServerUplink extends Thread implements Closeable {
 			}
 			if (key.isReadable()) {
 				final List<NetworkMessage> msgs;
-				Object attachment = key.attachment();
-				if (!(attachment instanceof MessageFragmentBuffer)) {
-					log.info("No message fragment buffer in key attachment. Aborting");
-					key.cancel();
-					bridge.getChat().displaySystemMessage(
-							"Client-side network error. Aborting.");
-					bridge.getClient().setLock(true);
-					close();
-					break;
-				}
 				try {
-					msgs = NetworkMessage.readRaw(channel, messageBuffer,
-							(MessageFragmentBuffer) attachment);
+					msgs = messageHandler.readRaw();
 				} catch (IOException ex) { // FIXME : figure out a way to deal
 											// with forcefully closed
 											// connections, and then downgrade

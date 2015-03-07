@@ -1,11 +1,14 @@
 package be.mapariensis.kanjiryoku.net.server;
 
+import static be.mapariensis.kanjiryoku.net.Constants.GREETING;
+import static be.mapariensis.kanjiryoku.net.Constants.protocolMajorVersion;
+import static be.mapariensis.kanjiryoku.net.Constants.protocolMinorVersion;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -22,25 +25,22 @@ import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static be.mapariensis.kanjiryoku.net.Constants.*;
 import be.mapariensis.kanjiryoku.config.ConfigFields;
 import be.mapariensis.kanjiryoku.config.ServerConfig;
-import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
+import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
-import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.MessageHandler;
+import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
 import be.mapariensis.kanjiryoku.net.server.handlers.AdminTaskExecutor;
-import be.mapariensis.kanjiryoku.net.util.MessageFragmentBuffer;
-import be.mapariensis.kanjiryoku.net.util.NetworkThreadFactory;
 
 public class ConnectionMonitor extends Thread implements UserManager, Closeable {
 	private static final Logger log = LoggerFactory
@@ -71,8 +71,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				Integer.class, ConfigFields.WORKER_THREADS_DEFAULT);
 		bufferMax = config.getTyped(ConfigFields.WORKER_BUFFER_SIZE,
 				Integer.class, ConfigFields.WORKER_BUFFER_SIZE_DEFAULT);
-		threadPool = Executors.newFixedThreadPool(workerThreads,
-				new NetworkThreadFactory(bufferMax, selector));
+		threadPool = Executors.newFixedThreadPool(workerThreads);
 		sessman = new SessionManagerImpl(config, this);
 		usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT,
 				Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
@@ -94,13 +93,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			}
 			return;
 		}
-		ByteBuffer messageBuffer = ByteBuffer.allocateDirect(bufferMax); // allocate
-																			// one
-																			// buffer
-																			// for
-																			// the
-																			// monitor
-																			// thread
 		while (keepOn) {
 			int readyCount;
 			try {
@@ -129,9 +121,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						ch = ssc.accept();
 						log.info("Accepted connection from peer {}", ch);
 						ch.configureBlocking(false);
-						SelectionKey channelKey = ch.register(selector,
-								SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-						channelKey.attach(new MessageFragmentBuffer(bufferMax));
+						ch.register(selector, SelectionKey.OP_READ
+								| SelectionKey.OP_WRITE);
 						queueMessage(ch, new NetworkMessage(
 								ClientCommandList.SAY, GREETING));
 						queueMessage(ch, new NetworkMessage(
@@ -141,14 +132,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						ch = (SocketChannel) key.channel();
 						List<NetworkMessage> msgs;
 						try {
-							Object attachment = key.attachment();
-							if (!(attachment instanceof MessageFragmentBuffer)) {
-								log.debug("No message fragment buffer in key attachment. Aborting");
-								key.cancel();
-								break;
-							}
-							msgs = NetworkMessage.readRaw(ch, messageBuffer,
-									(MessageFragmentBuffer) attachment);
+							msgs = ensureHandler(ch).readRaw();
 						} catch (IOException ex) { // FIXME : figure out a way
 													// to deal with forcefully
 													// closed connections, and
@@ -231,7 +215,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						strayHandlers.remove(ch);
 						return;
 					}
-					MessageHandler h = new MessageHandler(key);
+					MessageHandler h = new MessageHandler(key, bufferMax);
 					register(new User(handle, ch, h));
 				} else {
 					User u = store.getUser(ch);
@@ -273,7 +257,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			SelectionKey key = ch.keyFor(selector);
 			if (key == null)
 				throw new CancelledKeyException();
-			h = new MessageHandler(key);
+			h = new MessageHandler(key, bufferMax);
 			strayHandlers.put(ch, h);
 		}
 		return h;

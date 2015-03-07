@@ -1,31 +1,18 @@
 package be.mapariensis.kanjiryoku.net.model;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
+import java.nio.CharBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import static be.mapariensis.kanjiryoku.net.Constants.*;
-import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
-import be.mapariensis.kanjiryoku.net.util.MessageFragmentBuffer;
-
 public class NetworkMessage implements Iterable<String>,
 		Comparable<NetworkMessage> {
-	private static final Logger log = LoggerFactory
-			.getLogger(NetworkMessage.class);
 	public static final char ATOMIZER = '"';
 	public static final char DELIMITER = ' ';
 	public static final char ESCAPE_CHAR = '\\';
 	public static final byte EOM = (byte) 0x01;
-	private static final String EOMSTR = new String(new byte[] { EOM });
+	public static final String EOMSTR = new String(new byte[] { EOM });
 
 	private final List<?> args;
 	public final long timestamp;
@@ -59,78 +46,6 @@ public class NetworkMessage implements Iterable<String>,
 		return new NetworkMessage(args.subList(start, end));
 	}
 
-	public static List<NetworkMessage> readRaw(ReadableByteChannel sock,
-			ByteBuffer buf, MessageFragmentBuffer mfb) throws IOException,
-			EOFException {
-		buf.clear();
-		int bytesRead;
-		synchronized (sock) {
-			bytesRead = sock.read(buf);
-		}
-		if (bytesRead == -1)
-			throw new EOFException();
-		if (bytesRead == 0)
-			return Arrays.asList(new NetworkMessage());
-		byte[] msgBytes = new byte[bytesRead];
-		((ByteBuffer) buf.flip()).get(msgBytes); // read from pos zero to
-													// current position
-		String msgString = new String(msgBytes, ENCODING);
-		String[] lines = msgString.split(EOMSTR);
-		ArrayList<NetworkMessage> result = new ArrayList<NetworkMessage>(
-				lines.length);
-		if (msgBytes[msgBytes.length - 1] != EOM) {
-			int i;
-			// find last EOM in message
-			for (i = msgBytes.length - 1; i > 0; i--) {
-				if (msgBytes[i - 1] == EOM)
-					break;
-			}
-			// partial message
-			mfb.postMessage(msgBytes, i, msgBytes.length - i);
-			lines[lines.length - 1] = null; // mark last part as invalid
-		} else if (mfb.readingPartialMessage()) { // submitting final part of
-													// message.
-			// find first EOM in message
-			int i;
-			for (i = 0; i < msgBytes.length; i++) {
-				if (msgBytes[i] == EOM)
-					break;
-			}
-			NetworkMessage msg = mfb.postMessage(msgBytes, 0, i + 1); // ensure
-																		// the
-																		// EOM
-																		// is
-																		// included
-			if (msg == null) {
-				log.error("Expected finalized message, but got null");
-			} else {
-				result.add(msg);
-			}
-			lines[0] = null; // mark first part as invalid
-		}
-
-		for (String line : lines) {
-			if (line == null)
-				continue;
-			result.add(buildArgs(line));
-		}
-		return result;
-	}
-
-	public void sendRaw(WritableByteChannel sock, ByteBuffer buf)
-			throws IOException {
-		buf.clear();
-		String message = toString();
-		if (message.contains(EOMSTR))
-			throw new IOException("EOM byte is illegal in messages.");
-		buf.put(message.getBytes());
-		buf.put(EOM);
-		buf.flip();
-		synchronized (sock) {
-			sock.write(buf);
-		}
-	}
-
 	@Override
 	public String toString() {
 		return toString(0, args.size());
@@ -153,49 +68,20 @@ public class NetworkMessage implements Iterable<String>,
 		return sb.toString();
 	}
 
-	public static void sendRaw(WritableByteChannel sock, ByteBuffer buf,
-			String message) throws IOException {
-		if (message.contains(EOMSTR))
-			throw new IOException("EOM byte is illegal in messages.");
-		sendRaw(sock, buf, message.getBytes(ENCODING));
-	}
-
-	public static void sendRaw(WritableByteChannel sock, ByteBuffer buf,
-			byte[] message) throws IOException {
-		for (byte b : message) {
-			if (b == EOM)
-				throw new IOException("EOM byte is illegal in messages.");
-		}
-		buf.clear();
-		buf.put(message);
-		buf.put(EOM);
-		buf.flip();
-		synchronized (sock) {
-			sock.write(buf);
-		}
-	}
-
-	public static void signalProcessingError(WritableByteChannel sock,
-			ClientServerException ex) throws IOException {
-		signalProcessingError(sock,
-				ByteBuffer.allocate(ex.getMessage().length()), ex);
-	}
-
-	public static void signalProcessingError(WritableByteChannel sock,
-			ByteBuffer buf, ClientServerException ex) throws IOException {
-		sendRaw(sock, buf, ex.getMessage()); // these exception messages are
-												// protocol compliant
+	public static NetworkMessage buildArgs(String in) {
+		return buildArgs(CharBuffer.wrap(in));
 	}
 
 	// TODO unit tests
-	public static NetworkMessage buildArgs(String in) {
-		in = in.trim();
+	public static NetworkMessage buildArgs(CharBuffer in) {
 		List<String> result = new ArrayList<String>();
 		boolean ignoreDelims = false, escape = false;
 		StringBuilder sb = new StringBuilder(in.length());
-		for (int i = 0; i < in.length(); i++) {
-			char cur = in.charAt(i);
-			if (cur == ESCAPE_CHAR) {
+		while (in.position() < in.limit()) {
+			char cur = in.get();
+			if (cur == (char) EOM) {
+				break;
+			} else if (cur == ESCAPE_CHAR) {
 				if (escape)
 					sb.append(ESCAPE_CHAR);
 				else
