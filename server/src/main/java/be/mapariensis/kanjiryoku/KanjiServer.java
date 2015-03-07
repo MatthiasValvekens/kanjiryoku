@@ -43,9 +43,12 @@ public class KanjiServer {
 			break;
 		default:
 			System.err
-					.println("Too many arguments.\n"
-							+ "You may optionally pass a configuration file name on the command line. "
-							+ "The default is " + ConfigFields.CONFIG_FILE_NAME);
+					.println(String
+							.format("Too many arguments.\n"
+									+ "You may optionally pass a configuration file name on the command line. "
+									+ "The default is %s.",
+									ConfigFields.CONFIG_FILE_NAME));
+			return;
 		}
 		final ServerConfigImpl props = new ServerConfigImpl(
 				new IPropertiesImpl(readConfig()));
