@@ -15,10 +15,13 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -37,6 +40,7 @@ public class InitWindow {
 	private final JFrame frame = new JFrame("Connect to Kanjiryoku server");
 	private final ProfileSet profiles;
 	public static final String PROFILE_SET_KEY = "profiles";
+	private final JButton editButton, deleteButton, connectButton;
 
 	private class ConfigListenerProxy implements ListDataListener {
 		private final ConfigListener<JSONObject> l;
@@ -94,13 +98,6 @@ public class InitWindow {
 		profileList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		frame.add(new JScrollPane(profileList), gbc);
 
-		GridBagConstraints buttonConstraints = new GridBagConstraints();
-		buttonConstraints.gridx = 0;
-		buttonConstraints.gridy = 4;
-		buttonConstraints.fill = GridBagConstraints.HORIZONTAL;
-		buttonConstraints.gridwidth = 2;
-		buttonConstraints.weightx = 0.5;
-		buttonConstraints.insets = new Insets(10, 10, 10, 10);
 		Action connectAction = new AbstractAction("Connect") {
 
 			@Override
@@ -127,7 +124,6 @@ public class InitWindow {
 				}
 			}
 		};
-		frame.add(new JButton(connectAction), buttonConstraints);
 		Action addAction = new AbstractAction("Add") {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -157,14 +153,49 @@ public class InitWindow {
 					profiles.removeProfile(selection);
 			}
 		};
-		buttonConstraints.gridx = 2;
-		buttonConstraints.gridy = 1;
-		buttonConstraints.fill = GridBagConstraints.NONE;
-		frame.add(new JButton(addAction), buttonConstraints);
+		GridBagConstraints buttonConstraints = new GridBagConstraints();
+		buttonConstraints.gridx = 0;
+		buttonConstraints.gridy = 4;
+		buttonConstraints.fill = GridBagConstraints.HORIZONTAL;
+		buttonConstraints.gridwidth = 2;
+		buttonConstraints.weightx = 0.5;
+		buttonConstraints.insets = new Insets(5, 10, 10, 10);
+		frame.add(connectButton = new JButton(connectAction), buttonConstraints);
+
+		// button panel
+		JPanel buttonBox = new JPanel(new GridBagLayout());
+		buttonConstraints.gridx = 0;
+		buttonConstraints.gridy = 0;
+		buttonConstraints.fill = GridBagConstraints.HORIZONTAL;
+		buttonConstraints.insets = new Insets(1, 10, 1, 10);
+		buttonBox.add(new JButton(addAction), buttonConstraints);
 		buttonConstraints.gridy++;
-		frame.add(new JButton(editAction), buttonConstraints);
+		buttonBox.add(editButton = new JButton(editAction), buttonConstraints);
 		buttonConstraints.gridy++;
-		frame.add(new JButton(deleteAction), buttonConstraints);
+		buttonBox.add(deleteButton = new JButton(deleteAction),
+				buttonConstraints);
+
+		gbc = new GridBagConstraints();
+		gbc.gridx = 2;
+		gbc.gridy = 1;
+		frame.add(buttonBox, gbc);
+
+		// not available unless something is selected
+		editButton.setEnabled(false);
+		deleteButton.setEnabled(false);
+		connectButton.setEnabled(false);
+		profileList.addListSelectionListener(new ListSelectionListener() {
+
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				if (profileList.getSelectedValue() != null) {
+					editButton.setEnabled(true);
+					deleteButton.setEnabled(true);
+					connectButton.setEnabled(true);
+				}
+			}
+		});
+
 		frame.pack();
 	}
 
