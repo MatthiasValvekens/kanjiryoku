@@ -16,11 +16,12 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ import be.mapariensis.kanjiryoku.net.model.MessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
+import be.mapariensis.kanjiryoku.net.secure.SSLContextUtil;
 import be.mapariensis.kanjiryoku.net.server.handlers.AdminTaskExecutor;
 
 public class ConnectionMonitor extends Thread implements UserManager, Closeable {
@@ -55,9 +57,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final int bufferMax;
 	private final int usernameCharLimit;
 	private final ServerConfig config;
-	// store message handlers for anonymous connections here until they
-	// register/identify
-	private final Map<SocketChannel, MessageHandler> strayHandlers = new ConcurrentHashMap<SocketChannel, MessageHandler>();
+	// SSL-related stuff
+	private final SSLContext sslContext;
+	private final ExecutorService delegatedTaskPool;
 
 	public ConnectionMonitor(ServerConfig config) throws IOException,
 			BadConfigurationException {
@@ -76,6 +78,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT,
 				Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
 		setName("ConnectionMonitor:" + port);
+
+		sslContext = SSLContextUtil.setUp(config);
+		delegatedTaskPool = Executors.newFixedThreadPool(workerThreads);
 	}
 
 	@Override
@@ -103,14 +108,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			}
 			if (readyCount == 0)
 				continue;
-			Iterator<SelectionKey> iter = selector.selectedKeys().iterator();// use
-																				// iterator
-																				// to
-																				// remove
-																				// keys
-																				// after
-																				// handling
-																				// them
+			// use iterator to remove keys after handling them
+			Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
 			while (iter.hasNext()) {
 				SelectionKey key = iter.next();
 				iter.remove();
@@ -121,6 +120,18 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						ch = ssc.accept();
 						log.info("Accepted connection from peer {}", ch);
 						ch.configureBlocking(false);
+						String addr = ch.socket().getInetAddress().toString();
+						int port = ch.socket().getPort();
+
+						SSLEngine engine = sslContext.createSSLEngine(addr,
+								port);
+						engine.setUseClientMode(false);
+
+						// register a message handler
+						MessageHandler h = new MessageHandler(key, bufferMax,
+								engine, delegatedTaskPool);
+						key.attach(h);
+
 						ch.register(selector, SelectionKey.OP_READ
 								| SelectionKey.OP_WRITE);
 						queueMessage(ch, new NetworkMessage(
@@ -132,7 +143,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						ch = (SocketChannel) key.channel();
 						List<NetworkMessage> msgs;
 						try {
-							msgs = ensureHandler(ch).readRaw();
+							MessageHandler h = (MessageHandler) ch.keyFor(
+									selector).attachment();
+							msgs = h.readRaw();
 						} catch (IOException ex) { // FIXME : figure out a way
 													// to deal with forcefully
 													// closed connections, and
@@ -156,7 +169,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					} else if (key.isWritable()) {
 						ch = (SocketChannel) key.channel();
 						// deregister write event
-						MessageHandler h = ensureHandler(ch);
+						MessageHandler h = (MessageHandler) ch.keyFor(selector)
+								.attachment();
 						threadPool.execute(h);
 					}
 
@@ -212,10 +226,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					SelectionKey key = ch.keyFor(selector);
 					if (key == null) {
 						log.error("Key cancelled before registration could complete! Aborting.");
-						strayHandlers.remove(ch);
+						MessageHandler h = (MessageHandler) ch.keyFor(selector)
+								.attachment();
+						h.close();
 						return;
 					}
-					MessageHandler h = new MessageHandler(key, bufferMax);
+					MessageHandler h = (MessageHandler) ch.keyFor(selector)
+							.attachment();
 					register(new User(handle, ch, h));
 				} else {
 					User u = store.getUser(ch);
@@ -246,26 +263,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	}
 
-	private MessageHandler ensureHandler(SocketChannel ch)
-			throws CancelledKeyException {
-		// first try the user store for a handler
-		MessageHandler h = store.getOutbox(ch);
-		// check anonymous handlers next
-		if (h == null)
-			h = strayHandlers.get(ch);
-		if (h == null) {
-			SelectionKey key = ch.keyFor(selector);
-			if (key == null)
-				throw new CancelledKeyException();
-			h = new MessageHandler(key, bufferMax);
-			strayHandlers.put(ch, h);
-		}
-		return h;
-	}
-
 	private void queueMessage(SocketChannel ch, NetworkMessage message) {
 		try {
-			ensureHandler(ch).enqueue(message);
+			MessageHandler h = (MessageHandler) ch.keyFor(selector)
+					.attachment();
+			h.enqueue(message);
 		} catch (CancelledKeyException | NullPointerException ex) {
 			// if we get a CancelledKeyException here, this means the user has
 			// already been deregistered, and
@@ -305,9 +307,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	@Override
 	public void register(User user) throws UserManagementException {
 		store.addUser(user);
-		strayHandlers.remove(user.channel); // ensure the user's outbox is
-											// removed from the stray handler
-											// list
+
 		// message behaviour for remaining messages in the old handler is
 		// undefined now, but this shouldn't really matter
 		messageUser(user, new NetworkMessage(ClientCommandList.WELCOME,
