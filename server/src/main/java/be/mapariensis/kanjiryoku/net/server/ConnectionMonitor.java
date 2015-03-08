@@ -142,11 +142,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					}
 					if (key.isReadable()) {
 						ch = (SocketChannel) key.channel();
-						log.debug("Channel {} is readable.", ch);
 						List<NetworkMessage> msgs;
+						MessageHandler h = (MessageHandler) ch.keyFor(selector)
+								.attachment();
 						try {
-							MessageHandler h = (MessageHandler) ch.keyFor(
-									selector).attachment();
 							msgs = h.readRaw();
 						} catch (IOException ex) { // FIXME : figure out a way
 													// to deal with forcefully
@@ -155,7 +154,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 													// EOFException
 							log.info("Peer {} shut down.",
 									ch.getRemoteAddress());
-							key.cancel();
+							h.close();
 							User u;
 							if ((u = store.getUser(ch)) != null) {
 								deregister(u);
@@ -174,6 +173,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						ch = (SocketChannel) key.channel();
 						MessageHandler h = (MessageHandler) ch.keyFor(selector)
 								.attachment();
+						// TODO: this should really be in a separate thread.
 						if (h.needSend())
 							h.flushMessageQueue();
 					}
@@ -194,6 +194,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			}
 		}
 		threadPool.shutdownNow();
+		delegatedTaskPool.shutdownNow();
 	}
 
 	void stopListening() {

@@ -31,7 +31,7 @@ public class MessageHandler implements Closeable {
 	private static final Logger log = LoggerFactory
 			.getLogger(MessageHandler.class);
 	private volatile boolean requestedTaskExecution = false;
-
+	private final Object APPOUT_LOCK = new Object();
 	private final SelectionKey key;
 	private final ByteBuffer netIn, appIn, appOut, netOut;
 	private final SSLEngine engine;
@@ -66,8 +66,10 @@ public class MessageHandler implements Closeable {
 			if (b == NetworkMessage.EOM)
 				throw new RuntimeException("EOM byte is illegal in messages.");
 		}
-		appOut.put(message);
-		appOut.put(NetworkMessage.EOM);
+		synchronized (APPOUT_LOCK) {
+			appOut.put(message);
+			appOut.put(NetworkMessage.EOM);
+		}
 		key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 		key.selector().wakeup();
 
@@ -77,15 +79,18 @@ public class MessageHandler implements Closeable {
 		return engine;
 	}
 
-	public void flushMessageQueue() { // only allow one sender per socket at a
-										// time
+	public void flushMessageQueue() {
+		// FIXME: Thread-safety: this method might be sending stale data
+		// which should be OK, but it's bad practice still.
+		// Can't fix until the task flushing the message queue is moved to a
+		// separate thread (i.e. not the connection monitor, which can't afford
+		// to block).
 		try {
 			flush();
 			if (!needSend())
 				return;
 			sslWrite();
 			log.debug("SSL write operation done");
-
 		} catch (IOException e) {
 			log.error("I/O failure while sending messages", e);
 		}
@@ -98,7 +103,7 @@ public class MessageHandler implements Closeable {
 	public List<NetworkMessage> readRaw() throws IOException, EOFException {
 		if (engine.isInboundDone())
 			return Collections.emptyList();
-		appIn.clear();
+		appIn.clear(); // FIXME: does this discard anything significant?
 		// read encrypted data
 		// and return the empty list if nothing particularly interesting
 		// was found
@@ -120,7 +125,6 @@ public class MessageHandler implements Closeable {
 		// no full message received
 		// the position is now at 0
 		if (lastEom == -1) {
-			log.debug("No full message.");
 			appIn.compact();
 			return Collections.emptyList();
 		}
@@ -134,33 +138,38 @@ public class MessageHandler implements Closeable {
 		// after all, we cut off at the last EOM
 		decoder.decode(appIn, decodedInput, true);
 		decoder.flush(decodedInput);
+		// prepare netIn buffer for next read
+		appIn.limit(finalPosition);
+		appIn.compact();
+
 		decodedInput.flip();
 		List<NetworkMessage> result = new ArrayList<NetworkMessage>();
+
 		while (decodedInput.position() < decodedInput.limit()) {
 			// buildArgs stops when the limit is reached, or when it
 			// reaches EOM
 			result.add(NetworkMessage.buildArgs(decodedInput));
 		}
-		System.out.println(result);
 		decoder.reset();
-
-		// prepare netIn buffer for next read
-		appIn.limit(finalPosition);
-		appIn.compact();
 		log.debug("remaining appin bytes after rawread: {}", appIn.remaining());
 		return result;
 	}
 
 	@Override
 	public void close() throws IOException {
-		// negotiate end of SSL connection
-		if (!engine.isOutboundDone()) {
-			engine.closeOutbound();
-			while (handshake())
-				;
-		} else if (!engine.isInboundDone()) {
-			engine.closeInbound();
-			handshake();
+		try {
+			// negotiate end of SSL connection
+			if (!engine.isOutboundDone()) {
+				engine.closeOutbound();
+				while (handshake())
+					;
+			} else if (!engine.isInboundDone()) {
+				engine.closeInbound();
+				handshake();
+			}
+		} finally {
+			key.channel().close();
+			key.cancel();
 		}
 	}
 

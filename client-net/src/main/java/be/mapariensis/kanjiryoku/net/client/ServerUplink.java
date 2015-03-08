@@ -113,7 +113,7 @@ public class ServerUplink extends Thread implements Closeable {
 											// with forcefully closed
 											// connections, and then downgrade
 											// this to EOFException
-					key.cancel();
+					suppress(messageHandler);
 					try {
 						log.info("Peer {} shut down.",
 								channel.getRemoteAddress());
