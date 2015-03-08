@@ -70,7 +70,8 @@ public class InitWindow {
 
 	}
 
-	private InitWindow(ConfigManager manager) throws BadConfigurationException {
+	private InitWindow(final ConfigManager manager)
+			throws BadConfigurationException {
 		frame = new JFrame("Connect to Kanjiryoku server");
 		frame.setIconImage(Kanjiryoku.ICON);
 
@@ -113,7 +114,8 @@ public class InitWindow {
 					return;
 				try {
 					MainWindow wind = new MainWindow(
-							InetAddress.getByName(p.host), p.port, p.username);
+							InetAddress.getByName(p.host), p.port, p.username,
+							manager.getSSLContext());
 					frame.setVisible(false);
 					frame.dispose();
 					wind.setVisible(true);

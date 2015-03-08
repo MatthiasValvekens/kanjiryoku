@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku.net.secure;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -38,8 +39,13 @@ public class SSLContextUtil {
 		try {
 			KeyStore ks = KeyStore.getInstance("JKS");
 			KeyStore ts = KeyStore.getInstance("JKS");
-			ks.load(new FileInputStream(ksfile), kspass);
-			ts.load(new FileInputStream(tsfile), tspass);
+
+			try (InputStream in = new FileInputStream(ksfile)) {
+				ks.load(in, kspass);
+			}
+			try (InputStream in = new FileInputStream(tsfile)) {
+				ts.load(in, tspass);
+			}
 
 			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
 			kmf.init(ks, keypass);

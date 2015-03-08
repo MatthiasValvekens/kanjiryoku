@@ -6,8 +6,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.KeyStore;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 
 import javax.imageio.ImageIO;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.plaf.FontUIResource;
@@ -21,7 +29,10 @@ import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 
 public class Kanjiryoku {
 	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);
+	private static final String KEYSTORE_NAME = "kanjiryoku-client.jks";
 	private static final String CONFIG_FILE_NAME = "kanjiclient.cfg";
+	private static final char[] KEYSTORE_PASS = "Cw2krWlMoEOAeCIqJoeB"
+			.toCharArray();
 	public static final String ICON_FILE = "icon.png";
 	public static final Image ICON;
 
@@ -39,7 +50,51 @@ public class Kanjiryoku {
 		ICON = thing;
 	}
 
+	private static SSLContext sslSetUp() throws IOException {
+		log.info("Decrypting SSL key store...");
+
+		try {
+			KeyStore ks = KeyStore.getInstance("JKS");
+			try (InputStream in = Kanjiryoku.class
+					.getResourceAsStream(KEYSTORE_NAME)) {
+				ks.load(in, KEYSTORE_PASS);
+			}
+
+			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+			kmf.init(ks, KEYSTORE_PASS);
+
+			TrustManagerFactory tmf = TrustManagerFactory
+					.getInstance("SunX509");
+			tmf.init(ks);
+
+			// FIXME: Dummy trust manager for testing purposes.
+			X509TrustManager tm = new X509TrustManager() {
+				@Override
+				public void checkClientTrusted(X509Certificate[] chain,
+						String authType) throws CertificateException {
+				}
+
+				@Override
+				public void checkServerTrusted(X509Certificate[] chain,
+						String authType) throws CertificateException {
+				}
+
+				@Override
+				public X509Certificate[] getAcceptedIssuers() {
+					return null;
+				}
+			};
+			SSLContext context = SSLContext.getInstance("TLS");
+			context.init(kmf.getKeyManagers(), new TrustManager[] { tm }, null);
+			log.info("SSL context initialised successfully.");
+			return context;
+		} catch (Exception ex) {
+			throw new IOException(ex);
+		}
+	}
+
 	public static void main(String[] args) {
+		System.setProperty("javax.net.debug", "ssl");
 		// Check for config file on command line
 		Path configFile;
 		switch (args.length) {
@@ -79,7 +134,8 @@ public class Kanjiryoku {
 		UIManager.getLookAndFeelDefaults().put("Label.font", boldfr);
 
 		try {
-			InitWindow.show(new ConfigManager(configFile));
+			SSLContext sslc = sslSetUp();
+			InitWindow.show(new ConfigManager(configFile, sslc));
 		} catch (BadConfigurationException | IOException e) {
 			log.error("Failed to process configuration.", e);
 			return;

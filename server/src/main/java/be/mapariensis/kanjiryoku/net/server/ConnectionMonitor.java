@@ -43,6 +43,7 @@ import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
 import be.mapariensis.kanjiryoku.net.secure.SSLContextUtil;
 import be.mapariensis.kanjiryoku.net.server.handlers.AdminTaskExecutor;
+import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class ConnectionMonitor extends Thread implements UserManager, Closeable {
 	private static final Logger log = LoggerFactory
@@ -54,7 +55,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final Selector selector;
 	private final UserStore store = new UserStore();
 	private final SessionManagerImpl sessman;
-	private final int bufferMax;
 	private final int usernameCharLimit;
 	private final ServerConfig config;
 	// SSL-related stuff
@@ -71,15 +71,14 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		selector = Selector.open();
 		int workerThreads = config.getTyped(ConfigFields.WORKER_THREADS,
 				Integer.class, ConfigFields.WORKER_THREADS_DEFAULT);
-		bufferMax = config.getTyped(ConfigFields.WORKER_BUFFER_SIZE,
-				Integer.class, ConfigFields.WORKER_BUFFER_SIZE_DEFAULT);
 		threadPool = Executors.newFixedThreadPool(workerThreads);
 		sessman = new SessionManagerImpl(config, this);
 		usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT,
 				Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
 		setName("ConnectionMonitor:" + port);
 
-		sslContext = SSLContextUtil.setUp(config);
+		sslContext = SSLContextUtil.setUp(config.getRequired("sslContext",
+				IProperties.class));
 		delegatedTaskPool = Executors.newFixedThreadPool(workerThreads);
 	}
 
@@ -116,7 +115,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				SocketChannel ch = null;
 				try {
 					if (key.isAcceptable()) {
-						assert key.channel() == ssc;
 						ch = ssc.accept();
 						log.info("Accepted connection from peer {}", ch);
 						ch.configureBlocking(false);
@@ -126,21 +124,25 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						SSLEngine engine = sslContext.createSSLEngine(addr,
 								port);
 						engine.setUseClientMode(false);
-
+						engine.setNeedClientAuth(false);
+						engine.setWantClientAuth(false);
 						// register a message handler
-						MessageHandler h = new MessageHandler(key, bufferMax,
-								engine, delegatedTaskPool);
-						key.attach(h);
+						SelectionKey newKey = ch.register(selector,
+								SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+						MessageHandler h = new MessageHandler(newKey, engine,
+								delegatedTaskPool);
+						newKey.attach(h);
+						log.info("Registered message handler.");
 
-						ch.register(selector, SelectionKey.OP_READ
-								| SelectionKey.OP_WRITE);
 						queueMessage(ch, new NetworkMessage(
 								ClientCommandList.SAY, GREETING));
 						queueMessage(ch, new NetworkMessage(
 								ClientCommandList.VERSION,
 								protocolMajorVersion, protocolMinorVersion));
-					} else if (key.isReadable()) {
+					}
+					if (key.isReadable()) {
 						ch = (SocketChannel) key.channel();
+						log.debug("Channel {} is readable.", ch);
 						List<NetworkMessage> msgs;
 						try {
 							MessageHandler h = (MessageHandler) ch.keyFor(
@@ -166,12 +168,14 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 								threadPool
 										.execute(new CommandReceiver(ch, msg));
 						}
-					} else if (key.isWritable()) {
+					}
+					if (key.isWritable()) {
+						key.interestOps(SelectionKey.OP_READ);
 						ch = (SocketChannel) key.channel();
-						// deregister write event
 						MessageHandler h = (MessageHandler) ch.keyFor(selector)
 								.attachment();
-						threadPool.execute(h);
+						if (h.needSend())
+							h.flushMessageQueue();
 					}
 
 				} catch (Exception ex) {
@@ -228,7 +232,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						log.error("Key cancelled before registration could complete! Aborting.");
 						MessageHandler h = (MessageHandler) ch.keyFor(selector)
 								.attachment();
-						h.close();
+						if (h != null)
+							h.close();
 						return;
 					}
 					MessageHandler h = (MessageHandler) ch.keyFor(selector)
