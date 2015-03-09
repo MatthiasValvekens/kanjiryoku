@@ -5,8 +5,8 @@ import java.nio.charset.Charset;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 
 public class Constants {
-	public static final int protocolMajorVersion = 0;
-	public static final int protocolMinorVersion = 6;
+	public static final int protocolMajorVersion = 1;
+	public static final int protocolMinorVersion = 0;
 	public static final Charset ENCODING = Charset.forName("UTF-8");
 	public static final String GREETING = "Kanjiryoku server says hello.\n"
 			+ "Registration command is " + ServerCommandList.REGISTER

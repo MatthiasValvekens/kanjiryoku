@@ -19,7 +19,7 @@ public class ConfigFields {
 	 * The size of the ByteBuffer attached to each worker thread (default 2KB).
 	 */
 	public static final String WORKER_BUFFER_SIZE = "workerBufferSize";
-	public static final int WORKER_BUFFER_SIZE_DEFAULT = 2048;
+	public static final int WORKER_BUFFER_SIZE_DEFAULT = 8192;
 
 	public static final String USERNAME_LIMIT = "usernameCharLimit";
 	public static final int USERNAME_LIMIT_DEFAULT = 10;

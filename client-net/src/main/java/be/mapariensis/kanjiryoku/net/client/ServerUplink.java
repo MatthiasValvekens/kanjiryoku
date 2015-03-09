@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,9 +32,12 @@ public class ServerUplink extends Thread implements Closeable {
 	private static final Logger log = LoggerFactory
 			.getLogger(ServerUplink.class);
 	private static final long SELECT_TIMEOUT = 500;
-	private static final int BUFFER_MAX = 10000;
+	private static final int DELEGATE_TASK_WORKERS = 8;
 	private final ExecutorService threadPool;
+	private final ExecutorService delegatedTaskPool = Executors
+			.newFixedThreadPool(DELEGATE_TASK_WORKERS);
 	private final SocketChannel channel;
+	private final SSLContext context;
 	private volatile boolean keepOn = true;
 	private boolean registerAttempted = false; // marks whether the client has
 												// attempted to register with
@@ -46,7 +52,7 @@ public class ServerUplink extends Thread implements Closeable {
 	private final UIBridge bridge;
 
 	public ServerUplink(InetAddress addr, int port, String username,
-			UIBridge bridge) throws IOException {
+			UIBridge bridge, SSLContext context) throws IOException {
 		channel = SocketChannel.open();
 		selector = Selector.open();
 		this.addr = addr;
@@ -54,10 +60,19 @@ public class ServerUplink extends Thread implements Closeable {
 		this.bridge = bridge;
 		this.username = username;
 		threadPool = Executors.newSingleThreadExecutor();
+		this.context = context;
 	}
 
 	public void setUsername(String username) {
 		this.username = username;
+	}
+
+	public void register() {
+		if (!registerAttempted) {
+			enqueueMessage(new NetworkMessage(ServerCommandList.REGISTER,
+					username));
+			registerAttempted = true;
+		}
 	}
 
 	@Override
@@ -67,9 +82,12 @@ public class ServerUplink extends Thread implements Closeable {
 			channel.configureBlocking(true);
 			channel.connect(new InetSocketAddress(addr, port));
 			channel.configureBlocking(false);
-			key = channel.register(selector, SelectionKey.OP_READ
-					| SelectionKey.OP_WRITE);
-			messageHandler = new MessageHandler(key, BUFFER_MAX);
+			key = channel.register(selector, SelectionKey.OP_READ);
+			SSLEngine engine = context.createSSLEngine(addr.toString(), port);
+			engine.setUseClientMode(true);
+			messageHandler = new MessageHandler(key, engine, delegatedTaskPool);
+			bridge.getChat().displaySystemMessage("Connecting to server...");
+			messageHandler.send(new NetworkMessage(ServerCommandList.HELLO));
 		} catch (IOException e) {
 			log.error("Failed to connect.", e);
 			close();
@@ -85,9 +103,10 @@ public class ServerUplink extends Thread implements Closeable {
 				log.error("I/O error during selection", e);
 				break;
 			}
+			if (!keepOn)
+				break;
 			if (readyCount == 0)
 				continue;
-
 			// clear event
 			selector.selectedKeys().remove(key);
 
@@ -103,7 +122,7 @@ public class ServerUplink extends Thread implements Closeable {
 											// with forcefully closed
 											// connections, and then downgrade
 											// this to EOFException
-					key.cancel();
+					suppress(messageHandler);
 					try {
 						log.info("Peer {} shut down.",
 								channel.getRemoteAddress());
@@ -126,12 +145,7 @@ public class ServerUplink extends Thread implements Closeable {
 			}
 
 			if (key.isWritable()) {
-				if (!registerAttempted) {
-					enqueueMessage(new NetworkMessage(
-							ServerCommandList.REGISTER, username));
-					registerAttempted = true;
-				}
-				threadPool.execute(messageHandler);
+				messageHandler.flushMessageQueue();
 			}
 		}
 	}
@@ -190,7 +204,7 @@ public class ServerUplink extends Thread implements Closeable {
 
 	public void enqueueMessage(NetworkMessage msg) {
 		if (messageHandler != null)
-			messageHandler.enqueue(msg);
+			messageHandler.send(msg);
 	}
 
 	public void enqueueMessage(NetworkMessage msg, ServerResponseHandler rh) {
