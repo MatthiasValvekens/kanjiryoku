@@ -345,8 +345,18 @@ public enum ServerCommand {
 			userman.adminCommand(client, id, commandPart);
 		}
 
-	};
+	},
+	HELLO {
 
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException, BadConfigurationException {
+			// dummy command to initiate connection
+			System.err.println("Client says hello.");
+		}
+
+	};
 	public abstract void execute(NetworkMessage message, User client,
 			UserManager userman, SessionManager sessman)
 			throws ServerException, BadConfigurationException;

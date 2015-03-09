@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.net.ssl.SSLContext;
+
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +24,7 @@ public class ConfigManager {
 	private final Path configFile;
 	private JSONObject currentConfig;
 	private final ExecutorService saver = Executors.newSingleThreadExecutor();
+	private final SSLContext sslc;
 
 	private class SaveThread implements Runnable {
 		@Override
@@ -61,14 +64,15 @@ public class ConfigManager {
 		return config;
 	}
 
-	public ConfigManager(Path configFile) throws BadConfigurationException,
-			IOException {
+	public ConfigManager(Path configFile, SSLContext sslc)
+			throws BadConfigurationException, IOException {
 		this.configFile = configFile;
 		if (Files.exists(configFile)) {
 			currentConfig = new JSONObject(readConfig());
 		} else {
 			currentConfig = new JSONObject();
 		}
+		this.sslc = sslc;
 	}
 
 	public <T> ConfigListener<T> watch(String key) {
@@ -77,5 +81,9 @@ public class ConfigManager {
 
 	public IProperties getCurrentConfig() {
 		return new IPropertiesImpl(currentConfig);
+	}
+
+	public SSLContext getSSLContext() {
+		return sslc;
 	}
 }

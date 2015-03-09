@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
 
+import javax.net.ssl.SSLContext;
 import javax.swing.AbstractAction;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -34,8 +35,8 @@ public class MainWindow extends JFrame implements GUIBridge {
 	private final String serverInfoString;
 	private final JMenuBar menuBar;
 
-	public MainWindow(InetAddress addr, int port, String username)
-			throws IOException {
+	public MainWindow(InetAddress addr, int port, String username,
+			SSLContext sslc) throws IOException {
 		this.serverInfoString = String.format("(%s:%s)", addr, port);
 		setTitle(String.format("Kanjiryoku - %s", this.serverInfoString));
 		setIconImage(Kanjiryoku.ICON);
@@ -57,7 +58,7 @@ public class MainWindow extends JFrame implements GUIBridge {
 		final HTMLChatPanel chatComponent = new HTMLChatPanel(this, css);
 		chat = chatComponent;
 		add(new ChatPanel(this, chatComponent));
-		serv = new ServerUplink(addr, port, username, this);
+		serv = new ServerUplink(addr, port, username, this, sslc);
 		gci = new GamePanel(this);
 		add(gci);
 		serv.start();

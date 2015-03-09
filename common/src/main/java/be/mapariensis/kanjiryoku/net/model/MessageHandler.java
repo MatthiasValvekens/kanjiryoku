@@ -3,166 +3,381 @@ package be.mapariensis.kanjiryoku.net.model;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
+import java.net.SocketException;
+import java.nio.BufferOverflowException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.WritableByteChannel;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.Constants;
-import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 
-public class MessageHandler implements Runnable, Closeable {
+// The SSL support draws heavily upon Chapter 8 of "Fundamental Networking in Java"
+public class MessageHandler implements Closeable {
 	private static final Logger log = LoggerFactory
 			.getLogger(MessageHandler.class);
-	private final Queue<byte[]> messages = new ConcurrentLinkedQueue<byte[]>();
-	private volatile boolean sendingNow = false;
+	private volatile boolean requestedTaskExecution = false;
+	private final Object APPOUT_LOCK = new Object();
 	private final SelectionKey key;
-	private static final byte[] GOODBYE = ServerCommandList.BYE.toString()
-			.getBytes();
-	private final Object readLock = new Object();
-	private final ByteBuffer netIn, netOut;
+	private final ByteBuffer netIn, appIn, appOut, netOut;
+	private final SSLEngine engine;
+	private final ExecutorService delegatedTaskPool;
+	private SSLEngineResult sslres = null;
 
-	public MessageHandler(SelectionKey key, int bufsize) {
+	public MessageHandler(SelectionKey key, SSLEngine engine,
+			ExecutorService delegatedTaskPool) {
 		if (key == null)
 			throw new IllegalArgumentException();
 		this.key = key;
-		this.netIn = ByteBuffer.allocate(bufsize);
-		this.netOut = ByteBuffer.allocate(bufsize);
+		int netbufsize = engine.getSession().getPacketBufferSize();
+		int appbufsize = engine.getSession().getApplicationBufferSize();
+		log.trace("Buffers initialised to: net: {}, app: {}", netbufsize,
+				appbufsize);
+		this.netIn = ByteBuffer.allocate(netbufsize);
+		this.appIn = ByteBuffer.allocate(appbufsize + 256);
+		this.appOut = ByteBuffer.allocate(appbufsize);
+		this.netOut = ByteBuffer.allocate(netbufsize);
+		this.engine = engine;
+		this.delegatedTaskPool = delegatedTaskPool;
 	}
 
+	/**
+	 * Enqueue a message without flushing the message buffer
+	 * 
+	 * @param message
+	 */
 	public void enqueue(NetworkMessage message) {
 		if (message == null || message.isEmpty())
 			return;
 		enqueue(message.toString().getBytes(Constants.ENCODING));
 	}
 
-	protected void enqueue(byte[] bytes) {
-		synchronized (key) {
-			messages.add(bytes);
-			key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-			key.selector().wakeup();
-		}
-	}
-
-	public boolean isEmpty() {
-		return messages.isEmpty();
-	}
-
-	@Override
-	public void run() { // only allow one sender per socket at a time
-		if (messages.isEmpty() || sendingNow)
-			return;
-		synchronized (key) {
-			sendingNow = true;
-			if (key.isValid() && key.isWritable()) {
-				try {
-					while (!messages.isEmpty()) {
-						byte[] msg = messages.poll();
-						sendMessageNow(msg);
-					}
-				} catch (IOException e) {
-					log.error("I/O failure while sending messages", e);
-				} finally {
-					sendingNow = false;
-					key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-				}
-			} else {
-				log.error(
-						"Channel no longer available for writing. Validity {}, writability {}.",
-						key.isValid(), key.isWritable());
-				sendingNow = false;
-			}
-		}
-		key.selector().wakeup();
-	}
-
-	private void sendMessageNow(byte[] message) throws IOException {
+	protected void enqueue(byte[] message) {
 		for (byte b : message) {
 			if (b == NetworkMessage.EOM)
-				throw new IOException("EOM byte is illegal in messages.");
+				throw new RuntimeException("EOM byte is illegal in messages.");
 		}
-		netOut.clear();
-		netOut.put(message);
-		netOut.put(NetworkMessage.EOM);
-		netOut.flip();
-		WritableByteChannel ch = (WritableByteChannel) key.channel();
-		synchronized (key) {
-			ch.write(netOut);
+		synchronized (APPOUT_LOCK) {
+			appOut.put(message);
+			appOut.put(NetworkMessage.EOM);
 		}
+	}
+
+	/**
+	 * Buffer a message and flush the buffer while holding the lock on this
+	 * handler's application output buffer.
+	 * 
+	 * @param message
+	 */
+	public void send(NetworkMessage message) {
+		if (message == null || message.isEmpty())
+			return;
+		send(message.toString().getBytes(Constants.ENCODING));
+	}
+
+	protected void send(byte[] message) {
+		for (byte b : message) {
+			if (b == NetworkMessage.EOM)
+				throw new RuntimeException("EOM byte is illegal in messages.");
+		}
+		synchronized (APPOUT_LOCK) {
+			appOut.put(message);
+			appOut.put(NetworkMessage.EOM);
+			flushMessageQueue();
+		}
+	}
+
+	public SSLEngine getSSLEngine() {
+		return engine;
+	}
+
+	public void flushMessageQueue() {
+		try {
+			flush();
+			sslWrite();
+			log.trace("After write: ops: {} netOut pos: {} appOut pos: {}",
+					key.interestOps(), netOut.position(), appOut.position());
+			// unset OP_WRITE in case the handshake() method
+			// registered for it after noticing no handshaking was being done.
+			if (!needSend()) {
+				synchronized (key) {
+					key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+				}
+			}
+			return;
+		} catch (IOException e) {
+			log.error("I/O failure while sending messages", e);
+		}
+
+		key.selector().wakeup();
 	}
 
 	private final CharsetDecoder decoder = Constants.ENCODING.newDecoder();
 
 	public List<NetworkMessage> readRaw() throws IOException, EOFException {
-		synchronized (readLock) {
-			int bytesRead;
-			ReadableByteChannel ch = (ReadableByteChannel) key.channel();
-			synchronized (key) {
-				bytesRead = ch.read(netIn);
-			}
-			if (bytesRead == -1)
-				throw new EOFException();
-			if (bytesRead == 0)
-				return Arrays.asList(new NetworkMessage());
+		if (engine.isInboundDone())
+			throw new EOFException();
+		// read encrypted data
+		// and return the empty list if nothing particularly interesting
+		// was found
+		if (!sslRead())
+			return Collections.emptyList();
 
-			// need to remember this for later
-			int finalPosition = netIn.position();
-			netIn.limit(finalPosition);
-			// search backwards until we find the first EOM
-			int lastEom;
-			for (lastEom = netIn.limit() - 1; lastEom >= 0; lastEom--) {
-				netIn.position(lastEom);
-				if (netIn.get() == NetworkMessage.EOM)
-					break;
-			}
-			// no full message received
-			// the position is now at 0
-			if (lastEom == -1) {
-				netIn.compact();
-				return Collections.emptyList();
-			}
-			// the position is one byte after the last EOM
-			// so we can flip, and compact in the end
-			netIn.flip();
-
-			// decode the input into network messages
-			CharBuffer decodedInput = CharBuffer.allocate(bytesRead);
-			// there should not be any incomplete characters,
-			// after all, we cut off at the last EOM
-			decoder.decode(netIn, decodedInput, true);
-			decoder.flush(decodedInput);
-			decodedInput.flip();
-			List<NetworkMessage> result = new ArrayList<NetworkMessage>();
-			while (decodedInput.position() < decodedInput.limit()) {
-				// buildArgs stops when the limit is reached, or when it
-				// reaches EOM
-				result.add(NetworkMessage.buildArgs(decodedInput));
-			}
-			decoder.reset();
-
-			// prepare netIn buffer for next read
-			netIn.limit(finalPosition);
-			netIn.compact();
-
-			return result;
+		// process decrypted data
+		// need to remember this for later
+		int finalPosition = appIn.position();
+		appIn.limit(finalPosition);
+		// search backwards until we find the first EOM
+		int lastEom;
+		for (lastEom = appIn.limit() - 1; lastEom >= 0; lastEom--) {
+			appIn.position(lastEom);
+			if (appIn.get() == NetworkMessage.EOM)
+				break;
 		}
+		// no full message received
+		// the position is now at 0
+		if (lastEom == -1) {
+			appIn.compact();
+			return Collections.emptyList();
+		}
+		// the position is one byte after the last EOM
+		// so we can flip, and compact in the end
+		appIn.flip();
+
+		// decode the input into network messages
+		CharBuffer decodedInput = CharBuffer.allocate(appIn.limit());
+		// there should not be any incomplete characters,
+		// after all, we cut off at the last EOM
+		decoder.decode(appIn, decodedInput, true);
+		decoder.flush(decodedInput);
+		// prepare netIn buffer for next read
+		appIn.limit(finalPosition);
+		appIn.compact();
+
+		decodedInput.flip();
+		List<NetworkMessage> result = new ArrayList<NetworkMessage>();
+
+		while (decodedInput.position() < decodedInput.limit()) {
+			// buildArgs stops when the limit is reached, or when it
+			// reaches EOM
+			result.add(NetworkMessage.buildArgs(decodedInput));
+		}
+		decoder.reset();
+		return result;
 	}
 
 	@Override
 	public void close() throws IOException {
-		synchronized (key) {
-			sendMessageNow(GOODBYE);
+		try {
+			// negotiate end of SSL connection
+			if (!engine.isOutboundDone()) {
+				engine.closeOutbound();
+				while (handshake())
+					;
+			} else if (!engine.isInboundDone()) {
+				engine.closeInbound();
+				handshake();
+			}
+		} finally {
+			key.channel().close();
+			key.cancel();
+		}
+	}
+
+	private boolean sslRead() throws IOException {
+		int bytesRead;
+		ReadableByteChannel ch = (ReadableByteChannel) key.channel();
+		bytesRead = ch.read(netIn);
+		if (bytesRead == -1)
+			throw new EOFException();
+		if (bytesRead == 0)
+			return false;
+
+		// decrypt data
+		netIn.flip();
+		sslres = engine.unwrap(netIn, appIn);
+		netIn.compact(); // safeguard against partial reads
+		switch (sslres.getStatus()) {
+		case BUFFER_UNDERFLOW:
+			return false;
+		case BUFFER_OVERFLOW:
+			throw new BufferOverflowException();
+		case CLOSED:
+			((SocketChannel) key.channel()).socket().shutdownInput();
+			break;
+		case OK:
+			break;
+		}
+
+		while (handshake())
+			;
+
+		// EOF conditions
+		if (bytesRead == -1)
+			engine.closeInbound();
+		if (engine.isInboundDone())
+			return false;
+		return true;
+	}
+
+	private void flush() throws IOException {
+		if (netOut.position() == 0) {
+			log.trace("Nothing to flush");
+			return;
+		}
+		netOut.flip();
+		SocketChannel ch = (SocketChannel) key.channel();
+		log.trace("Will attempt to write {} bytes. Writability {}.",
+				netOut.limit(), key.isWritable());
+		ch.write(netOut);
+		netOut.compact();
+		if (netOut.position() > 0) {
+			// short write
+			log.trace("Short write! {} bytes left.", netOut.position());
+			synchronized (key) {
+				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+			}
+		} else {
+			synchronized (key) {
+				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+			}
+		}
+	}
+
+	private void sslWrite() throws IOException {
+		appOut.flip();
+		sslres = engine.wrap(appOut, netOut);
+		appOut.compact();
+
+		switch (sslres.getStatus()) {
+		case BUFFER_UNDERFLOW:
+			throw new BufferUnderflowException();
+		case BUFFER_OVERFLOW:
+			throw new BufferOverflowException();
+		case CLOSED:
+			throw new SSLException("SSL engine closed.");
+		case OK:
+			break;
+		}
+
+		while (handshake())
+			;
+		flush();
+	}
+
+	private boolean handshake() throws IOException {
+		SocketChannel ch = (SocketChannel) key.channel();
+		log.trace("HS: {}", engine.getHandshakeStatus());
+		switch (engine.getHandshakeStatus()) {
+		case NEED_TASK:
+			if (!requestedTaskExecution) {
+				delegatedTaskPool.execute(new DelegatedTaskWorker());
+				requestedTaskExecution = true;
+			}
+			return false;
+		case NEED_UNWRAP:
+			if (!engine.isInboundDone()) {
+				ch.read(netIn);
+			}
+			netIn.flip();
+			log.trace("Unwrapping...");
+			sslres = engine.unwrap(netIn, appIn);
+			log.trace("Unwrapping done.");
+			netIn.compact();
+			break;
+		case NEED_WRAP:
+			appOut.flip();
+			flush();
+			log.trace("Wrapping...");
+			sslres = engine.wrap(appOut, netOut);
+			log.trace("Wrapping done.");
+			appOut.compact();
+			if (sslres.getStatus() == SSLEngineResult.Status.CLOSED) {
+				try {
+					flush();
+				} catch (SocketException ex) {
+					log.trace("Peer closed socked without waiting for close_notify.");
+				}
+			} else {
+				log.trace("Flushing after wrap");
+				// exceptions should be allowed to propagate.
+				flush();
+			}
+			break;
+		case FINISHED:
+		case NOT_HANDSHAKING:
+			// register for OP_WRITE
+			// The reason we do this here is because
+			// IF there's any data left in the application buffer,
+			// the application should register for OP_WRITE to finish its write
+			// However, when this is done while the SSL engine is waiting for
+			// handshake data
+			// this wastes CPU cycles by attempting (and failing) to move data
+			// from appOut to netOut
+
+			// Should the client not have anything to write, the next call to
+			// flushMessageQueue() will set this straight
+			synchronized (key) {
+				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+			}
+			return false;
+		}
+
+		log.trace("SR: {}", sslres.getStatus());
+		switch (sslres.getStatus()) {
+		case BUFFER_UNDERFLOW:
+			key.interestOps(SelectionKey.OP_READ);
+		case BUFFER_OVERFLOW:
+			return false;
+		case CLOSED:
+			if (engine.isOutboundDone()) {
+				ch.socket().shutdownOutput();
+			}
+			return false;
+		case OK:
+			break;
+		}
+		return true;
+	}
+
+	public boolean needSend() {
+		return netOut.position() > 0 || appOut.position() > 0;
+	}
+
+	private class DelegatedTaskWorker implements Runnable {
+		@Override
+		public void run() {
+			log.trace("Running delegated task...");
+			// set interestOps to clear read and write
+			key.interestOps(0);
+
+			Runnable task;
+			while ((task = engine.getDelegatedTask()) != null) {
+				task.run();
+			}
+
+			// restore ops, the SSL engine might want to read/write something
+			// after this.
+			// Calling the handshake method from this thread would be dangerous.
+			synchronized (key) {
+				key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+			}
+			requestedTaskExecution = false;
+			log.trace("Task finished");
 		}
 	}
 }
