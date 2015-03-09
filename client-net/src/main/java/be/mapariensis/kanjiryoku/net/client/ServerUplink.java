@@ -25,7 +25,8 @@ import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
-import be.mapariensis.kanjiryoku.net.model.MessageHandler;
+import be.mapariensis.kanjiryoku.net.model.IMessageHandler;
+import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public class ServerUplink extends Thread implements Closeable {
@@ -47,7 +48,7 @@ public class ServerUplink extends Thread implements Closeable {
 	private final InetAddress addr;
 	private final int port;
 	private String username;
-	private MessageHandler messageHandler;
+	private IMessageHandler messageHandler;
 	private SelectionKey key;
 	private final UIBridge bridge;
 
@@ -85,7 +86,7 @@ public class ServerUplink extends Thread implements Closeable {
 			key = channel.register(selector, SelectionKey.OP_READ);
 			SSLEngine engine = context.createSSLEngine(addr.toString(), port);
 			engine.setUseClientMode(true);
-			messageHandler = new MessageHandler(key, engine, delegatedTaskPool);
+			messageHandler = new SSLMessageHandler(key, engine, delegatedTaskPool);
 			bridge.getChat().displaySystemMessage("Connecting to server...");
 			messageHandler.send(new NetworkMessage(ServerCommandList.HELLO));
 		} catch (IOException e) {

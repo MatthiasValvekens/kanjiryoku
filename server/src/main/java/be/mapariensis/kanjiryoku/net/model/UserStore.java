@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
-import be.mapariensis.kanjiryoku.net.model.MessageHandler;
 
 public final class UserStore implements Iterable<User> {
 	private final Map<SocketChannel, User> userConnMap = new ConcurrentHashMap<SocketChannel, User>();
@@ -61,14 +60,14 @@ public final class UserStore implements Iterable<User> {
 		return userConnMap.get(peer);
 	}
 
-	public MessageHandler getOutbox(SocketChannel channel) {
+	public IMessageHandler getOutbox(SocketChannel channel) {
 		User u = userConnMap.get(channel);
 		return u == null ? null : u.outbox;
 	}
 
-	public MessageHandler requireOutbox(SocketChannel channel)
+	public IMessageHandler requireOutbox(SocketChannel channel)
 			throws UserManagementException {
-		MessageHandler h = userConnMap.get(channel).outbox;
+		IMessageHandler h = userConnMap.get(channel).outbox;
 		if (h == null)
 			throw new UserManagementException("No user bound to this peer.");
 		else
