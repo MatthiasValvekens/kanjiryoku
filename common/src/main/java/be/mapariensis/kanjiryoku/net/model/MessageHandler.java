@@ -102,7 +102,7 @@ public class MessageHandler implements Closeable {
 
 	public List<NetworkMessage> readRaw() throws IOException, EOFException {
 		if (engine.isInboundDone())
-			return Collections.emptyList();
+			throw new EOFException();
 		// read encrypted data
 		// and return the empty list if nothing particularly interesting
 		// was found
@@ -307,6 +307,10 @@ public class MessageHandler implements Closeable {
 		return true;
 	}
 
+	public boolean needSend() {
+		return netOut.position() > 0 || appOut.position() > 0;
+	}
+
 	private class DelegatedTaskWorker implements Runnable {
 		@Override
 		public void run() {
@@ -327,9 +331,5 @@ public class MessageHandler implements Closeable {
 			requestedTaskExecution = false;
 			log.debug("Task finished");
 		}
-	}
-
-	public boolean needSend() {
-		return netOut.position() > 0 || appOut.position() > 0;
 	}
 }

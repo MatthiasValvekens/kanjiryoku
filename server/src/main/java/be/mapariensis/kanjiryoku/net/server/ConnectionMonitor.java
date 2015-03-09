@@ -114,6 +114,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				iter.remove();
 				SocketChannel ch = null;
 				try {
+
 					if (key.isAcceptable()) {
 						ch = ssc.accept();
 						log.info("Accepted connection from peer {}", ch);
@@ -154,7 +155,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 													// EOFException
 							log.info("Peer {} shut down.",
 									ch.getRemoteAddress());
-							h.close();
 							User u;
 							if ((u = store.getUser(ch)) != null) {
 								deregister(u);
@@ -247,7 +247,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 							log.info(
 									"Gracefully closing {} disconnected with BYE",
 									ch);
-							closeQuietly(ch);
+							MessageHandler h = (MessageHandler) ch.keyFor(
+									selector).attachment();
+							h.close();
 						} else
 							throw new UserManagementException(
 									"You must register before using any command other than BYE or REGISTER");
@@ -342,7 +344,14 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 		store.removeUser(user);
 		log.info("Deregistered user {}", user);
-		closeQuietly(user.channel);
+		try {
+			((MessageHandler) user.channel.keyFor(selector).attachment())
+					.close();
+		} catch (IOException e) {
+			log.warn("Error while closing messageHandler", e);
+		} finally {
+			closeQuietly(user.channel);
+		}
 		if (nosession)
 			lobbyBroadcast(user, new NetworkMessage(ClientCommandList.SAY,
 					String.format("User %s has disconnected.", username)));

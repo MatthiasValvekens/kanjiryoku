@@ -96,7 +96,6 @@ public class ServerUplink extends Thread implements Closeable {
 			}
 			if (readyCount == 0)
 				continue;
-
 			// clear event
 			selector.selectedKeys().remove(key);
 
@@ -135,7 +134,6 @@ public class ServerUplink extends Thread implements Closeable {
 			}
 
 			if (key.isWritable()) {
-				key.interestOps(SelectionKey.OP_READ);
 				if (!registerAttempted) {
 					enqueueMessage(new NetworkMessage(
 							ServerCommandList.REGISTER, username));
