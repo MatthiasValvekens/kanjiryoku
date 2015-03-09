@@ -74,11 +74,11 @@ public class ServerUplink extends Thread implements Closeable {
 			channel.configureBlocking(true);
 			channel.connect(new InetSocketAddress(addr, port));
 			channel.configureBlocking(false);
-			key = channel.register(selector, SelectionKey.OP_READ
-					| SelectionKey.OP_WRITE);
+			key = channel.register(selector, SelectionKey.OP_READ);
 			SSLEngine engine = context.createSSLEngine(addr.toString(), port);
 			engine.setUseClientMode(true);
 			messageHandler = new MessageHandler(key, engine, delegatedTaskPool);
+			messageHandler.send(new NetworkMessage(ServerCommandList.HELLO));
 		} catch (IOException e) {
 			log.error("Failed to connect.", e);
 			close();
@@ -94,6 +94,8 @@ public class ServerUplink extends Thread implements Closeable {
 				log.error("I/O error during selection", e);
 				break;
 			}
+			if (!keepOn)
+				break;
 			if (readyCount == 0)
 				continue;
 			// clear event
@@ -139,8 +141,7 @@ public class ServerUplink extends Thread implements Closeable {
 							ServerCommandList.REGISTER, username));
 					registerAttempted = true;
 				}
-				if (messageHandler.needSend())
-					messageHandler.flushMessageQueue();
+				messageHandler.flushMessageQueue();
 			}
 		}
 	}
@@ -199,7 +200,7 @@ public class ServerUplink extends Thread implements Closeable {
 
 	public void enqueueMessage(NetworkMessage msg) {
 		if (messageHandler != null)
-			messageHandler.enqueue(msg);
+			messageHandler.send(msg);
 	}
 
 	public void enqueueMessage(NetworkMessage msg, ServerResponseHandler rh) {

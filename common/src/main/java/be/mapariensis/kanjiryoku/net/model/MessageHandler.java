@@ -45,7 +45,7 @@ public class MessageHandler implements Closeable {
 		this.key = key;
 		int netbufsize = engine.getSession().getPacketBufferSize();
 		int appbufsize = engine.getSession().getApplicationBufferSize();
-		log.debug("Buffers initialised to: net: {}, app: {}", netbufsize,
+		log.trace("Buffers initialised to: net: {}, app: {}", netbufsize,
 				appbufsize);
 		this.netIn = ByteBuffer.allocate(netbufsize);
 		this.appIn = ByteBuffer.allocate(appbufsize + 256);
@@ -55,6 +55,11 @@ public class MessageHandler implements Closeable {
 		this.delegatedTaskPool = delegatedTaskPool;
 	}
 
+	/**
+	 * Enqueue a message without flushing the message buffer
+	 * 
+	 * @param message
+	 */
 	public void enqueue(NetworkMessage message) {
 		if (message == null || message.isEmpty())
 			return;
@@ -70,9 +75,30 @@ public class MessageHandler implements Closeable {
 			appOut.put(message);
 			appOut.put(NetworkMessage.EOM);
 		}
-		key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-		key.selector().wakeup();
+	}
 
+	/**
+	 * Buffer a message and flush the buffer while holding the lock on this
+	 * handler's application output buffer.
+	 * 
+	 * @param message
+	 */
+	public void send(NetworkMessage message) {
+		if (message == null || message.isEmpty())
+			return;
+		send(message.toString().getBytes(Constants.ENCODING));
+	}
+
+	protected void send(byte[] message) {
+		for (byte b : message) {
+			if (b == NetworkMessage.EOM)
+				throw new RuntimeException("EOM byte is illegal in messages.");
+		}
+		synchronized (APPOUT_LOCK) {
+			appOut.put(message);
+			appOut.put(NetworkMessage.EOM);
+			flushMessageQueue();
+		}
 	}
 
 	public SSLEngine getSSLEngine() {
@@ -80,17 +106,19 @@ public class MessageHandler implements Closeable {
 	}
 
 	public void flushMessageQueue() {
-		// FIXME: Thread-safety: this method might be sending stale data
-		// which should be OK, but it's bad practice still.
-		// Can't fix until the task flushing the message queue is moved to a
-		// separate thread (i.e. not the connection monitor, which can't afford
-		// to block).
 		try {
 			flush();
-			if (!needSend())
-				return;
 			sslWrite();
-			log.debug("SSL write operation done");
+			log.trace("After write: ops: {} netOut pos: {} appOut pos: {}",
+					key.interestOps(), netOut.position(), appOut.position());
+			// unset OP_WRITE in case the handshake() method
+			// registered for it after noticing no handshaking was being done.
+			if (!needSend()) {
+				synchronized (key) {
+					key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+				}
+			}
+			return;
 		} catch (IOException e) {
 			log.error("I/O failure while sending messages", e);
 		}
@@ -208,24 +236,29 @@ public class MessageHandler implements Closeable {
 
 	private void flush() throws IOException {
 		if (netOut.position() == 0) {
-			log.debug("Nothing to flush");
+			log.trace("Nothing to flush");
 			return;
 		}
 		netOut.flip();
 		SocketChannel ch = (SocketChannel) key.channel();
-		log.debug("Will attempt to write {} bytes. Writability {}.",
+		log.trace("Will attempt to write {} bytes. Writability {}.",
 				netOut.limit(), key.isWritable());
 		ch.write(netOut);
 		netOut.compact();
 		if (netOut.position() > 0) {
 			// short write
-			log.debug("Short write! {} bytes left.", netOut.position());
-			key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+			log.trace("Short write! {} bytes left.", netOut.position());
+			synchronized (key) {
+				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+			}
+		} else {
+			synchronized (key) {
+				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+			}
 		}
 	}
 
 	private void sslWrite() throws IOException {
-		// netOut.clear();
 		appOut.flip();
 		sslres = engine.wrap(appOut, netOut);
 		appOut.compact();
@@ -248,7 +281,7 @@ public class MessageHandler implements Closeable {
 
 	private boolean handshake() throws IOException {
 		SocketChannel ch = (SocketChannel) key.channel();
-		log.debug("HS: {}", engine.getHandshakeStatus());
+		log.trace("HS: {}", engine.getHandshakeStatus());
 		switch (engine.getHandshakeStatus()) {
 		case NEED_TASK:
 			if (!requestedTaskExecution) {
@@ -261,39 +294,53 @@ public class MessageHandler implements Closeable {
 				ch.read(netIn);
 			}
 			netIn.flip();
-			log.debug("Unwrapping...");
+			log.trace("Unwrapping...");
 			sslres = engine.unwrap(netIn, appIn);
-			log.debug("Unwrapping done.");
+			log.trace("Unwrapping done.");
 			netIn.compact();
 			break;
 		case NEED_WRAP:
 			appOut.flip();
 			flush();
-			log.debug("Wrapping...");
+			log.trace("Wrapping...");
 			sslres = engine.wrap(appOut, netOut);
-			log.debug("Wrapping done.");
+			log.trace("Wrapping done.");
 			appOut.compact();
 			if (sslres.getStatus() == SSLEngineResult.Status.CLOSED) {
 				try {
 					flush();
 				} catch (SocketException ex) {
-					log.info("Peer closed socked without waiting for close_notify.");
+					log.trace("Peer closed socked without waiting for close_notify.");
 				}
 			} else {
-				log.debug("Flushing after wrap");
+				log.trace("Flushing after wrap");
 				// exceptions should be allowed to propagate.
 				flush();
 			}
 			break;
 		case FINISHED:
-			log.debug("Handshake complete.");
 		case NOT_HANDSHAKING:
+			// register for OP_WRITE
+			// The reason we do this here is because
+			// IF there's any data left in the application buffer,
+			// the application should register for OP_WRITE to finish its write
+			// However, when this is done while the SSL engine is waiting for
+			// handshake data
+			// this wastes CPU cycles by attempting (and failing) to move data
+			// from appOut to netOut
+
+			// Should the client not have anything to write, the next call to
+			// flushMessageQueue() will set this straight
+			synchronized (key) {
+				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+			}
 			return false;
 		}
 
-		log.debug("SR: {}", sslres.getStatus());
+		log.trace("SR: {}", sslres.getStatus());
 		switch (sslres.getStatus()) {
 		case BUFFER_UNDERFLOW:
+			key.interestOps(SelectionKey.OP_READ);
 		case BUFFER_OVERFLOW:
 			return false;
 		case CLOSED:
@@ -314,10 +361,8 @@ public class MessageHandler implements Closeable {
 	private class DelegatedTaskWorker implements Runnable {
 		@Override
 		public void run() {
-			log.debug("Running delegated task...");
+			log.trace("Running delegated task...");
 			// set interestOps to clear read and write
-			int oldops;
-			oldops = key.interestOps();
 			key.interestOps(0);
 
 			Runnable task;
@@ -325,11 +370,14 @@ public class MessageHandler implements Closeable {
 				task.run();
 			}
 
-			// restore ops
-			key.interestOps(oldops | SelectionKey.OP_WRITE);
-			key.selector().wakeup();
+			// restore ops, the SSL engine might want to read/write something
+			// after this.
+			// Calling the handshake method from this thread would be dangerous.
+			synchronized (key) {
+				key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+			}
 			requestedTaskExecution = false;
-			log.debug("Task finished");
+			log.trace("Task finished");
 		}
 	}
 }

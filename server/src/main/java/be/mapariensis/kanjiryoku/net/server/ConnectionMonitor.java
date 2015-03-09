@@ -114,7 +114,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				iter.remove();
 				SocketChannel ch = null;
 				try {
-
+					if (!key.isValid())
+						break;
 					if (key.isAcceptable()) {
 						ch = ssc.accept();
 						log.info("Accepted connection from peer {}", ch);
@@ -129,7 +130,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						engine.setWantClientAuth(false);
 						// register a message handler
 						SelectionKey newKey = ch.register(selector,
-								SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+								SelectionKey.OP_READ);
 						MessageHandler h = new MessageHandler(newKey, engine,
 								delegatedTaskPool);
 						newKey.attach(h);
@@ -144,8 +145,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					if (key.isReadable()) {
 						ch = (SocketChannel) key.channel();
 						List<NetworkMessage> msgs;
-						MessageHandler h = (MessageHandler) ch.keyFor(selector)
-								.attachment();
+						MessageHandler h = (MessageHandler) key.attachment();
 						try {
 							msgs = h.readRaw();
 						} catch (IOException ex) { // FIXME : figure out a way
@@ -158,6 +158,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 							User u;
 							if ((u = store.getUser(ch)) != null) {
 								deregister(u);
+							} else {
+								key.cancel();
+								key.channel().close();
 							}
 							continue;
 						}
@@ -169,15 +172,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						}
 					}
 					if (key.isWritable()) {
-						key.interestOps(SelectionKey.OP_READ);
-						ch = (SocketChannel) key.channel();
-						MessageHandler h = (MessageHandler) ch.keyFor(selector)
-								.attachment();
-						// TODO: this should really be in a separate thread.
-						if (h.needSend())
-							h.flushMessageQueue();
+						MessageHandler h = (MessageHandler) key.attachment();
+						h.flushMessageQueue();
 					}
-
 				} catch (Exception ex) {
 					log.warn("Error while processing {}. Ignoring.",
 							ch != null ? ch : "(unknown address)", ex);
@@ -250,9 +247,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 							MessageHandler h = (MessageHandler) ch.keyFor(
 									selector).attachment();
 							h.close();
-						} else
+						} else if (command != ServerCommand.HELLO)
 							throw new UserManagementException(
-									"You must register before using any command other than BYE or REGISTER");
+									"You must register before using any command other than HELLO, REGISTER or BYE");
 					} else
 						command.execute(msg, u, ConnectionMonitor.this, sessman);
 				}
@@ -275,7 +272,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		try {
 			MessageHandler h = (MessageHandler) ch.keyFor(selector)
 					.attachment();
-			h.enqueue(message);
+			h.send(message);
 		} catch (CancelledKeyException | NullPointerException ex) {
 			// if we get a CancelledKeyException here, this means the user has
 			// already been deregistered, and
