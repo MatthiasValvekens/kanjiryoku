@@ -105,7 +105,6 @@ public class ServerUplink extends Thread implements Closeable {
 				break; // TODO : handle this robustly
 			}
 			if (key.isReadable()) {
-				log.debug("Server noticed me (*^^*)");
 				final List<NetworkMessage> msgs;
 				try {
 					msgs = messageHandler.readRaw();

@@ -103,7 +103,6 @@ public class MessageHandler implements Closeable {
 	public List<NetworkMessage> readRaw() throws IOException, EOFException {
 		if (engine.isInboundDone())
 			return Collections.emptyList();
-		appIn.clear(); // FIXME: does this discard anything significant?
 		// read encrypted data
 		// and return the empty list if nothing particularly interesting
 		// was found
@@ -113,7 +112,6 @@ public class MessageHandler implements Closeable {
 		// process decrypted data
 		// need to remember this for later
 		int finalPosition = appIn.position();
-		log.info("JKJLD {}", finalPosition);
 		appIn.limit(finalPosition);
 		// search backwards until we find the first EOM
 		int lastEom;
@@ -151,7 +149,6 @@ public class MessageHandler implements Closeable {
 			result.add(NetworkMessage.buildArgs(decodedInput));
 		}
 		decoder.reset();
-		log.debug("remaining appin bytes after rawread: {}", appIn.remaining());
 		return result;
 	}
 
@@ -184,12 +181,8 @@ public class MessageHandler implements Closeable {
 
 		// decrypt data
 		netIn.flip();
-		log.debug("kdjlfksdjlksd {} {} {} {}", appIn.position(), appIn.limit(),
-				appIn.remaining(), bytesRead);
 		sslres = engine.unwrap(netIn, appIn);
 		netIn.compact(); // safeguard against partial reads
-		log.debug("kdjlfksdjlksd {} {} {}", sslres.bytesProduced(),
-				appIn.position(), netIn.position());
 		switch (sslres.getStatus()) {
 		case BUFFER_UNDERFLOW:
 			return false;
@@ -254,7 +247,6 @@ public class MessageHandler implements Closeable {
 	}
 
 	private boolean handshake() throws IOException {
-		log.debug("Handshake!");
 		SocketChannel ch = (SocketChannel) key.channel();
 		log.debug("HS: {}", engine.getHandshakeStatus());
 		switch (engine.getHandshakeStatus()) {
@@ -278,11 +270,7 @@ public class MessageHandler implements Closeable {
 			appOut.flip();
 			flush();
 			log.debug("Wrapping...");
-			log.debug("Shit in netout: {} {}", netOut.position(),
-					netOut.limit());
 			sslres = engine.wrap(appOut, netOut);
-			log.debug("Shit in netout: {} {}", netOut.position(),
-					netOut.limit());
 			log.debug("Wrapping done.");
 			appOut.compact();
 			if (sslres.getStatus() == SSLEngineResult.Status.CLOSED) {
