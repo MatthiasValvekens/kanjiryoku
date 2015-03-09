@@ -137,7 +137,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						log.info("Registered message handler.");
 
 						queueMessage(ch, new NetworkMessage(
-								ClientCommandList.SAY, GREETING));
+								ClientCommandList.HELLO, GREETING));
 						queueMessage(ch, new NetworkMessage(
 								ClientCommandList.VERSION,
 								protocolMajorVersion, protocolMinorVersion));

@@ -67,6 +67,14 @@ public class ServerUplink extends Thread implements Closeable {
 		this.username = username;
 	}
 
+	public void register() {
+		if (!registerAttempted) {
+			enqueueMessage(new NetworkMessage(ServerCommandList.REGISTER,
+					username));
+			registerAttempted = true;
+		}
+	}
+
 	@Override
 	public void run() {
 		// block until channel connects, and then switch to nonblocking mode
@@ -78,6 +86,7 @@ public class ServerUplink extends Thread implements Closeable {
 			SSLEngine engine = context.createSSLEngine(addr.toString(), port);
 			engine.setUseClientMode(true);
 			messageHandler = new MessageHandler(key, engine, delegatedTaskPool);
+			bridge.getChat().displaySystemMessage("Connecting to server...");
 			messageHandler.send(new NetworkMessage(ServerCommandList.HELLO));
 		} catch (IOException e) {
 			log.error("Failed to connect.", e);
@@ -136,11 +145,6 @@ public class ServerUplink extends Thread implements Closeable {
 			}
 
 			if (key.isWritable()) {
-				if (!registerAttempted) {
-					enqueueMessage(new NetworkMessage(
-							ServerCommandList.REGISTER, username));
-					registerAttempted = true;
-				}
 				messageHandler.flushMessageQueue();
 			}
 		}

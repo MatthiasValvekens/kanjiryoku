@@ -296,7 +296,17 @@ public enum ClientCommand {
 					.receiveMessage(msg.get(1), msg.truncate(2));
 		}
 
+	},
+	HELLO {
+		@Override
+		public void execute(NetworkMessage msg, UIBridge bridge)
+				throws ClientException {
+			checkArgs(msg, 2);
+			bridge.getChat().displayServerMessage(msg.timestamp, msg.get(1));
+			bridge.getUplink().register();
+		}
 	};
+
 	private static final Logger log = LoggerFactory
 			.getLogger(ClientCommand.class);
 
