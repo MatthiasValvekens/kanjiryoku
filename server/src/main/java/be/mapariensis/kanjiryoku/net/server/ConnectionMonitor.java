@@ -37,7 +37,8 @@ import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
-import be.mapariensis.kanjiryoku.net.model.MessageHandler;
+import be.mapariensis.kanjiryoku.net.model.IMessageHandler;
+import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
@@ -131,7 +132,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						// register a message handler
 						SelectionKey newKey = ch.register(selector,
 								SelectionKey.OP_READ);
-						MessageHandler h = new MessageHandler(newKey, engine,
+						IMessageHandler h = new SSLMessageHandler(newKey, engine,
 								delegatedTaskPool);
 						newKey.attach(h);
 						log.info("Registered message handler.");
@@ -145,7 +146,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					if (key.isReadable()) {
 						ch = (SocketChannel) key.channel();
 						List<NetworkMessage> msgs;
-						MessageHandler h = (MessageHandler) key.attachment();
+						IMessageHandler h = (IMessageHandler) key.attachment();
 						try {
 							msgs = h.readRaw();
 						} catch (IOException ex) { // FIXME : figure out a way
@@ -172,7 +173,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						}
 					}
 					if (key.isWritable()) {
-						MessageHandler h = (MessageHandler) key.attachment();
+						IMessageHandler h = (IMessageHandler) key.attachment();
 						h.flushMessageQueue();
 					}
 				} catch (Exception ex) {
@@ -228,13 +229,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					SelectionKey key = ch.keyFor(selector);
 					if (key == null) {
 						log.error("Key cancelled before registration could complete! Aborting.");
-						MessageHandler h = (MessageHandler) ch.keyFor(selector)
+						SSLMessageHandler h = (SSLMessageHandler) ch.keyFor(selector)
 								.attachment();
 						if (h != null)
 							h.close();
 						return;
 					}
-					MessageHandler h = (MessageHandler) ch.keyFor(selector)
+					SSLMessageHandler h = (SSLMessageHandler) ch.keyFor(selector)
 							.attachment();
 					register(new User(handle, ch, h));
 				} else {
@@ -244,7 +245,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 							log.info(
 									"Gracefully closing {} disconnected with BYE",
 									ch);
-							MessageHandler h = (MessageHandler) ch.keyFor(
+							SSLMessageHandler h = (SSLMessageHandler) ch.keyFor(
 									selector).attachment();
 							h.close();
 						} else if (command != ServerCommand.HELLO)
@@ -270,7 +271,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	private void queueMessage(SocketChannel ch, NetworkMessage message) {
 		try {
-			MessageHandler h = (MessageHandler) ch.keyFor(selector)
+			IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
 					.attachment();
 			h.send(message);
 		} catch (CancelledKeyException | NullPointerException ex) {
@@ -342,7 +343,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		store.removeUser(user);
 		log.info("Deregistered user {}", user);
 		try {
-			((MessageHandler) user.channel.keyFor(selector).attachment())
+			((SSLMessageHandler) user.channel.keyFor(selector).attachment())
 					.close();
 		} catch (IOException e) {
 			log.warn("Error while closing messageHandler", e);

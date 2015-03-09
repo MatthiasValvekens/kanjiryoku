@@ -23,12 +23,12 @@ public class User {
 	private static final Logger log = LoggerFactory.getLogger(User.class);
 	public final String handle;
 	public final SocketChannel channel;
-	protected final MessageHandler outbox;
+	protected final IMessageHandler outbox;
 	private Session session;
 	private final List<ClientResponseHandler> activeResponseHandlers = new LinkedList<ClientResponseHandler>();
 	private final Object sessionLock = new Object();
 
-	public User(String handle, SocketChannel channel, MessageHandler outbox) {
+	public User(String handle, SocketChannel channel, SSLMessageHandler outbox) {
 		if (handle == null || outbox == null)
 			throw new IllegalArgumentException();
 		this.handle = handle;

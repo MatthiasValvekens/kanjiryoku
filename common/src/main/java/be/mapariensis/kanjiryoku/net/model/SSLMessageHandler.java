@@ -1,6 +1,5 @@
 package be.mapariensis.kanjiryoku.net.model;
 
-import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.SocketException;
@@ -27,9 +26,9 @@ import org.slf4j.LoggerFactory;
 import be.mapariensis.kanjiryoku.net.Constants;
 
 // The SSL support draws heavily upon Chapter 8 of "Fundamental Networking in Java"
-public class MessageHandler implements Closeable {
+public class SSLMessageHandler implements IMessageHandler {
 	private static final Logger log = LoggerFactory
-			.getLogger(MessageHandler.class);
+			.getLogger(SSLMessageHandler.class);
 	private volatile boolean requestedTaskExecution = false;
 	private final Object APPOUT_LOCK = new Object();
 	private final SelectionKey key;
@@ -38,7 +37,7 @@ public class MessageHandler implements Closeable {
 	private final ExecutorService delegatedTaskPool;
 	private SSLEngineResult sslres = null;
 
-	public MessageHandler(SelectionKey key, SSLEngine engine,
+	public SSLMessageHandler(SelectionKey key, SSLEngine engine,
 			ExecutorService delegatedTaskPool) {
 		if (key == null)
 			throw new IllegalArgumentException();
@@ -60,6 +59,7 @@ public class MessageHandler implements Closeable {
 	 * 
 	 * @param message
 	 */
+	@Override
 	public void enqueue(NetworkMessage message) {
 		if (message == null || message.isEmpty())
 			return;
@@ -83,6 +83,7 @@ public class MessageHandler implements Closeable {
 	 * 
 	 * @param message
 	 */
+	@Override
 	public void send(NetworkMessage message) {
 		if (message == null || message.isEmpty())
 			return;
@@ -101,10 +102,12 @@ public class MessageHandler implements Closeable {
 		}
 	}
 
+	@Override
 	public SSLEngine getSSLEngine() {
 		return engine;
 	}
 
+	@Override
 	public void flushMessageQueue() {
 		try {
 			flush();
@@ -128,6 +131,7 @@ public class MessageHandler implements Closeable {
 
 	private final CharsetDecoder decoder = Constants.ENCODING.newDecoder();
 
+	@Override
 	public List<NetworkMessage> readRaw() throws IOException, EOFException {
 		if (engine.isInboundDone())
 			throw new EOFException();
@@ -354,6 +358,7 @@ public class MessageHandler implements Closeable {
 		return true;
 	}
 
+	@Override
 	public boolean needSend() {
 		return netOut.position() > 0 || appOut.position() > 0;
 	}
