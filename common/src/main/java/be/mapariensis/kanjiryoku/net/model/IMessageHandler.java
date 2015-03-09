@@ -5,8 +5,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.List;
 
-import javax.net.ssl.SSLEngine;
-
 public interface IMessageHandler extends Closeable {
 
 	/**
@@ -23,8 +21,6 @@ public interface IMessageHandler extends Closeable {
 	 * @param message
 	 */
 	public abstract void send(NetworkMessage message);
-
-	public abstract SSLEngine getSSLEngine();
 
 	public abstract void flushMessageQueue();
 

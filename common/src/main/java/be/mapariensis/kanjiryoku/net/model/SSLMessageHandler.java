@@ -102,7 +102,6 @@ public class SSLMessageHandler implements IMessageHandler {
 		}
 	}
 
-	@Override
 	public SSLEngine getSSLEngine() {
 		return engine;
 	}
