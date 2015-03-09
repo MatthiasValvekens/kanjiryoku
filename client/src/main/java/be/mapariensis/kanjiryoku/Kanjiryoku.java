@@ -7,15 +7,11 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyStore;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 
 import javax.imageio.ImageIO;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.plaf.FontUIResource;
@@ -41,7 +37,7 @@ public class Kanjiryoku {
 
 	static {
 		Image thing = null;
-		try (InputStream is = InitWindow.class.getClassLoader()
+		try (InputStream is = Kanjiryoku.class.getClassLoader()
 				.getResourceAsStream(ICON_FILE)) {
 			thing = ImageIO.read(is);
 		} catch (IOException | IllegalArgumentException e) {
@@ -55,8 +51,10 @@ public class Kanjiryoku {
 
 		try {
 			KeyStore ks = KeyStore.getInstance("JKS");
-			try (InputStream in = Kanjiryoku.class
+			try (InputStream in = Kanjiryoku.class.getClassLoader()
 					.getResourceAsStream(KEYSTORE_NAME)) {
+				if (in == null)
+					throw new IOException("Keystore not found");
 				ks.load(in, KEYSTORE_PASS);
 			}
 
@@ -67,25 +65,9 @@ public class Kanjiryoku {
 					.getInstance("SunX509");
 			tmf.init(ks);
 
-			// FIXME: Dummy trust manager for testing purposes.
-			X509TrustManager tm = new X509TrustManager() {
-				@Override
-				public void checkClientTrusted(X509Certificate[] chain,
-						String authType) throws CertificateException {
-				}
-
-				@Override
-				public void checkServerTrusted(X509Certificate[] chain,
-						String authType) throws CertificateException {
-				}
-
-				@Override
-				public X509Certificate[] getAcceptedIssuers() {
-					return null;
-				}
-			};
 			SSLContext context = SSLContext.getInstance("TLS");
-			context.init(kmf.getKeyManagers(), new TrustManager[] { tm }, null);
+
+			context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
 			log.info("SSL context initialised successfully.");
 			return context;
 		} catch (Exception ex) {
@@ -94,7 +76,6 @@ public class Kanjiryoku {
 	}
 
 	public static void main(String[] args) {
-		System.setProperty("javax.net.debug", "ssl");
 		// Check for config file on command line
 		Path configFile;
 		switch (args.length) {

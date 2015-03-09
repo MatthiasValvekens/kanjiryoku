@@ -33,7 +33,6 @@ public class KanjiServer {
 
 	public static void main(String[] args) throws IOException,
 			BadConfigurationException {
-		System.setProperty("javax.net.debug", "ssl");
 		// Check for config file on command line
 		switch (args.length) {
 		case 0:
