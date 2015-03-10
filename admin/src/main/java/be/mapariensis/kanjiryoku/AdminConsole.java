@@ -8,8 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.gui.ChatInterface;
-import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.gui.GameClientInterface;
+import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.net.client.ServerResponseHandler;
 import be.mapariensis.kanjiryoku.net.client.ServerUplink;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
@@ -24,7 +24,7 @@ public class AdminConsole implements UIBridge, ChatInterface {
 
 	public AdminConsole(InetAddress addr, int port, String username)
 			throws IOException {
-		this.uplink = new ServerUplink(addr, port, username, this);
+		this.uplink = new ServerUplink(addr, port, username, this, null);
 	}
 
 	@Override
@@ -115,5 +115,11 @@ public class AdminConsole implements UIBridge, ChatInterface {
 				InetAddress.getByName("127.0.0.1"), 9630, "admin"
 						+ (System.currentTimeMillis() % 10000));
 		console.start();
+	}
+
+	@Override
+	public void close() {
+		displaySystemMessage("Closing connection.");
+		uplink.close();
 	}
 }

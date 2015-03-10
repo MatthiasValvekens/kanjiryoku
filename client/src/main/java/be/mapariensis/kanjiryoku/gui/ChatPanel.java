@@ -1,17 +1,23 @@
 package be.mapariensis.kanjiryoku.gui;
 
-import javax.swing.*;
-
-import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
-import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
-import be.mapariensis.kanjiryoku.util.History;
-import be.mapariensis.kanjiryoku.util.StandardHistoryImpl;
-
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+
+import javax.swing.AbstractAction;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.KeyStroke;
+
+import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
+import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
+import be.mapariensis.kanjiryoku.util.History;
+import be.mapariensis.kanjiryoku.util.StandardHistoryImpl;
 
 // TODO enforce timestamp ordering
 public class ChatPanel extends JPanel {
@@ -22,6 +28,7 @@ public class ChatPanel extends JPanel {
 
 	private final History history = new StandardHistoryImpl(HISTORY_SIZE);
 	private boolean firstManualCommandSent = false;
+	private final JTextField input;
 
 	public ChatPanel(final UIBridge bridge, JComponent chatRenderer) {
 		setPreferredSize(new Dimension(600, 600));
@@ -32,7 +39,7 @@ public class ChatPanel extends JPanel {
 		add(scrollPane, BorderLayout.CENTER);
 		add(new JLabel("Chat"), BorderLayout.NORTH);
 		JPanel controls = new JPanel();
-		final JTextField input = new JTextField(20);
+		input = new JTextField(20);
 		controls.add(input);
 
 		input.addActionListener(new ActionListener() {
@@ -50,13 +57,9 @@ public class ChatPanel extends JPanel {
 										"Lines starting with '\\' are interpreted as server commands.");
 						firstManualCommandSent = true;
 					}
+					// interpret the rest as a command
 					bridge.getUplink().enqueueMessage(
-							NetworkMessage.buildArgs(msg.substring(1))); // interpret
-																			// the
-																			// rest
-																			// as
-																			// a
-																			// command
+							NetworkMessage.buildArgs(msg.substring(1)));
 					input.setText("");
 					return;
 				}
@@ -91,5 +94,9 @@ public class ChatPanel extends JPanel {
 		input.getInputMap(WHEN_FOCUSED).put(
 				KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), HISTORY_FORWARD);
 		add(controls, BorderLayout.SOUTH);
+	}
+
+	public void setChatLock(boolean lock) {
+		input.setEnabled(!lock);
 	}
 }

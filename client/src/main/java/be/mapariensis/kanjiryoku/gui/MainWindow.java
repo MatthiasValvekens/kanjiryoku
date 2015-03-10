@@ -31,6 +31,7 @@ public class MainWindow extends JFrame implements GUIBridge {
 	public static final String CSS_FILE = "chatcss.css";
 	private final ServerUplink serv;
 	private final ChatInterface chat;
+	private final ChatPanel chatPanel;
 	private final GamePanel gci;
 	private final String serverInfoString;
 	private final JMenuBar menuBar;
@@ -57,7 +58,7 @@ public class MainWindow extends JFrame implements GUIBridge {
 		}
 		final HTMLChatPanel chatComponent = new HTMLChatPanel(this, css);
 		chat = chatComponent;
-		add(new ChatPanel(this, chatComponent));
+		add(chatPanel = new ChatPanel(this, chatComponent));
 		serv = new ServerUplink(addr, port, username, this, sslc);
 		gci = new GamePanel(this);
 		add(gci);
@@ -196,5 +197,12 @@ public class MainWindow extends JFrame implements GUIBridge {
 	@Override
 	public Frame getFrame() {
 		return this;
+	}
+
+	@Override
+	public void close() {
+		chatPanel.setChatLock(true);
+		gci.setLock(true);
+		serv.close();
 	}
 }

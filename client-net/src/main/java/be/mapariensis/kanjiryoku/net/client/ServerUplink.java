@@ -80,7 +80,7 @@ public class ServerUplink extends Thread implements Closeable {
 			if (context == null) {
 				bridge.getChat().displaySystemMessage(
 						"Server does not support plain text mode. Bail.");
-				close();
+				bridge.close();
 			} else {
 				bridge.getChat().displaySystemMessage("Mode accepted.");
 				SSLEngine engine = context.createSSLEngine(addr.toString(),
@@ -101,7 +101,7 @@ public class ServerUplink extends Thread implements Closeable {
 				// refused.
 				bridge.getChat().displaySystemMessage(
 						"Server does not support SSL mode. Bail.");
-				close();
+				bridge.close();
 			} else {
 				bridge.getChat().displaySystemMessage("Mode accepted.");
 				enqueueMessage(new NetworkMessage(ServerCommandList.REGISTER,
@@ -133,9 +133,9 @@ public class ServerUplink extends Thread implements Closeable {
 					"Connected. Waiting for reply...");
 		} catch (IOException e) {
 			log.error("Failed to connect.", e);
-			close();
 			bridge.getChat().displaySystemMessage(
 					"Could not connect to server.");
+			bridge.close();
 			return;
 		}
 		while (keepOn) {
@@ -172,8 +172,7 @@ public class ServerUplink extends Thread implements Closeable {
 						bridge.getChat()
 								.displaySystemMessage(
 										"Peer connection lost. This is most likely a network or a server error.");
-						bridge.getClient().setLock(true);
-						close();
+						bridge.close();
 						break;
 					} catch (IOException e) {
 						break;
