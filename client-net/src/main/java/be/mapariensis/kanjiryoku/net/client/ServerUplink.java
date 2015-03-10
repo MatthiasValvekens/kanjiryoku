@@ -20,18 +20,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.gui.UIBridge;
+import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.client.handlers.WaitingResponseHandler;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
-import be.mapariensis.kanjiryoku.net.model.MessageHandler;
+import be.mapariensis.kanjiryoku.net.model.IMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
+import be.mapariensis.kanjiryoku.net.model.PlainMessageHandler;
+import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 
 public class ServerUplink extends Thread implements Closeable {
 	private static final Logger log = LoggerFactory
 			.getLogger(ServerUplink.class);
 	private static final long SELECT_TIMEOUT = 500;
+	private static final int PLAINTEXT_BUFSIZE = 8192;
 	private static final int DELEGATE_TASK_WORKERS = 8;
 	private final ExecutorService threadPool;
 	private final ExecutorService delegatedTaskPool = Executors
@@ -39,15 +43,12 @@ public class ServerUplink extends Thread implements Closeable {
 	private final SocketChannel channel;
 	private final SSLContext context;
 	private volatile boolean keepOn = true;
-	private boolean registerAttempted = false; // marks whether the client has
-												// attempted to register with
-												// the server
 	private boolean registerCompleted = false;
 	private final Selector selector;
 	private final InetAddress addr;
 	private final int port;
 	private String username;
-	private MessageHandler messageHandler;
+	private IMessageHandler messageHandler;
 	private SelectionKey key;
 	private final UIBridge bridge;
 
@@ -67,27 +68,69 @@ public class ServerUplink extends Thread implements Closeable {
 		this.username = username;
 	}
 
-	public void register() {
-		if (!registerAttempted) {
-			enqueueMessage(new NetworkMessage(ServerCommandList.REGISTER,
-					username));
-			registerAttempted = true;
+	private boolean modeFixed() {
+		if (messageHandler instanceof SSLMessageHandler)
+			return true;
+		PlainMessageHandler pmh = (PlainMessageHandler) messageHandler;
+		return pmh.getStatus() == PlainMessageHandler.Status.PERMANENT;
+	}
+
+	public void sslMode() {
+		if (!modeFixed()) {
+			if (context == null) {
+				bridge.getChat().displaySystemMessage(
+						"Server does not support plain text mode. Bail.");
+				close();
+			} else {
+				bridge.getChat().displaySystemMessage("Mode accepted.");
+				SSLEngine engine = context.createSSLEngine(addr.toString(),
+						port);
+				engine.setUseClientMode(true);
+				messageHandler = new SSLMessageHandler(key, engine,
+						delegatedTaskPool, PLAINTEXT_BUFSIZE);
+				enqueueMessage(new NetworkMessage(ServerCommandList.REGISTER,
+						username));
+			}
 		}
+	}
+
+	public void plaintextMode() {
+		if (!modeFixed()) {
+			if (context != null) {
+				// this means we attempted to connect using SSL, but the server
+				// refused.
+				bridge.getChat().displaySystemMessage(
+						"Server does not support SSL mode. Bail.");
+				close();
+			} else {
+				bridge.getChat().displaySystemMessage("Mode accepted.");
+				enqueueMessage(new NetworkMessage(ServerCommandList.REGISTER,
+						username));
+				((PlainMessageHandler) messageHandler).setPermanent();
+			}
+		}
+	}
+
+	public void requestMode() {
+		String mode = context == null ? Constants.MODE_PLAIN
+				: Constants.MODE_TLS;
+		bridge.getChat().displaySystemMessage(
+				String.format("Requesting communication mode %s...", mode));
+		messageHandler.send(new NetworkMessage(ServerCommandList.HELLO, mode));
 	}
 
 	@Override
 	public void run() {
 		// block until channel connects, and then switch to nonblocking mode
 		try {
+			bridge.getChat().displaySystemMessage("Connecting to server...");
 			channel.configureBlocking(true);
 			channel.connect(new InetSocketAddress(addr, port));
 			channel.configureBlocking(false);
 			key = channel.register(selector, SelectionKey.OP_READ);
-			SSLEngine engine = context.createSSLEngine(addr.toString(), port);
-			engine.setUseClientMode(true);
-			messageHandler = new MessageHandler(key, engine, delegatedTaskPool);
-			bridge.getChat().displaySystemMessage("Connecting to server...");
-			messageHandler.send(new NetworkMessage(ServerCommandList.HELLO));
+			messageHandler = new PlainMessageHandler(key, PLAINTEXT_BUFSIZE);
+			bridge.getChat().displaySystemMessage(
+					"Connected. Waiting for reply...");
 		} catch (IOException e) {
 			log.error("Failed to connect.", e);
 			close();

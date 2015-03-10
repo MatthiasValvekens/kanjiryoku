@@ -1,6 +1,5 @@
 package be.mapariensis.kanjiryoku.net.model;
 
-import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.SocketException;
@@ -27,9 +26,9 @@ import org.slf4j.LoggerFactory;
 import be.mapariensis.kanjiryoku.net.Constants;
 
 // The SSL support draws heavily upon Chapter 8 of "Fundamental Networking in Java"
-public class MessageHandler implements Closeable {
+public class SSLMessageHandler implements IMessageHandler {
 	private static final Logger log = LoggerFactory
-			.getLogger(MessageHandler.class);
+			.getLogger(SSLMessageHandler.class);
 	private volatile boolean requestedTaskExecution = false;
 	private final Object APPOUT_LOCK = new Object();
 	private final SelectionKey key;
@@ -38,18 +37,17 @@ public class MessageHandler implements Closeable {
 	private final ExecutorService delegatedTaskPool;
 	private SSLEngineResult sslres = null;
 
-	public MessageHandler(SelectionKey key, SSLEngine engine,
-			ExecutorService delegatedTaskPool) {
+	public SSLMessageHandler(SelectionKey key, SSLEngine engine,
+			ExecutorService delegatedTaskPool, int plaintextBufsize) {
 		if (key == null)
 			throw new IllegalArgumentException();
 		this.key = key;
 		int netbufsize = engine.getSession().getPacketBufferSize();
-		int appbufsize = engine.getSession().getApplicationBufferSize();
 		log.trace("Buffers initialised to: net: {}, app: {}", netbufsize,
-				appbufsize);
+				plaintextBufsize);
 		this.netIn = ByteBuffer.allocate(netbufsize);
-		this.appIn = ByteBuffer.allocate(appbufsize + 256);
-		this.appOut = ByteBuffer.allocate(appbufsize);
+		this.appIn = ByteBuffer.allocate(plaintextBufsize + 256);
+		this.appOut = ByteBuffer.allocate(plaintextBufsize);
 		this.netOut = ByteBuffer.allocate(netbufsize);
 		this.engine = engine;
 		this.delegatedTaskPool = delegatedTaskPool;
@@ -60,6 +58,7 @@ public class MessageHandler implements Closeable {
 	 * 
 	 * @param message
 	 */
+	@Override
 	public void enqueue(NetworkMessage message) {
 		if (message == null || message.isEmpty())
 			return;
@@ -83,6 +82,7 @@ public class MessageHandler implements Closeable {
 	 * 
 	 * @param message
 	 */
+	@Override
 	public void send(NetworkMessage message) {
 		if (message == null || message.isEmpty())
 			return;
@@ -105,6 +105,7 @@ public class MessageHandler implements Closeable {
 		return engine;
 	}
 
+	@Override
 	public void flushMessageQueue() {
 		try {
 			flush();
@@ -128,6 +129,7 @@ public class MessageHandler implements Closeable {
 
 	private final CharsetDecoder decoder = Constants.ENCODING.newDecoder();
 
+	@Override
 	public List<NetworkMessage> readRaw() throws IOException, EOFException {
 		if (engine.isInboundDone())
 			throw new EOFException();
@@ -239,10 +241,17 @@ public class MessageHandler implements Closeable {
 			log.trace("Nothing to flush");
 			return;
 		}
-		netOut.flip();
 		SocketChannel ch = (SocketChannel) key.channel();
-		log.trace("Will attempt to write {} bytes. Writability {}.",
-				netOut.limit(), key.isWritable());
+		log.trace("Will attempt to write {} bytes to {}. Writability {}.",
+				netOut.position() - 1, ch.socket().getRemoteSocketAddress(),
+				key.isWritable());
+		if (!key.isWritable()) {
+			synchronized (key) {
+				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+			}
+			return;
+		}
+		netOut.flip();
 		ch.write(netOut);
 		netOut.compact();
 		if (netOut.position() > 0) {
@@ -354,6 +363,7 @@ public class MessageHandler implements Closeable {
 		return true;
 	}
 
+	@Override
 	public boolean needSend() {
 		return netOut.position() > 0 || appOut.position() > 0;
 	}

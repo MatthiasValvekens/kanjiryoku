@@ -11,7 +11,7 @@ import java.security.KeyStore;
 import javax.imageio.ImageIO;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.TrustManager;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.plaf.FontUIResource;
@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.config.ConfigManager;
 import be.mapariensis.kanjiryoku.gui.InitWindow;
+import be.mapariensis.kanjiryoku.net.CustomX509TrustManager;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 
 public class Kanjiryoku {
@@ -61,13 +62,9 @@ public class Kanjiryoku {
 			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
 			kmf.init(ks, KEYSTORE_PASS);
 
-			TrustManagerFactory tmf = TrustManagerFactory
-					.getInstance("SunX509");
-			tmf.init(ks);
-
 			SSLContext context = SSLContext.getInstance("TLS");
-
-			context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+			TrustManager tm = new CustomX509TrustManager(ks);
+			context.init(kmf.getKeyManagers(), new TrustManager[] { tm }, null);
 			log.info("SSL context initialised successfully.");
 			return context;
 		} catch (Exception ex) {

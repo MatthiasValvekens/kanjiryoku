@@ -16,10 +16,18 @@ public class ConfigFields {
 	public static final String WORKER_THREADS = "workerThreads";
 	public static final int WORKER_THREADS_DEFAULT = 10;
 	/**
-	 * The size of the ByteBuffer attached to each worker thread (default 2KB).
+	 * The size of the ByteBuffer attached to each plaintext message handler
+	 * (default 4KB).
 	 */
-	public static final String WORKER_BUFFER_SIZE = "workerBufferSize";
-	public static final int WORKER_BUFFER_SIZE_DEFAULT = 8192;
+	public static final String PLAINTEXT_BUFFER_SIZE = "plaintextBufferSize";
+	public static final int PLAINTEXT_BUFFER_SIZE_DEFAULT = 4096;
+
+	/**
+	 * Controls whether SSL mode is enforced. Default is false for now, but this
+	 * *will* change in the future.
+	 */
+	public static final String FORCE_SSL = "disablePlaintext";
+	public static final boolean FORCE_SSL_DEFAULT = false;
 
 	public static final String USERNAME_LIMIT = "usernameCharLimit";
 	public static final int USERNAME_LIMIT_DEFAULT = 10;
