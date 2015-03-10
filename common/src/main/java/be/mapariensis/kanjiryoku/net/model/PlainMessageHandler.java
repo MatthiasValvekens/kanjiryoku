@@ -18,11 +18,28 @@ import org.slf4j.LoggerFactory;
 import be.mapariensis.kanjiryoku.net.Constants;
 
 public class PlainMessageHandler implements IMessageHandler {
+	public static enum Status {
+		/**
+		 * Initial state.
+		 */
+		PROTOCOL_INIT,
+		/**
+		 * Switch to SSL requested, but we still need plaintext mode for the
+		 * final step of the negotiation.
+		 */
+		LIMBO,
+		/**
+		 * Permanent plaintext mode enabled.
+		 */
+		PERMANENT
+	}
+
 	private static final Logger log = LoggerFactory
 			.getLogger(PlainMessageHandler.class);
 	private final Object APPOUT_LOCK = new Object();
 	private final SelectionKey key;
 	private final ByteBuffer appIn, appOut;
+	private Status status;
 
 	public PlainMessageHandler(SelectionKey key, int bufsize) {
 		if (key == null)
@@ -30,6 +47,7 @@ public class PlainMessageHandler implements IMessageHandler {
 		this.key = key;
 		this.appIn = ByteBuffer.allocate(bufsize);
 		this.appOut = ByteBuffer.allocate(bufsize);
+		status = Status.PROTOCOL_INIT;
 	}
 
 	/**
@@ -186,5 +204,19 @@ public class PlainMessageHandler implements IMessageHandler {
 	@Override
 	public boolean needSend() {
 		return appOut.position() > 0;
+	}
+
+	public Status getStatus() {
+		return status;
+	}
+
+	public void setLimbo() {
+		if (status != Status.PROTOCOL_INIT)
+			throw new IllegalStateException();
+		status = Status.LIMBO;
+	}
+
+	public void setPermanent() {
+		status = Status.PERMANENT;
 	}
 }

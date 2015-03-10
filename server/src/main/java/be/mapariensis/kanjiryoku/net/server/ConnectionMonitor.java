@@ -5,6 +5,7 @@ import static be.mapariensis.kanjiryoku.net.Constants.protocolMajorVersion;
 import static be.mapariensis.kanjiryoku.net.Constants.protocolMinorVersion;
 
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -14,8 +15,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -67,8 +66,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final ExecutorService delegatedTaskPool;
 	private final int plaintextBufsize;
 	private final boolean enforceSSL;
-	private final Set<SelectionKey> modeChangeRequested = Collections
-			.synchronizedSet(new HashSet<SelectionKey>());
 
 	public ConnectionMonitor(ServerConfig config) throws IOException,
 			BadConfigurationException {
@@ -106,33 +103,36 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	private void setMode(SelectionKey key, String mode) {
 		SocketChannel ch = (SocketChannel) key.channel();
+		// caller checks this
+		PlainMessageHandler h = (PlainMessageHandler) key.attachment();
 		if (enforceSSL
 				|| (Constants.MODE_TLS.equals(mode) && sslContext != null)) {
 			// Send SETMODE before switching, otherwise the client won't
 			// understand
 			queueMessage(ch, new NetworkMessage(ClientCommandList.SETMODE,
 					Constants.MODE_TLS));
-			modeChangeRequested.add(key);
+			h.setLimbo();
 		} else {
 			// we don't have to do anything for other modes
 			queueMessage(ch, new NetworkMessage(ClientCommandList.SETMODE,
 					Constants.MODE_PLAIN));
+			h.setPermanent();
 		}
 	}
 
-	private void activateSsl(SelectionKey key) {
+	private SSLMessageHandler activateSsl(SelectionKey key) {
 		SocketChannel ch = (SocketChannel) key.channel();
 		log.trace("Activating SSL for {}", ch.socket());
-		modeChangeRequested.remove(key);
 		String addr = ch.socket().getInetAddress().toString();
 		int port = ch.socket().getPort();
 		SSLEngine engine = sslContext.createSSLEngine(addr, port);
 		engine.setUseClientMode(false);
 		engine.setNeedClientAuth(false);
 		engine.setWantClientAuth(false);
-		IMessageHandler h = new SSLMessageHandler(key, engine,
+		SSLMessageHandler h = new SSLMessageHandler(key, engine,
 				delegatedTaskPool, plaintextBufsize);
 		key.attach(h);
+		return h;
 	}
 
 	@Override
@@ -165,91 +165,85 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			while (iter.hasNext()) {
 				SelectionKey key = iter.next();
 				iter.remove();
-				SocketChannel ch = null;
 				try {
-					if (!key.isValid())
-						break;
+					if (!key.isValid()) {
+						key.cancel();
+						continue;
+					}
+					if (!key.channel().isOpen()) {
+						log.info("Channel {} closed.", key.channel());
+						deregisterAndClose(key);
+						continue;
+					}
 					if (key.isAcceptable()) {
-						ch = ssc.accept();
-						log.info("Accepted connection from peer {}", ch);
-						ch.configureBlocking(false);
-						// register a message handler
-						SelectionKey newKey = ch.register(selector,
-								SelectionKey.OP_READ);
-						IMessageHandler h = new PlainMessageHandler(newKey,
-								plaintextBufsize);
-						newKey.attach(h);
-						log.info("Registered message handler.");
-
-						queueMessage(ch, new NetworkMessage(
-								ClientCommandList.HELLO, GREETING));
-						queueMessage(ch, new NetworkMessage(
-								ClientCommandList.VERSION,
-								protocolMajorVersion, protocolMinorVersion));
+						acceptClient();
 					}
 					if (key.isReadable()) {
-						ch = (SocketChannel) key.channel();
-						if (modeChangeRequested.contains(key)) {
-							// we need to switch message handlers first
-							activateSsl(key);
-						}
-						List<NetworkMessage> msgs;
-						IMessageHandler h = (IMessageHandler) key.attachment();
-						try {
-							msgs = h.readRaw();
-						} catch (IOException ex) { // FIXME : figure out a way
-													// to deal with forcefully
-													// closed connections, and
-													// then downgrade this to
-													// EOFException
-							log.info("Peer {} shut down.",
-									ch.getRemoteAddress());
-							User u;
-							if ((u = store.getUser(ch)) != null) {
-								deregister(u);
-							} else {
-								key.cancel();
-								key.channel().close();
-							}
-							continue;
-						}
-						for (NetworkMessage msg : msgs) {
-							// schedule command interpretation
-							if (!msg.isEmpty()) {
-								String command = msg.get(0);
-								if (msg.argCount() == 2
-										&& ClientCommandList.HELLO.name()
-												.equals(command)) {
-									// handle mode switching in the same thread
-									setMode(key, msg.get(1));
-								} else {
-									threadPool.execute(new CommandReceiver(ch,
-											msg));
-								}
-							}
-						}
+						readClient(key);
 					}
 					if (key.isWritable()) {
 						IMessageHandler h = (IMessageHandler) key.attachment();
 						h.flushMessageQueue();
 					}
-				} catch (Exception ex) {
-					log.warn("Error while processing {}. Ignoring.",
-							ch != null ? ch : "(unknown address)", ex);
+				} catch (EOFException ex) {
+					log.debug("Peer shut down.");
+					deregisterAndClose(key);
+				} catch (IOException | RuntimeException ex) {
+					log.warn("Error while processing {}. Disconnecting.",
+							key.channel(), ex);
+					deregisterAndClose(key);
 				}
 			}
 
 		}
 		log.info("Connection listener shut down.");
 		for (User u : store) {
-			try {
-				deregister(u);
-			} catch (UserManagementException e) {
-				log.info("Failed to deregister {}", u);
-			}
+			deregister(u);
 		}
 		threadPool.shutdownNow();
 		delegatedTaskPool.shutdownNow();
+	}
+
+	private void acceptClient() throws IOException {
+		SocketChannel ch = ssc.accept();
+		log.info("Accepted connection from peer {}", ch);
+		ch.configureBlocking(false);
+		// register a message handler
+		SelectionKey newKey = ch.register(selector, SelectionKey.OP_READ);
+		IMessageHandler h = new PlainMessageHandler(newKey, plaintextBufsize);
+		newKey.attach(h);
+		log.info("Registered message handler.");
+
+		queueMessage(ch, new NetworkMessage(ClientCommandList.HELLO, GREETING));
+		queueMessage(ch, new NetworkMessage(ClientCommandList.VERSION,
+				protocolMajorVersion, protocolMinorVersion));
+	}
+
+	private void readClient(SelectionKey key) throws IOException, EOFException {
+		SocketChannel ch = (SocketChannel) key.channel();
+		IMessageHandler h = (IMessageHandler) key.attachment();
+		if (h instanceof PlainMessageHandler
+				&& ((PlainMessageHandler) h).getStatus() == PlainMessageHandler.Status.LIMBO) {
+			// we need to switch message handlers first
+			h = activateSsl(key);
+		}
+		List<NetworkMessage> msgs;
+
+		msgs = h.readRaw();
+		for (NetworkMessage msg : msgs) {
+			// schedule command interpretation
+			if (!msg.isEmpty()) {
+				String command = msg.get(0);
+				if (msg.argCount() == 2
+						&& ServerCommand.HELLO.name().equals(command)) {
+					// handle mode switching in the same thread
+					setMode(key, msg.get(1));
+				} else {
+					threadPool.execute(new CommandReceiver(ch, msg));
+				}
+			}
+		}
+
 	}
 
 	void stopListening() {
@@ -383,10 +377,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	}
 
 	@Override
-	public void deregister(User user) throws UserManagementException {
+	public void deregister(User user) {
 		// TODO allow for disconnect handlers?
 		if (user == null)
-			throw new UserManagementException("null is not a user");
+			throw new IllegalArgumentException("null is not a user");
 		String username = user.handle;
 		user.purgeResponseHandlers();
 		boolean nosession = user.getSession() == null;
@@ -405,20 +399,27 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		} catch (IOException e) {
 			log.warn("Error while closing messageHandler", e);
 		} finally {
-			closeQuietly(user.channel);
+			closeQuietly(user.channel.keyFor(selector));
 		}
 		if (nosession)
 			lobbyBroadcast(user, new NetworkMessage(ClientCommandList.SAY,
 					String.format("User %s has disconnected.", username)));
 	}
 
-	private void closeQuietly(SocketChannel channel) {
-		SelectionKey key = channel.keyFor(selector);
-		if (key != null)
-			key.cancel();
+	private void closeQuietly(SelectionKey key) {
+		key.cancel();
 		try {
-			channel.close();
+			key.channel().close();
 		} catch (IOException e) {
+		}
+	}
+
+	private void deregisterAndClose(SelectionKey key) {
+		User u;
+		if ((u = store.getUser((SocketChannel) key.channel())) != null) {
+			deregister(u);
+		} else {
+			closeQuietly(key);
 		}
 	}
 
@@ -487,12 +488,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 					@Override
 					public void run() {
-						try {
-							mon.deregister(toBeKicked);
-						} catch (UserManagementException e) {
-							log.warn("Failed to kick user {}", toBeKicked, e);
-							return;
-						}
+						mon.deregister(toBeKicked);
 					}
 
 				};

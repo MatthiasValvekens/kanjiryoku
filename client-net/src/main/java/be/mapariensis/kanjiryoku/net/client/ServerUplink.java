@@ -43,9 +43,6 @@ public class ServerUplink extends Thread implements Closeable {
 	private final SocketChannel channel;
 	private final SSLContext context;
 	private volatile boolean keepOn = true;
-	private boolean modeFixed = false; // marks whether the client has
-										// attempted to register with
-										// the server
 	private boolean registerCompleted = false;
 	private final Selector selector;
 	private final InetAddress addr;
@@ -71,8 +68,15 @@ public class ServerUplink extends Thread implements Closeable {
 		this.username = username;
 	}
 
+	private boolean modeFixed() {
+		if (messageHandler instanceof SSLMessageHandler)
+			return true;
+		PlainMessageHandler pmh = (PlainMessageHandler) messageHandler;
+		return pmh.getStatus() == PlainMessageHandler.Status.PERMANENT;
+	}
+
 	public void sslMode() {
-		if (!modeFixed) {
+		if (!modeFixed()) {
 			if (context == null) {
 				bridge.getChat().displaySystemMessage(
 						"Server does not support plain text mode. Bail.");
@@ -87,12 +91,11 @@ public class ServerUplink extends Thread implements Closeable {
 				enqueueMessage(new NetworkMessage(ServerCommandList.REGISTER,
 						username));
 			}
-			modeFixed = true;
 		}
 	}
 
 	public void plaintextMode() {
-		if (!modeFixed) {
+		if (!modeFixed()) {
 			if (context != null) {
 				// this means we attempted to connect using SSL, but the server
 				// refused.
@@ -103,8 +106,8 @@ public class ServerUplink extends Thread implements Closeable {
 				bridge.getChat().displaySystemMessage("Mode accepted.");
 				enqueueMessage(new NetworkMessage(ServerCommandList.REGISTER,
 						username));
+				((PlainMessageHandler) messageHandler).setPermanent();
 			}
-			modeFixed = true;
 		}
 	}
 
