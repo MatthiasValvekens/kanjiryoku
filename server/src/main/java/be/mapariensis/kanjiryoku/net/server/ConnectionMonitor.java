@@ -65,6 +65,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	// SSL-related stuff
 	private final SSLContext sslContext;
 	private final ExecutorService delegatedTaskPool;
+	private final int plaintextBufsize;
+	private final boolean enforceSSL;
 	private final Set<SelectionKey> modeChangeRequested = Collections
 			.synchronizedSet(new HashSet<SelectionKey>());
 
@@ -78,20 +80,34 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		selector = Selector.open();
 		int workerThreads = config.getTyped(ConfigFields.WORKER_THREADS,
 				Integer.class, ConfigFields.WORKER_THREADS_DEFAULT);
+		plaintextBufsize = config.getTyped(ConfigFields.PLAINTEXT_BUFFER_SIZE,
+				Integer.class, ConfigFields.PLAINTEXT_BUFFER_SIZE_DEFAULT);
+		enforceSSL = config.getTyped(ConfigFields.FORCE_SSL, Boolean.class,
+				ConfigFields.FORCE_SSL_DEFAULT);
 		threadPool = Executors.newFixedThreadPool(workerThreads);
 		sessman = new SessionManagerImpl(config, this);
 		usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT,
 				Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
 		setName("ConnectionMonitor:" + port);
-
-		sslContext = SSLContextUtil.setUp(config.getRequired("sslContext",
-				IProperties.class));
-		delegatedTaskPool = Executors.newFixedThreadPool(workerThreads);
+		IProperties sslConfig = config
+				.getTyped("sslContext", IProperties.class);
+		if (sslConfig != null) {
+			sslContext = SSLContextUtil.setUp(sslConfig);
+			delegatedTaskPool = Executors.newFixedThreadPool(workerThreads);
+		} else if (!enforceSSL) {
+			log.info("No SSL configuration found. Starting server in plaintext-only mode.");
+			sslContext = null;
+			delegatedTaskPool = null;
+		} else {
+			throw new BadConfigurationException(
+					"Server was instructed to enforce SSL, but no SSL configuration could be found.");
+		}
 	}
 
 	private void setMode(SelectionKey key, String mode) {
 		SocketChannel ch = (SocketChannel) key.channel();
-		if (Constants.MODE_TLS.equals(mode)) {
+		if (enforceSSL
+				|| (Constants.MODE_TLS.equals(mode) && sslContext != null)) {
 			// Send SETMODE before switching, otherwise the client won't
 			// understand
 			queueMessage(ch, new NetworkMessage(ClientCommandList.SETMODE,
@@ -161,7 +177,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						SelectionKey newKey = ch.register(selector,
 								SelectionKey.OP_READ);
 						IMessageHandler h = new PlainMessageHandler(newKey,
-								4096);
+								plaintextBufsize);
 						newKey.attach(h);
 						log.info("Registered message handler.");
 
@@ -384,7 +400,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		store.removeUser(user);
 		log.info("Deregistered user {}", user);
 		try {
-			((SSLMessageHandler) user.channel.keyFor(selector).attachment())
+			((IMessageHandler) user.channel.keyFor(selector).attachment())
 					.close();
 		} catch (IOException e) {
 			log.warn("Error while closing messageHandler", e);
