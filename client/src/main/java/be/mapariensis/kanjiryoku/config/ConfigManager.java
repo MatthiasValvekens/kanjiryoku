@@ -26,6 +26,8 @@ public class ConfigManager {
 	private final ExecutorService saver = Executors.newSingleThreadExecutor();
 	private final SSLContext sslc;
 
+	public static final boolean SSL_DEFAULT = true;
+
 	private class SaveThread implements Runnable {
 		@Override
 		public void run() {

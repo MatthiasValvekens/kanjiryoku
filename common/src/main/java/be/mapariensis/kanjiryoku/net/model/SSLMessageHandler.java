@@ -242,10 +242,17 @@ public class SSLMessageHandler implements IMessageHandler {
 			log.trace("Nothing to flush");
 			return;
 		}
-		netOut.flip();
 		SocketChannel ch = (SocketChannel) key.channel();
-		log.trace("Will attempt to write {} bytes. Writability {}.",
-				netOut.limit(), key.isWritable());
+		log.trace("Will attempt to write {} bytes to {}. Writability {}.",
+				netOut.position() - 1, ch.socket().getRemoteSocketAddress(),
+				key.isWritable());
+		if (!key.isWritable()) {
+			synchronized (key) {
+				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+			}
+			return;
+		}
+		netOut.flip();
 		ch.write(netOut);
 		netOut.compact();
 		if (netOut.position() > 0) {

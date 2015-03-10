@@ -14,6 +14,8 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -28,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.config.ConfigFields;
 import be.mapariensis.kanjiryoku.config.ServerConfig;
+import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
@@ -38,8 +41,9 @@ import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.IMessageHandler;
-import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
+import be.mapariensis.kanjiryoku.net.model.PlainMessageHandler;
+import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
 import be.mapariensis.kanjiryoku.net.secure.SSLContextUtil;
@@ -61,6 +65,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	// SSL-related stuff
 	private final SSLContext sslContext;
 	private final ExecutorService delegatedTaskPool;
+	private final Set<SelectionKey> modeChangeRequested = Collections
+			.synchronizedSet(new HashSet<SelectionKey>());
 
 	public ConnectionMonitor(ServerConfig config) throws IOException,
 			BadConfigurationException {
@@ -81,6 +87,36 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		sslContext = SSLContextUtil.setUp(config.getRequired("sslContext",
 				IProperties.class));
 		delegatedTaskPool = Executors.newFixedThreadPool(workerThreads);
+	}
+
+	private void setMode(SelectionKey key, String mode) {
+		SocketChannel ch = (SocketChannel) key.channel();
+		if (Constants.MODE_TLS.equals(mode)) {
+			// Send SETMODE before switching, otherwise the client won't
+			// understand
+			queueMessage(ch, new NetworkMessage(ClientCommandList.SETMODE,
+					Constants.MODE_TLS));
+			modeChangeRequested.add(key);
+		} else {
+			// we don't have to do anything for other modes
+			queueMessage(ch, new NetworkMessage(ClientCommandList.SETMODE,
+					Constants.MODE_PLAIN));
+		}
+	}
+
+	private void activateSsl(SelectionKey key) {
+		SocketChannel ch = (SocketChannel) key.channel();
+		log.trace("Activating SSL for {}", ch.socket());
+		modeChangeRequested.remove(key);
+		String addr = ch.socket().getInetAddress().toString();
+		int port = ch.socket().getPort();
+		SSLEngine engine = sslContext.createSSLEngine(addr, port);
+		engine.setUseClientMode(false);
+		engine.setNeedClientAuth(false);
+		engine.setWantClientAuth(false);
+		IMessageHandler h = new SSLMessageHandler(key, engine,
+				delegatedTaskPool);
+		key.attach(h);
 	}
 
 	@Override
@@ -121,19 +157,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						ch = ssc.accept();
 						log.info("Accepted connection from peer {}", ch);
 						ch.configureBlocking(false);
-						String addr = ch.socket().getInetAddress().toString();
-						int port = ch.socket().getPort();
-
-						SSLEngine engine = sslContext.createSSLEngine(addr,
-								port);
-						engine.setUseClientMode(false);
-						engine.setNeedClientAuth(false);
-						engine.setWantClientAuth(false);
 						// register a message handler
 						SelectionKey newKey = ch.register(selector,
 								SelectionKey.OP_READ);
-						IMessageHandler h = new SSLMessageHandler(newKey, engine,
-								delegatedTaskPool);
+						IMessageHandler h = new PlainMessageHandler(newKey,
+								4096);
 						newKey.attach(h);
 						log.info("Registered message handler.");
 
@@ -145,6 +173,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					}
 					if (key.isReadable()) {
 						ch = (SocketChannel) key.channel();
+						if (modeChangeRequested.contains(key)) {
+							// we need to switch message handlers first
+							activateSsl(key);
+						}
 						List<NetworkMessage> msgs;
 						IMessageHandler h = (IMessageHandler) key.attachment();
 						try {
@@ -167,9 +199,18 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						}
 						for (NetworkMessage msg : msgs) {
 							// schedule command interpretation
-							if (!msg.isEmpty())
-								threadPool
-										.execute(new CommandReceiver(ch, msg));
+							if (!msg.isEmpty()) {
+								String command = msg.get(0);
+								if (msg.argCount() == 2
+										&& ClientCommandList.HELLO.name()
+												.equals(command)) {
+									// handle mode switching in the same thread
+									setMode(key, msg.get(1));
+								} else {
+									threadPool.execute(new CommandReceiver(ch,
+											msg));
+								}
+							}
 						}
 					}
 					if (key.isWritable()) {
@@ -229,13 +270,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					SelectionKey key = ch.keyFor(selector);
 					if (key == null) {
 						log.error("Key cancelled before registration could complete! Aborting.");
-						SSLMessageHandler h = (SSLMessageHandler) ch.keyFor(selector)
-								.attachment();
+						SSLMessageHandler h = (SSLMessageHandler) ch.keyFor(
+								selector).attachment();
 						if (h != null)
 							h.close();
 						return;
 					}
-					SSLMessageHandler h = (SSLMessageHandler) ch.keyFor(selector)
+					IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
 							.attachment();
 					register(new User(handle, ch, h));
 				} else {
@@ -245,8 +286,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 							log.info(
 									"Gracefully closing {} disconnected with BYE",
 									ch);
-							SSLMessageHandler h = (SSLMessageHandler) ch.keyFor(
-									selector).attachment();
+							SSLMessageHandler h = (SSLMessageHandler) ch
+									.keyFor(selector).attachment();
 							h.close();
 						} else if (command != ServerCommand.HELLO)
 							throw new UserManagementException(

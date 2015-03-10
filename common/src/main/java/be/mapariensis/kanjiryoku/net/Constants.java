@@ -14,6 +14,8 @@ public class Constants {
 
 	public static final String COMMAND_REGISTER = "REGISTER";
 	public static final String WELCOME = "Welcome";
+	public static final String MODE_TLS = "TLS";
+	public static final String MODE_PLAIN = "PLAIN";
 
 	public static final String RESPONSE_SUCCESS = "SUCCESS";
 	public static final String ACCEPTS = "ACCEPT";

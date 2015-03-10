@@ -301,9 +301,24 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ClientException {
+			log.debug("Server says hello.");
 			checkArgs(msg, 2);
 			bridge.getChat().displayServerMessage(msg.timestamp, msg.get(1));
-			bridge.getUplink().register();
+			bridge.getUplink().requestMode();
+		}
+	},
+	SETMODE {
+		@Override
+		public void execute(NetworkMessage msg, UIBridge bridge)
+				throws ClientException {
+			checkArgs(msg, 2);
+			String mode = msg.get(1);
+			if (Constants.MODE_PLAIN.equals(mode))
+				bridge.getUplink().plaintextMode();
+			else if (Constants.MODE_TLS.equals(mode))
+				bridge.getUplink().sslMode();
+			else
+				throw new ServerCommunicationException(msg);
 		}
 	};
 

@@ -8,6 +8,7 @@ import java.awt.event.ActionEvent;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
@@ -19,6 +20,7 @@ import javax.swing.JTextField;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.config.ConfigManager;
 import be.mapariensis.kanjiryoku.net.profiles.ProfileSet;
 import be.mapariensis.kanjiryoku.net.profiles.ProfileSet.Profile;
 
@@ -78,6 +80,10 @@ public class CreateConnectionDialog extends JDialog {
 		final JTextField username = new JTextField(FIELD_LEN);
 		put(username, fieldConstraints);
 
+		labelConstraints.gridy++;
+		final JCheckBox useSsl = new JCheckBox("Use SSL",
+				ConfigManager.SSL_DEFAULT);
+		put(useSsl, fieldConstraints);
 		GridBagConstraints buttonConstraints = new GridBagConstraints();
 		buttonConstraints.gridx = 1;
 		buttonConstraints.gridy = labelConstraints.gridy;
@@ -90,11 +96,12 @@ public class CreateConnectionDialog extends JDialog {
 				String host = hostname.getText();
 				String user = username.getText();
 				String profile = profileName.getText();
+				boolean ssl = useSsl.isSelected();
 				try {
 					if (user.isEmpty() || profile.isEmpty())
 						throw new RuntimeException("Required field empty");
 					profiles.replaceProfile(initialProfile, profile, host,
-							Integer.valueOf(port.getText()), user);
+							Integer.valueOf(port.getText()), user, ssl);
 					setVisible(false);
 					dispose();
 				} catch (RuntimeException ex) {
@@ -116,6 +123,7 @@ public class CreateConnectionDialog extends JDialog {
 				hostname.setText(p.host);
 				port.setText(Integer.toString(p.port));
 				username.setText(p.username);
+				useSsl.setSelected(p.useSsl);
 			}
 		}
 		pack();
