@@ -35,7 +35,7 @@ public class ServerUplink extends Thread implements Closeable {
 	private static final Logger log = LoggerFactory
 			.getLogger(ServerUplink.class);
 	private static final long SELECT_TIMEOUT = 500;
-	private static final int PLAINTEXT_BUFSIZE = 4096;
+	private static final int PLAINTEXT_BUFSIZE = 8192;
 	private static final int DELEGATE_TASK_WORKERS = 8;
 	private final ExecutorService threadPool;
 	private final ExecutorService delegatedTaskPool = Executors
@@ -83,7 +83,7 @@ public class ServerUplink extends Thread implements Closeable {
 						port);
 				engine.setUseClientMode(true);
 				messageHandler = new SSLMessageHandler(key, engine,
-						delegatedTaskPool);
+						delegatedTaskPool, PLAINTEXT_BUFSIZE);
 				enqueueMessage(new NetworkMessage(ServerCommandList.REGISTER,
 						username));
 			}

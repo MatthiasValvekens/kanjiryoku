@@ -17,10 +17,10 @@ public class ConfigFields {
 	public static final int WORKER_THREADS_DEFAULT = 10;
 	/**
 	 * The size of the ByteBuffer attached to each plaintext message handler
-	 * (default 8KB).
+	 * (default 4KB).
 	 */
 	public static final String PLAINTEXT_BUFFER_SIZE = "plaintextBufferSize";
-	public static final int PLAINTEXT_BUFFER_SIZE_DEFAULT = 8192;
+	public static final int PLAINTEXT_BUFFER_SIZE_DEFAULT = 4096;
 
 	/**
 	 * Controls whether SSL mode is enforced. Default is false for now, but this

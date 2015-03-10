@@ -131,7 +131,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		engine.setNeedClientAuth(false);
 		engine.setWantClientAuth(false);
 		IMessageHandler h = new SSLMessageHandler(key, engine,
-				delegatedTaskPool);
+				delegatedTaskPool, plaintextBufsize);
 		key.attach(h);
 	}
 

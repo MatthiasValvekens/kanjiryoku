@@ -38,17 +38,16 @@ public class SSLMessageHandler implements IMessageHandler {
 	private SSLEngineResult sslres = null;
 
 	public SSLMessageHandler(SelectionKey key, SSLEngine engine,
-			ExecutorService delegatedTaskPool) {
+			ExecutorService delegatedTaskPool, int plaintextBufsize) {
 		if (key == null)
 			throw new IllegalArgumentException();
 		this.key = key;
 		int netbufsize = engine.getSession().getPacketBufferSize();
-		int appbufsize = engine.getSession().getApplicationBufferSize();
 		log.trace("Buffers initialised to: net: {}, app: {}", netbufsize,
-				appbufsize);
+				plaintextBufsize);
 		this.netIn = ByteBuffer.allocate(netbufsize);
-		this.appIn = ByteBuffer.allocate(appbufsize + 256);
-		this.appOut = ByteBuffer.allocate(appbufsize);
+		this.appIn = ByteBuffer.allocate(plaintextBufsize + 256);
+		this.appOut = ByteBuffer.allocate(plaintextBufsize);
 		this.netOut = ByteBuffer.allocate(netbufsize);
 		this.engine = engine;
 		this.delegatedTaskPool = delegatedTaskPool;
