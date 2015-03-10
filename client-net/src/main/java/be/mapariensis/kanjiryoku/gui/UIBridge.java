@@ -10,4 +10,6 @@ public interface UIBridge {
 	public ChatInterface getChat();
 
 	public void setUsername(String username);
+
+	public void close();
 }
