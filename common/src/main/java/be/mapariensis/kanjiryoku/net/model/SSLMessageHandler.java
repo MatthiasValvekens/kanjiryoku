@@ -36,6 +36,7 @@ public class SSLMessageHandler implements IMessageHandler {
 	private final SSLEngine engine;
 	private final ExecutorService delegatedTaskPool;
 	private SSLEngineResult sslres = null;
+	private volatile boolean disposed = false;
 
 	public SSLMessageHandler(SelectionKey key, SSLEngine engine,
 			ExecutorService delegatedTaskPool, int plaintextBufsize) {
@@ -264,6 +265,9 @@ public class SSLMessageHandler implements IMessageHandler {
 			synchronized (key) {
 				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 			}
+			if (disposed) {
+				close();
+			}
 		}
 	}
 
@@ -389,5 +393,10 @@ public class SSLMessageHandler implements IMessageHandler {
 			requestedTaskExecution = false;
 			log.trace("Task finished");
 		}
+	}
+
+	@Override
+	public void dispose() {
+		disposed = true;
 	}
 }
