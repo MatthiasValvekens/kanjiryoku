@@ -4,6 +4,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyStore;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -12,12 +14,14 @@ import javax.net.ssl.TrustManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
+import be.mapariensis.kanjiryoku.util.ByteUtils;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
-public class SSLContextUtil {
+public class SecurityUtils {
 	private static final Logger log = LoggerFactory
-			.getLogger(SSLContextUtil.class);
+			.getLogger(SecurityUtils.class);
 
 	public static final String KEYSTORE = "keyStore";
 	public static final String TRUSTSTORE = "trustStore";
@@ -61,5 +65,15 @@ public class SSLContextUtil {
 		} catch (Exception ex) {
 			throw new IOException(ex);
 		}
+	}
+
+	public static byte[] sha256(byte[] data) throws NoSuchAlgorithmException {
+		MessageDigest md = MessageDigest.getInstance("SHA256");
+		md.update(data);
+		return md.digest();
+	}
+
+	public static String sha256(String data) throws NoSuchAlgorithmException {
+		return ByteUtils.bytesToHex(sha256(data.getBytes(Constants.ENCODING)));
 	}
 }

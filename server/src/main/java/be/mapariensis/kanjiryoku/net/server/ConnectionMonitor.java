@@ -45,7 +45,7 @@ import be.mapariensis.kanjiryoku.net.model.PlainMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
-import be.mapariensis.kanjiryoku.net.secure.SSLContextUtil;
+import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
 import be.mapariensis.kanjiryoku.net.server.handlers.AdminTaskExecutor;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
@@ -89,7 +89,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		IProperties sslConfig = config
 				.getTyped("sslContext", IProperties.class);
 		if (sslConfig != null) {
-			sslContext = SSLContextUtil.setUp(sslConfig);
+			sslContext = SecurityUtils.setUp(sslConfig);
 			delegatedTaskPool = Executors.newFixedThreadPool(workerThreads);
 		} else if (!enforceSSL) {
 			log.info("No SSL configuration found. Starting server in plaintext-only mode.");
