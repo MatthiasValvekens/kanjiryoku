@@ -29,4 +29,9 @@ public interface IMessageHandler extends Closeable {
 
 	public abstract boolean needSend();
 
+	/**
+	 * Close the handler after the next flush that completes successfully.
+	 */
+	public void dispose();
+
 }
