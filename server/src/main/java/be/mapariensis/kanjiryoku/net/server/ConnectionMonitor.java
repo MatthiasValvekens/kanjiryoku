@@ -103,7 +103,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 	}
 
-	private void setMode(SelectionKey key, String mode) {
+	private void setMode(SelectionKey key, String mode) throws IOException {
 		SocketChannel ch = (SocketChannel) key.channel();
 		// caller checks this
 		PlainMessageHandler h = (PlainMessageHandler) key.attachment();
@@ -253,7 +253,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		keepOn = false;
 	}
 
-	private void queueMessage(SocketChannel ch, NetworkMessage message) {
+	private void queueMessage(SocketChannel ch, NetworkMessage message)
+			throws IOException {
 		try {
 			IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
 					.attachment();
@@ -268,7 +269,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 	}
 
-	private void queueProcessingError(SocketChannel ch, ServerException ex) {
+	private void queueProcessingError(SocketChannel ch, ServerException ex)
+			throws IOException {
 		queueMessage(ch, ex.protocolMessage);
 	}
 
@@ -377,7 +379,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	@Override
 	public void messageUser(User user, NetworkMessage message) {
-		queueMessage(user.channel, message);
+		try {
+			queueMessage(user.channel, message);
+		} catch (IOException e) {
+			log.warn("Failed to message user {}, disconnecting.", user);
+			// this might happen during deregistration, so just cancel the key
+			user.channel.keyFor(selector).cancel();
+		}
 	}
 
 	private static enum AdminCommand {
@@ -481,9 +489,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				ConfigFields.ADMIN_WHITELIST, List.class,
 				ConfigFields.ADMIN_WHITELIST_DEFAULT);
 		if (!adminEnabled) {
-			queueProcessingError(issuer.channel, new ServerException(
-					"Admin commands are disabled.",
-					ServerException.ERROR_GENERIC));
+			try {
+				queueProcessingError(issuer.channel, new ServerException(
+						"Admin commands are disabled.",
+						ServerException.ERROR_GENERIC));
+			} catch (IOException e) {
+				log.error("Failed to issue server error.");
+			}
 			return;
 		}
 		if (commandMessage.argCount() == 0)

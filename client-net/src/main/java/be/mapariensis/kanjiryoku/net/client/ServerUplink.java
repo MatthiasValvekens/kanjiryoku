@@ -116,7 +116,13 @@ public class ServerUplink extends Thread implements Closeable {
 				: Constants.MODE_TLS;
 		bridge.getChat().displaySystemMessage(
 				String.format("Requesting communication mode %s...", mode));
-		messageHandler.send(new NetworkMessage(ServerCommandList.HELLO, mode));
+		try {
+			messageHandler.send(new NetworkMessage(ServerCommandList.HELLO,
+					mode));
+		} catch (IOException e) {
+			log.error("I/O error while requesting mode.", e);
+			bridge.close();
+		}
 	}
 
 	@Override
@@ -187,7 +193,11 @@ public class ServerUplink extends Thread implements Closeable {
 			}
 
 			if (key.isWritable()) {
-				messageHandler.flushMessageQueue();
+				try {
+					messageHandler.flushMessageQueue();
+				} catch (IOException e) {
+					log.error("Failed to flush messages.", e);
+				}
 			}
 		}
 	}
@@ -245,8 +255,13 @@ public class ServerUplink extends Thread implements Closeable {
 	}
 
 	public void enqueueMessage(NetworkMessage msg) {
-		if (messageHandler != null)
-			messageHandler.send(msg);
+		if (messageHandler != null) {
+			try {
+				messageHandler.send(msg);
+			} catch (IOException e) {
+				log.error("Failed to send message.", e);
+			}
+		}
 	}
 
 	public void enqueueMessage(NetworkMessage msg, ServerResponseHandler rh) {

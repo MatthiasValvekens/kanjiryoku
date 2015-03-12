@@ -1,5 +1,6 @@
 package be.mapariensis.kanjiryoku.net.server.handlers;
 
+import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -115,7 +116,7 @@ public class CommandReceiverFactory {
 			IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
 					.attachment();
 			h.send(ex.protocolMessage);
-		} catch (CancelledKeyException | NullPointerException e) {
+		} catch (CancelledKeyException | NullPointerException | IOException e) {
 			log.warn("Failed to write message, peer already disconnected.");
 		}
 	}

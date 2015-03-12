@@ -85,7 +85,7 @@ public class User {
 	public void leaveSession() {
 		try {
 			outbox.send(new NetworkMessage(ClientCommandList.RESETUI));
-		} catch (CancelledKeyException e) {
+		} catch (CancelledKeyException | IOException e) {
 		}
 		synchronized (sessionLock) {
 			session = null;

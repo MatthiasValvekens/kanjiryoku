@@ -82,15 +82,16 @@ public class SSLMessageHandler implements IMessageHandler {
 	 * handler's application output buffer.
 	 * 
 	 * @param message
+	 * @throws IOException
 	 */
 	@Override
-	public void send(NetworkMessage message) {
+	public void send(NetworkMessage message) throws IOException {
 		if (message == null || message.isEmpty())
 			return;
 		send(message.toString().getBytes(Constants.ENCODING));
 	}
 
-	protected void send(byte[] message) {
+	protected void send(byte[] message) throws IOException {
 		for (byte b : message) {
 			if (b == NetworkMessage.EOM)
 				throw new RuntimeException("EOM byte is illegal in messages.");
@@ -107,7 +108,7 @@ public class SSLMessageHandler implements IMessageHandler {
 	}
 
 	@Override
-	public void flushMessageQueue() {
+	public void flushMessageQueue() throws IOException {
 		try {
 			flush();
 			sslWrite();
@@ -121,11 +122,9 @@ public class SSLMessageHandler implements IMessageHandler {
 				}
 			}
 			return;
-		} catch (IOException e) {
-			log.error("I/O failure while sending messages", e);
+		} catch (BufferOverflowException | BufferUnderflowException e) {
+			throw new IOException(e);
 		}
-
-		key.selector().wakeup();
 	}
 
 	private final CharsetDecoder decoder = Constants.ENCODING.newDecoder();
