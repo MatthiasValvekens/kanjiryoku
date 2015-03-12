@@ -39,6 +39,7 @@ public class PlainMessageHandler implements IMessageHandler {
 	private final Object APPOUT_LOCK = new Object();
 	private final SelectionKey key;
 	private final ByteBuffer appIn, appOut;
+	private volatile boolean disposed = false;
 	private Status status;
 
 	public PlainMessageHandler(SelectionKey key, int bufsize) {
@@ -198,6 +199,9 @@ public class PlainMessageHandler implements IMessageHandler {
 			synchronized (key) {
 				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 			}
+			if (disposed) {
+				close();
+			}
 		}
 	}
 
@@ -218,5 +222,10 @@ public class PlainMessageHandler implements IMessageHandler {
 
 	public void setPermanent() {
 		status = Status.PERMANENT;
+	}
+
+	@Override
+	public void dispose() {
+		disposed = true;
 	}
 }

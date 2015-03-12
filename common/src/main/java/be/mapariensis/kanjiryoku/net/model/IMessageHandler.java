@@ -19,14 +19,20 @@ public interface IMessageHandler extends Closeable {
 	 * handler's application output buffer.
 	 * 
 	 * @param message
+	 * @throws IOException
 	 */
-	public abstract void send(NetworkMessage message);
+	public abstract void send(NetworkMessage message) throws IOException;
 
-	public abstract void flushMessageQueue();
+	public abstract void flushMessageQueue() throws IOException;
 
 	public abstract List<NetworkMessage> readRaw() throws IOException,
 			EOFException;
 
 	public abstract boolean needSend();
+
+	/**
+	 * Close the handler after the next flush that completes successfully.
+	 */
+	public void dispose();
 
 }

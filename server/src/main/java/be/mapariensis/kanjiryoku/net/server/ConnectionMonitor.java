@@ -35,7 +35,6 @@ import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
-import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
@@ -47,6 +46,7 @@ import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
 import be.mapariensis.kanjiryoku.net.secure.SSLContextUtil;
 import be.mapariensis.kanjiryoku.net.server.handlers.AdminTaskExecutor;
+import be.mapariensis.kanjiryoku.net.server.handlers.CommandReceiverFactory;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class ConnectionMonitor extends Thread implements UserManager, Closeable {
@@ -59,13 +59,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final Selector selector;
 	private final UserStore store = new UserStore();
 	private final SessionManagerImpl sessman;
-	private final int usernameCharLimit;
 	private final ServerConfig config;
 	// SSL-related stuff
 	private final SSLContext sslContext;
 	private final ExecutorService delegatedTaskPool;
 	private final int plaintextBufsize;
 	private final boolean enforceSSL;
+	private final CommandReceiverFactory crf;
 
 	public ConnectionMonitor(ServerConfig config) throws IOException,
 			BadConfigurationException {
@@ -83,8 +83,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				ConfigFields.FORCE_SSL_DEFAULT);
 		threadPool = Executors.newFixedThreadPool(workerThreads);
 		sessman = new SessionManagerImpl(config, this);
-		usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT,
+		int usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT,
 				Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
+		crf = new CommandReceiverFactory(usernameCharLimit, this, selector,
+				sessman);
 		setName("ConnectionMonitor:" + port);
 		IProperties sslConfig = config
 				.getTyped("sslContext", IProperties.class);
@@ -101,7 +103,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 	}
 
-	private void setMode(SelectionKey key, String mode) {
+	private void setMode(SelectionKey key, String mode) throws IOException {
 		SocketChannel ch = (SocketChannel) key.channel();
 		// caller checks this
 		PlainMessageHandler h = (PlainMessageHandler) key.attachment();
@@ -239,7 +241,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					// handle mode switching in the same thread
 					setMode(key, msg.get(1));
 				} else {
-					threadPool.execute(new CommandReceiver(ch, msg));
+					threadPool.execute(crf.getReceiver(ch, msg));
 				}
 			}
 		}
@@ -251,76 +253,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		keepOn = false;
 	}
 
-	private class CommandReceiver implements Runnable {
-		final SocketChannel ch;
-		final NetworkMessage msg;
-
-		CommandReceiver(SocketChannel ch, NetworkMessage msg) {
-			this.ch = ch;
-			this.msg = msg;
-		}
-
-		@Override
-		public void run() {
-			try {
-				ServerCommand command;
-				String commandString = msg.get(0).toUpperCase();
-				try {
-					command = ServerCommand.valueOf(commandString);
-				} catch (IllegalArgumentException ex) {
-					throw new ProtocolSyntaxException(String.format(
-							"Unknown command %s", commandString));
-				}
-				// check for REGISTER command (which gets special treatment)
-				if (command == ServerCommand.REGISTER) {
-					String handle = msg.get(1);
-					handle = handle.substring(0,
-							Math.min(usernameCharLimit, handle.length())); // truncate
-																			// handle
-					SelectionKey key = ch.keyFor(selector);
-					if (key == null) {
-						log.error("Key cancelled before registration could complete! Aborting.");
-						SSLMessageHandler h = (SSLMessageHandler) ch.keyFor(
-								selector).attachment();
-						if (h != null)
-							h.close();
-						return;
-					}
-					IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
-							.attachment();
-					register(new User(handle, ch, h));
-				} else {
-					User u = store.getUser(ch);
-					if (u == null) {
-						if (command == ServerCommand.BYE) {
-							log.info(
-									"Gracefully closing {} disconnected with BYE",
-									ch);
-							SSLMessageHandler h = (SSLMessageHandler) ch
-									.keyFor(selector).attachment();
-							h.close();
-						} else if (command != ServerCommand.HELLO)
-							throw new UserManagementException(
-									"You must register before using any command other than HELLO, REGISTER or BYE");
-					} else
-						command.execute(msg, u, ConnectionMonitor.this, sessman);
-				}
-			} catch (ServerException ex) {
-				log.debug("Processing error", ex);
-				queueProcessingError(ch, ex);
-			} catch (IndexOutOfBoundsException ex) {
-				log.debug("Badly formed command: {}", msg, ex);
-				queueProcessingError(ch, new ProtocolSyntaxException(
-						"Badly formed command", ex));
-			} catch (Exception e) {
-				log.error("Failed to process command.", e);
-				queueProcessingError(ch, new ServerBackendException(e));
-			}
-		}
-
-	}
-
-	private void queueMessage(SocketChannel ch, NetworkMessage message) {
+	private void queueMessage(SocketChannel ch, NetworkMessage message)
+			throws IOException {
 		try {
 			IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
 					.attachment();
@@ -335,7 +269,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 	}
 
-	private void queueProcessingError(SocketChannel ch, ServerException ex) {
+	private void queueProcessingError(SocketChannel ch, ServerException ex)
+			throws IOException {
 		queueMessage(ch, ex.protocolMessage);
 	}
 
@@ -444,7 +379,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	@Override
 	public void messageUser(User user, NetworkMessage message) {
-		queueMessage(user.channel, message);
+		try {
+			queueMessage(user.channel, message);
+		} catch (IOException e) {
+			log.warn("Failed to message user {}, disconnecting.", user);
+			// this might happen during deregistration, so just cancel the key
+			user.channel.keyFor(selector).cancel();
+		}
 	}
 
 	private static enum AdminCommand {
@@ -548,9 +489,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				ConfigFields.ADMIN_WHITELIST, List.class,
 				ConfigFields.ADMIN_WHITELIST_DEFAULT);
 		if (!adminEnabled) {
-			queueProcessingError(issuer.channel, new ServerException(
-					"Admin commands are disabled.",
-					ServerException.ERROR_GENERIC));
+			try {
+				queueProcessingError(issuer.channel, new ServerException(
+						"Admin commands are disabled.",
+						ServerException.ERROR_GENERIC));
+			} catch (IOException e) {
+				log.error("Failed to issue server error.");
+			}
 			return;
 		}
 		if (commandMessage.argCount() == 0)
@@ -614,5 +559,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				messageUser(u, msg); // only message fellow users that are not
 										// in a session
 		}
+	}
+
+	@Override
+	public UserStore getStore() {
+		return store;
 	}
 }
