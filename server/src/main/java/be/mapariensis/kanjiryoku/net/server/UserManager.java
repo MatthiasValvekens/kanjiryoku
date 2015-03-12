@@ -4,6 +4,7 @@ import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
+import be.mapariensis.kanjiryoku.net.model.UserStore;
 
 public interface UserManager {
 	/**
@@ -54,4 +55,6 @@ public interface UserManager {
 
 	public void adminCommand(User issuer, int id, NetworkMessage commandMessage)
 			throws UserManagementException, ProtocolSyntaxException;
+
+	public UserStore getStore();
 }
