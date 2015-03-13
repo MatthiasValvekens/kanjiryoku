@@ -35,11 +35,16 @@ public class ServerAuthEngine {
 		return status;
 	}
 
+	public String getUsername() {
+		return username;
+	}
+
 	public synchronized NetworkMessage submit(NetworkMessage msg)
 			throws ProtocolSyntaxException, AuthenticationFailedException {
+		if (msg == null)
+			throw new IllegalArgumentException();
 		try {
 			switch (status) {
-			case PROCESS_CRED:
 			case SUCCESS:
 			case FAILURE:
 				throw new ProtocolSyntaxException();
@@ -60,7 +65,6 @@ public class ServerAuthEngine {
 			case WAIT_CRED:
 				String hash = msg.get(1);
 				String clientSalt = msg.get(2);
-				status = AuthStatus.PROCESS_CRED;
 				if (!stringAlong && backend.authenticate(hash, clientSalt)) {
 					status = AuthStatus.SUCCESS;
 					return new NetworkMessage(ClientCommandList.AUTH,
@@ -69,12 +73,13 @@ public class ServerAuthEngine {
 					status = AuthStatus.FAILURE;
 					throw new AuthenticationFailedException(username);
 				}
+			default:
+				throw new IllegalArgumentException();
 			}
 		} catch (RuntimeException ex) {
 			log.info("Authentication failed.", ex);
 			status = AuthStatus.FAILURE;
 			throw new ProtocolSyntaxException();
 		}
-		return null;
 	}
 }

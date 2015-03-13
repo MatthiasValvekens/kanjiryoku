@@ -57,4 +57,6 @@ public interface UserManager {
 			throws UserManagementException, ProtocolSyntaxException;
 
 	public UserStore getStore();
+
+	public void delegate(Runnable run);
 }

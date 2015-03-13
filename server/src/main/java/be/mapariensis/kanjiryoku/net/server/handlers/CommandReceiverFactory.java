@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.config.ConfigFields;
 import be.mapariensis.kanjiryoku.config.ServerConfig;
+import be.mapariensis.kanjiryoku.net.exceptions.AuthenticationFailedException;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
@@ -26,6 +27,7 @@ import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler.Factory;
+import be.mapariensis.kanjiryoku.net.secure.auth.AuthStatus;
 import be.mapariensis.kanjiryoku.net.secure.auth.ServerAuthEngine;
 import be.mapariensis.kanjiryoku.net.server.ConnectionContext;
 import be.mapariensis.kanjiryoku.net.server.ServerCommand;
@@ -87,8 +89,8 @@ public class CommandReceiverFactory {
 		@Override
 		public void run() {
 			try {
-				IMessageHandler h = ((ConnectionContext) ch.keyFor(selector)
-						.attachment()).getMessageHandler();
+				final IMessageHandler h = ((ConnectionContext) ch.keyFor(
+						selector).attachment()).getMessageHandler();
 				ServerCommand command;
 				String commandString = msg.get(0).toUpperCase();
 				try {
@@ -99,41 +101,10 @@ public class CommandReceiverFactory {
 				}
 				// check for REGISTER command (which gets special treatment)
 				if (command == ServerCommand.REGISTER) {
-					String handle = msg.get(1);
-					handle = handle.substring(0,
-							Math.min(usernameCharLimit, handle.length())); // truncate
-					if (requireAuth) {
-						// shortcut if ssl authenticated
-						if (sslAuthSufficient && h instanceof SSLMessageHandler) {
-							SSLEngine eng = ((SSLMessageHandler) h)
-									.getSSLEngine();
-							try {
-								Principal p = eng.getSession()
-										.getPeerPrincipal();
-								if (handle.equals(p.getName())) {
-									authenticate(handle, h);
-								} else {
-									log.info(
-											"Handle {} does not match principal name {}.",
-											p.getName());
-								}
-							} catch (SSLPeerUnverifiedException ex) {
-								// peer is not verified
-								log.debug("SSL peer not verified. Falling back to password-based auth.");
-							}
-
-						} else {
-							ServerAuthEngine eng = new ServerAuthEngine(ahf);
-							eng.submit(msg);
-							// attach auth engine to connection context
-							((ConnectionContext) ch.keyFor(selector)
-									.attachment()).setAuthEngine(eng);
-						}
-					} else {
-						// authentication has been turned off, go ahead and
-						// register.
-						authenticate(handle, h);
-					}
+					handleRegister(msg, h);
+				} else if (command == ServerCommand.AUTH) {
+					// schedule next auth step in separate thread.
+					userman.delegate(new AuthDelegate(h, this));
 				} else {
 					User u = userman.getStore().getUser(ch);
 					if (u == null) {
@@ -161,6 +132,43 @@ public class CommandReceiverFactory {
 			}
 		}
 
+		private void handleRegister(NetworkMessage msg, IMessageHandler h)
+				throws ServerException, IOException {
+			String handle = msg.get(1);
+			handle = handle.substring(0,
+					Math.min(usernameCharLimit, handle.length())); // truncate
+			if (requireAuth) {
+				// shortcut if ssl authenticated
+				if (sslAuthSufficient && h instanceof SSLMessageHandler) {
+					SSLEngine eng = ((SSLMessageHandler) h).getSSLEngine();
+					try {
+						Principal p = eng.getSession().getPeerPrincipal();
+						if (handle.equals(p.getName())) {
+							authenticate(handle, h);
+						} else {
+							log.info(
+									"Handle {} does not match principal name {}.",
+									p.getName());
+						}
+					} catch (SSLPeerUnverifiedException ex) {
+						// peer is not verified
+						log.debug("SSL peer not verified. Falling back on password-based auth.");
+					}
+
+				} else {
+					ServerAuthEngine eng = new ServerAuthEngine(ahf);
+					eng.submit(msg);
+					// attach auth engine to connection context
+					((ConnectionContext) ch.keyFor(selector).attachment())
+							.setAuthEngine(eng);
+				}
+			} else {
+				// authentication has been turned off, go ahead and
+				// register.
+				authenticate(handle, h);
+			}
+		}
+
 		private void authenticate(String handle, IMessageHandler h)
 				throws IOException, UserManagementException {
 			SelectionKey key = ch.keyFor(selector);
@@ -182,6 +190,42 @@ public class CommandReceiverFactory {
 			h.send(ex.protocolMessage);
 		} catch (CancelledKeyException | NullPointerException | IOException e) {
 			log.warn("Failed to write message, peer already disconnected.");
+		}
+	}
+
+	private class AuthDelegate implements Runnable {
+
+		final IMessageHandler h;
+		final CommandReceiver cr;
+
+		public AuthDelegate(IMessageHandler h, CommandReceiver cr) {
+			this.h = h;
+			this.cr = cr;
+		}
+
+		@Override
+		public void run() {
+			ServerAuthEngine eng = ((ConnectionContext) cr.ch.keyFor(selector)
+					.attachment()).getAuthEngine();
+			try {
+				eng.submit(cr.msg);
+			} catch (AuthenticationFailedException e) {
+				h.dispose(e.protocolMessage);
+				return;
+			} catch (ProtocolSyntaxException e) {
+				log.debug("Protocol syntax exception in auth engine. Ignoring.");
+				return;
+			}
+			if (eng.getStatus() == AuthStatus.SUCCESS) {
+				try {
+					cr.authenticate(eng.getUsername(), h);
+				} catch (UserManagementException e) {
+					h.dispose(e.protocolMessage);
+				} catch (IOException e) {
+					log.warn("I/O error during user registration", e);
+					return;
+				}
+			}
 		}
 	}
 }

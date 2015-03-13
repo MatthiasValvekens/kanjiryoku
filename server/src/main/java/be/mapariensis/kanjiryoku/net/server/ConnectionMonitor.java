@@ -573,4 +573,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	public UserStore getStore() {
 		return store;
 	}
+
+	@Override
+	public void delegate(Runnable run) {
+		threadPool.execute(run);
+	}
 }

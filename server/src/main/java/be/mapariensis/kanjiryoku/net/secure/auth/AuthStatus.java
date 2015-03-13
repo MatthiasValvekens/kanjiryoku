@@ -10,10 +10,6 @@ public enum AuthStatus {
 	 */
 	WAIT_CRED,
 	/**
-	 * The server is processing the credentials.
-	 */
-	PROCESS_CRED,
-	/**
 	 * Authentication succeeded.
 	 */
 	SUCCESS,
