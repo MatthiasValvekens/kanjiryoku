@@ -20,15 +20,15 @@ public class ServerAuthEngine {
 			.getLogger(ServerAuthEngine.class);
 
 	private final SecureRandom rng = new SecureRandom();
-	private final AuthHandler.Factory factory;
+	private final AuthHandlerProvider provider;
 	private AuthHandler backend;
 	private String username;
 	private volatile AuthStatus status;
 	private boolean stringAlong = false;
 
-	public ServerAuthEngine(AuthHandler.Factory factory) {
+	public ServerAuthEngine(AuthHandlerProvider provider) {
 		this.status = AuthStatus.INIT;
-		this.factory = factory;
+		this.provider = provider;
 	}
 
 	public AuthStatus getStatus() {
@@ -52,7 +52,7 @@ public class ServerAuthEngine {
 				username = msg.get(1);
 				status = AuthStatus.WAIT_CRED;
 				try {
-					backend = factory.init(username);
+					backend = provider.createHandler(username);
 				} catch (UserManagementException e) {
 					// The user doesn't exist, but let's play along anyway.
 					stringAlong = true;

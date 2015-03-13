@@ -25,14 +25,14 @@ import be.mapariensis.kanjiryoku.net.model.IMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
-import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler;
-import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler.Factory;
+import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandlerProvider;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthStatus;
 import be.mapariensis.kanjiryoku.net.secure.auth.ServerAuthEngine;
 import be.mapariensis.kanjiryoku.net.server.ConnectionContext;
 import be.mapariensis.kanjiryoku.net.server.ServerCommand;
 import be.mapariensis.kanjiryoku.net.server.SessionManager;
 import be.mapariensis.kanjiryoku.net.server.UserManager;
+import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class CommandReceiverFactory {
 	private static final Logger log = LoggerFactory
@@ -42,7 +42,7 @@ public class CommandReceiverFactory {
 	private final Selector selector;
 	private final SessionManager sessman;
 	private final boolean requireAuth, sslAuthSufficient;
-	private final AuthHandler.Factory ahf;
+	private final AuthHandlerProvider authHandlerProvider;
 
 	public CommandReceiverFactory(ServerConfig config, UserManager userman,
 			Selector selector, SessionManager sessman)
@@ -58,18 +58,29 @@ public class CommandReceiverFactory {
 		this.selector = selector;
 		this.sessman = sessman;
 		if (requireAuth) {
-			String afhClass = config.getRequired(ConfigFields.AUTH_BACKEND,
-					String.class);
+			IProperties authBackend = config.getRequired(
+					ConfigFields.AUTH_BACKEND, IProperties.class);
+			String providerFactory = authBackend.getRequired(
+					ConfigFields.AUTH_BACKEND_PROVIDER_CLASS, String.class);
+			// Load factory implementation from config
+			AuthHandlerProvider.Factory factory;
 			try {
-				ahf = (Factory) getClass().getClassLoader().loadClass(afhClass)
+				factory = (AuthHandlerProvider.Factory) getClass()
+						.getClassLoader().loadClass(providerFactory)
 						.newInstance();
 			} catch (InstantiationException | IllegalAccessException
 					| ClassNotFoundException | ClassCastException e) {
 				log.error("Failed to instantiate authentication backend.", e);
 				throw new BadConfigurationException(e);
 			}
+			// This contains the configuration for the authentication backend
+			// e.g. database credentials, etc.
+			IProperties backendConfig = authBackend.getRequired(
+					ConfigFields.AUTH_BACKEND_CONFIG, IProperties.class);
+			// Initialise auth handler provider.
+			authHandlerProvider = factory.setUp(backendConfig);
 		} else {
-			ahf = null;
+			authHandlerProvider = null;
 		}
 	}
 
@@ -162,7 +173,8 @@ public class CommandReceiverFactory {
 					// called before. This should not be allowed.
 					if (context.getAuthEngine() != null)
 						throw new ProtocolSyntaxException();
-					ServerAuthEngine eng = new ServerAuthEngine(ahf);
+					ServerAuthEngine eng = new ServerAuthEngine(
+							authHandlerProvider);
 					// attach auth engine to connection context
 					context.setAuthEngine(eng);
 					userman.delegate(new AuthDelegate(h, this));
