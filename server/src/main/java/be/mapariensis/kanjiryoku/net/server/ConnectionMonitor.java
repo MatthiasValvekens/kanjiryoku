@@ -388,97 +388,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 	}
 
-	private static enum AdminCommand {
-		BROADCAST {
-			@Override
-			public Runnable getTask(final User issuer,
-					final ConnectionMonitor mon, final NetworkMessage command)
-					throws ArgumentCountException {
-				if (command.argCount() < 2)
-					throw new ArgumentCountException(Type.TOO_FEW, BROADCAST);
-				return new Runnable() {
-					@Override
-					public void run() {
-						NetworkMessage message = new NetworkMessage(
-								ClientCommandList.SAY, String.format(
-										"[GLOBAL from %s]\n%s", issuer.handle,
-										command.get(1)));
-						for (User u : mon.store) {
-							mon.messageUser(u, message);
-						}
-					}
-				};
-			}
-		},
-		KICK {
-
-			@Override
-			public Runnable getTask(User issuer, final ConnectionMonitor mon,
-					NetworkMessage command) throws ProtocolSyntaxException {
-				if (command.argCount() < 2)
-					throw new ArgumentCountException(Type.TOO_FEW, KICK);
-				String username = command.get(1);
-				final User toBeKicked;
-				try {
-					toBeKicked = mon.getUser(username);
-				} catch (UserManagementException e) {
-					log.warn("User {} not found, aborting.", username, e);
-					return null;
-				}
-				return new Runnable() {
-
-					@Override
-					public void run() {
-						mon.deregister(toBeKicked);
-					}
-
-				};
-			}
-
-		},
-		NUKESESSION {
-			@Override
-			public Runnable getTask(User issuer, final ConnectionMonitor mon,
-					NetworkMessage command) throws ProtocolSyntaxException {
-				if (command.argCount() < 2)
-					throw new ArgumentCountException(Type.TOO_FEW, NUKESESSION);
-				final Session target;
-				try {
-					target = mon.sessman.getSession(Integer.parseInt(command
-							.get(1)));
-				} catch (Exception e) {
-					log.warn("Exception in NUKESESSION prep", e);
-					return null;
-				}
-
-				return target == null ? null : new Runnable() {
-
-					@Override
-					public void run() {
-						mon.sessman.destroySession(target);
-					}
-				};
-			}
-		},
-		SHUTDOWN {
-
-			@Override
-			public Runnable getTask(User issuer, final ConnectionMonitor mon,
-					NetworkMessage command) throws ProtocolSyntaxException {
-				return new Runnable() {
-
-					@Override
-					public void run() {
-						mon.keepOn = false;
-					}
-				};
-			}
-
-		};
-		public abstract Runnable getTask(User issuer, ConnectionMonitor mon,
-				NetworkMessage command) throws ProtocolSyntaxException;
-	}
-
 	@Override
 	public void adminCommand(User issuer, int id, NetworkMessage commandMessage)
 			throws UserManagementException, ProtocolSyntaxException {
@@ -564,5 +473,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	@Override
 	public UserStore getStore() {
 		return store;
+	}
+
+	public SessionManager getSessionManager() {
+		return sessman;
+	}
+
+	void shutdown() {
+		keepOn = false;
 	}
 }
