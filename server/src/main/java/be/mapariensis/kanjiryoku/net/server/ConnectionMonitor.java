@@ -62,7 +62,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final ServerConfig config;
 	// SSL-related stuff
 	private final SSLContext sslContext;
-	private final ExecutorService delegatedTaskPool;
 	private final int plaintextBufsize;
 	private final boolean enforceSSL, requireAuth;
 	private final CommandReceiverFactory crf;
@@ -90,11 +89,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				.getTyped("sslContext", IProperties.class);
 		if (sslConfig != null) {
 			sslContext = SecurityUtils.setUp(sslConfig);
-			delegatedTaskPool = Executors.newFixedThreadPool(workerThreads);
 		} else if (!enforceSSL) {
 			log.info("No SSL configuration found. Starting server in plaintext-only mode.");
 			sslContext = null;
-			delegatedTaskPool = null;
 		} else {
 			throw new BadConfigurationException(
 					"Server was instructed to enforce SSL, but no SSL configuration could be found.");
@@ -131,8 +128,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		SSLEngine engine = sslContext.createSSLEngine(addr, port);
 		engine.setUseClientMode(false);
 		engine.setWantClientAuth(true);
-		SSLMessageHandler h = new SSLMessageHandler(key, engine,
-				delegatedTaskPool, plaintextBufsize);
+		SSLMessageHandler h = new SSLMessageHandler(key, engine, threadPool,
+				plaintextBufsize);
 		((ConnectionContext) key.attachment()).setMessageHandler(h);
 		return h;
 	}
@@ -204,7 +201,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			deregister(u);
 		}
 		threadPool.shutdownNow();
-		delegatedTaskPool.shutdownNow();
 	}
 
 	private void acceptClient() throws IOException {
