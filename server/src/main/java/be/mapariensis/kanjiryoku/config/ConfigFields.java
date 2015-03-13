@@ -11,10 +11,10 @@ public class ConfigFields {
 	 */
 	public static final String PORT = "port";
 	/**
-	 * The number of worker threads (default 10). Adjust as necessary.
+	 * The number of worker threads (default 15). Adjust as necessary.
 	 */
 	public static final String WORKER_THREADS = "workerThreads";
-	public static final int WORKER_THREADS_DEFAULT = 10;
+	public static final int WORKER_THREADS_DEFAULT = 15;
 	/**
 	 * The size of the ByteBuffer attached to each plaintext message handler
 	 * (default 4KB).
