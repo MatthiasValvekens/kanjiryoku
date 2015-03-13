@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.Constants;
+import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 
 public class PlainMessageHandler implements IMessageHandler {
 	public static enum Status {
@@ -79,15 +80,16 @@ public class PlainMessageHandler implements IMessageHandler {
 	 * handler's application output buffer.
 	 * 
 	 * @param message
+	 * @throws IOException
 	 */
 	@Override
-	public void send(NetworkMessage message) {
+	public void send(NetworkMessage message) throws IOException {
 		if (message == null || message.isEmpty())
 			return;
 		send(message.toString().getBytes(Constants.ENCODING));
 	}
 
-	protected void send(byte[] message) {
+	protected void send(byte[] message) throws IOException {
 		for (byte b : message) {
 			if (b == NetworkMessage.EOM)
 				throw new RuntimeException("EOM byte is illegal in messages.");
@@ -100,12 +102,8 @@ public class PlainMessageHandler implements IMessageHandler {
 	}
 
 	@Override
-	public void flushMessageQueue() {
-		try {
-			flush();
-		} catch (IOException e) {
-			log.error("I/O failure while sending messages", e);
-		}
+	public void flushMessageQueue() throws IOException {
+		flush();
 	}
 
 	private final CharsetDecoder decoder = Constants.ENCODING.newDecoder();
@@ -226,6 +224,21 @@ public class PlainMessageHandler implements IMessageHandler {
 
 	@Override
 	public void dispose() {
+		disposed = true;
+	}
+
+	@Override
+	public void dispose(String disconnectMessage) {
+		dispose(new NetworkMessage(ClientCommandList.SAY, disconnectMessage));
+	}
+
+	@Override
+	public void dispose(NetworkMessage disconnectMessage) {
+		try {
+			send(disconnectMessage);
+		} catch (IOException e) {
+			log.warn("I/O error during dispose.", e);
+		}
 		disposed = true;
 	}
 }
