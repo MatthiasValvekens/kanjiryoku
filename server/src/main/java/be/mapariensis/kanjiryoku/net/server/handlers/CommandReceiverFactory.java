@@ -26,6 +26,8 @@ import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler.Factory;
+import be.mapariensis.kanjiryoku.net.secure.auth.ServerAuthEngine;
+import be.mapariensis.kanjiryoku.net.server.ConnectionContext;
 import be.mapariensis.kanjiryoku.net.server.ServerCommand;
 import be.mapariensis.kanjiryoku.net.server.SessionManager;
 import be.mapariensis.kanjiryoku.net.server.UserManager;
@@ -85,8 +87,8 @@ public class CommandReceiverFactory {
 		@Override
 		public void run() {
 			try {
-				IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
-						.attachment();
+				IMessageHandler h = ((ConnectionContext) ch.keyFor(selector)
+						.attachment()).getMessageHandler();
 				ServerCommand command;
 				String commandString = msg.get(0).toUpperCase();
 				try {
@@ -121,10 +123,11 @@ public class CommandReceiverFactory {
 							}
 
 						} else {
-							AuthHandler ah = ahf.init(handle);
-							// TODO: bind authentication state machine to
-							// message
-							// handler?
+							ServerAuthEngine eng = new ServerAuthEngine(ahf);
+							eng.submit(msg);
+							// attach auth engine to connection context
+							((ConnectionContext) ch.keyFor(selector)
+									.attachment()).setAuthEngine(eng);
 						}
 					} else {
 						// authentication has been turned off, go ahead and
@@ -174,8 +177,8 @@ public class CommandReceiverFactory {
 	private void queueProcessingError(SocketChannel ch, ServerException ex) {
 
 		try {
-			IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
-					.attachment();
+			IMessageHandler h = ((ConnectionContext) ch.keyFor(selector)
+					.attachment()).getMessageHandler();
 			h.send(ex.protocolMessage);
 		} catch (CancelledKeyException | NullPointerException | IOException e) {
 			log.warn("Failed to write message, peer already disconnected.");
