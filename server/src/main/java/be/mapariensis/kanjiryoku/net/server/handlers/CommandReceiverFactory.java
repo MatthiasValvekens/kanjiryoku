@@ -15,7 +15,6 @@ import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.IMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
-import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.server.ServerCommand;
 import be.mapariensis.kanjiryoku.net.server.SessionManager;
@@ -53,6 +52,8 @@ public class CommandReceiverFactory {
 		@Override
 		public void run() {
 			try {
+				IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
+						.attachment();
 				ServerCommand command;
 				String commandString = msg.get(0).toUpperCase();
 				try {
@@ -70,14 +71,11 @@ public class CommandReceiverFactory {
 					SelectionKey key = ch.keyFor(selector);
 					if (key == null) {
 						log.error("Key cancelled before registration could complete! Aborting.");
-						SSLMessageHandler h = (SSLMessageHandler) ch.keyFor(
-								selector).attachment();
 						if (h != null)
 							h.close();
 						return;
 					}
-					IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
-							.attachment();
+
 					userman.register(new User(handle, ch, h));
 				} else {
 					User u = userman.getStore().getUser(ch);
@@ -86,8 +84,6 @@ public class CommandReceiverFactory {
 							log.info(
 									"Gracefully closing {} disconnected with BYE",
 									ch);
-							SSLMessageHandler h = (SSLMessageHandler) ch
-									.keyFor(selector).attachment();
 							h.close();
 						} else if (command != ServerCommand.HELLO)
 							throw new UserManagementException(
