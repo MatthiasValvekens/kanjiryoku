@@ -64,7 +64,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final SSLContext sslContext;
 	private final ExecutorService delegatedTaskPool;
 	private final int plaintextBufsize;
-	private final boolean enforceSSL;
+	private final boolean enforceSSL, requireAuth;
 	private final CommandReceiverFactory crf;
 
 	public ConnectionMonitor(ServerConfig config) throws IOException,
@@ -83,10 +83,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				ConfigFields.FORCE_SSL_DEFAULT);
 		threadPool = Executors.newFixedThreadPool(workerThreads);
 		sessman = new SessionManagerImpl(config, this);
-		int usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT,
-				Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
-		crf = new CommandReceiverFactory(usernameCharLimit, this, selector,
-				sessman);
+
+		crf = new CommandReceiverFactory(config, this, selector, sessman);
 		setName("ConnectionMonitor:" + port);
 		IProperties sslConfig = config
 				.getTyped("sslContext", IProperties.class);
@@ -100,6 +98,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		} else {
 			throw new BadConfigurationException(
 					"Server was instructed to enforce SSL, but no SSL configuration could be found.");
+		}
+		requireAuth = config.getTyped(ConfigFields.REQUIRE_AUTH, Boolean.class,
+				ConfigFields.REQUIRE_AUTH_DEFAULT);
+		if (requireAuth && sslConfig != null) {
+			log.warn("Warning: authentication is enabled, but SSL is not configured properly.");
 		}
 	}
 
@@ -129,8 +132,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		int port = ch.socket().getPort();
 		SSLEngine engine = sslContext.createSSLEngine(addr, port);
 		engine.setUseClientMode(false);
-		engine.setNeedClientAuth(false);
-		engine.setWantClientAuth(false);
+		engine.setWantClientAuth(true);
 		SSLMessageHandler h = new SSLMessageHandler(key, engine,
 				delegatedTaskPool, plaintextBufsize);
 		key.attach(h);
@@ -513,6 +515,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			log.error("Failed to get command issuer address. Aborting operation.");
 			return;
 		}
+		// FIXME: Do this with proper authentication/authorisation.
 		if (!addr.isLoopbackAddress() && !checkAddress(addr, allowedIps)) {
 			// this is a weak security precaution that isn't even that hard to
 			// circumvent

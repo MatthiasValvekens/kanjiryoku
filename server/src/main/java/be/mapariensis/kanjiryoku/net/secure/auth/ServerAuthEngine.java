@@ -19,29 +19,6 @@ public class ServerAuthEngine {
 	private static final Logger log = LoggerFactory
 			.getLogger(ServerAuthEngine.class);
 
-	public static enum AuthStatus {
-		/**
-		 * The initial state, nothing has happened yet.
-		 */
-		INIT,
-		/**
-		 * The server is waiting for credentials.
-		 */
-		WAIT_CRED,
-		/**
-		 * The server is processing the credentials.
-		 */
-		PROCESS_CRED,
-		/**
-		 * Authentication succeeded.
-		 */
-		SUCCESS,
-		/**
-		 * Authentication failed.
-		 */
-		FAILURE
-	}
-
 	private final SecureRandom rng = new SecureRandom();
 	private final AuthHandler.Factory factory;
 	private AuthHandler backend;

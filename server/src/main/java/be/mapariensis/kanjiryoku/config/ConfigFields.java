@@ -82,4 +82,11 @@ public class ConfigFields {
 
 	public static final String ENABLE_BATON_PASS = "enableBatonPass";
 	public static final boolean ENABLE_BATON_PASS_DEFAULT = false;
+
+	// Auth
+	public static final String REQUIRE_AUTH = "requireAuthentication";
+	public static final boolean REQUIRE_AUTH_DEFAULT = true;
+	public static final String AUTH_BACKEND = "authBackend";
+	public static final String SSL_AUTH_SUFFICIENT = "sslAuthSufficient";
+	public static final boolean SSL_AUTH_SUFFICIENT_DEFAULT = true;
 }
