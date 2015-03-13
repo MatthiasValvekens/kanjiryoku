@@ -35,4 +35,8 @@ public interface IMessageHandler extends Closeable {
 	 */
 	public void dispose();
 
+	public void dispose(String disconnectMessage);
+
+	public void dispose(NetworkMessage disconnectMessage);
+
 }
