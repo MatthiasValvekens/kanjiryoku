@@ -156,11 +156,16 @@ public class CommandReceiverFactory {
 					}
 
 				} else {
+					ConnectionContext context = (ConnectionContext) ch.keyFor(
+							selector).attachment();
+					// if the auth engine is already set, REGISTER has been
+					// called before. This should not be allowed.
+					if (context.getAuthEngine() != null)
+						throw new ProtocolSyntaxException();
 					ServerAuthEngine eng = new ServerAuthEngine(ahf);
-					eng.submit(msg);
 					// attach auth engine to connection context
-					((ConnectionContext) ch.keyFor(selector).attachment())
-							.setAuthEngine(eng);
+					context.setAuthEngine(eng);
+					userman.delegate(new AuthDelegate(h, this));
 				}
 			} else {
 				// authentication has been turned off, go ahead and
