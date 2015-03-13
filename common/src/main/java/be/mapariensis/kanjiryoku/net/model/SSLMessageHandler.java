@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.Constants;
+import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 
 // The SSL support draws heavily upon Chapter 8 of "Fundamental Networking in Java"
 public class SSLMessageHandler implements IMessageHandler {
@@ -396,6 +397,21 @@ public class SSLMessageHandler implements IMessageHandler {
 
 	@Override
 	public void dispose() {
+		disposed = true;
+	}
+
+	@Override
+	public void dispose(String disconnectMessage) {
+		dispose(new NetworkMessage(ClientCommandList.SAY, disconnectMessage));
+	}
+
+	@Override
+	public void dispose(NetworkMessage disconnectMessage) {
+		try {
+			send(disconnectMessage);
+		} catch (IOException e) {
+			log.warn("I/O error during dispose.", e);
+		}
 		disposed = true;
 	}
 }
