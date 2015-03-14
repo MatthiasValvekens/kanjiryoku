@@ -7,6 +7,10 @@ You should compile this file to jzinnia-0.6-JAVA.dll, or jzinnia-0.6-JAVA.so, wh
 Take care to compile for the same architecture as your JVM. 32-bit library files will not work with a 64-bit JVM, and vice-versa.
 Your JDK should have all necessary include files.
 
+Note: This directory only contains the tools to compile JNI bindings for Zinnia.
+To be able to actually use the Zinnia engine, you still need a copy of libzinnia on your classpath.
+See http://zinnia.sourceforge.net for details on how to compile the library.
+
 BSD license for Zinnia:
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
