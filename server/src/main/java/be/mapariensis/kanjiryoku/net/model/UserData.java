@@ -3,24 +3,63 @@ package be.mapariensis.kanjiryoku.net.model;
 import org.joda.time.DateTime;
 
 public class UserData {
+
+	public static class Builder {
+		private final UserData ud;
+
+		public Builder() {
+			ud = new UserData();
+		}
+
+		public Builder setUsername(String username) {
+			if (username == null)
+				throw new IllegalArgumentException();
+			ud.username = username;
+			return this;
+		}
+
+		public Builder setCreated(DateTime created) {
+			if (created == null)
+				throw new IllegalArgumentException();
+			ud.created = created;
+			return this;
+		}
+
+		public Builder setLastLogin(DateTime lastLogin) {
+			if (lastLogin == null)
+				throw new IllegalArgumentException();
+			ud.previousLogin = lastLogin;
+			return this;
+		}
+
+		public UserData deliver() {
+			return ud;
+		}
+	}
+
 	/**
 	 * User name.
 	 */
-	public final String username;
+	private String username;
 	/**
 	 * Account creation time.
 	 */
-	public final DateTime created;
+	private DateTime created;
 	/**
 	 * Last login.
 	 */
-	public final DateTime previousLogin;
+	private DateTime previousLogin;
 
-	public UserData(String username, DateTime created, DateTime lastLogin) {
-		if (username == null || created == null || lastLogin == null)
-			throw new IllegalArgumentException();
-		this.username = username;
-		this.created = created;
-		this.previousLogin = lastLogin;
+	public String getUsername() {
+		return username;
 	}
+
+	public DateTime getCreated() {
+		return created;
+	}
+
+	public DateTime getPreviousLogin() {
+		return previousLogin;
+	}
+
 }
