@@ -232,6 +232,10 @@ public class CommandReceiverFactory {
 			} catch (ProtocolSyntaxException e) {
 				log.debug("Protocol syntax exception in auth engine. Ignoring.");
 				return;
+			} catch (ServerBackendException e) {
+				log.debug("Error in server backend", e);
+				h.dispose(e.protocolMessage);
+				return;
 			}
 			if (eng.getStatus() == AuthStatus.SUCCESS) {
 				try {

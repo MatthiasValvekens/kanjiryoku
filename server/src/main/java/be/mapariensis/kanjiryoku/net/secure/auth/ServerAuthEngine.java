@@ -10,6 +10,7 @@ import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.AuthenticationFailedException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
@@ -40,7 +41,8 @@ public class ServerAuthEngine {
 	}
 
 	public synchronized NetworkMessage submit(NetworkMessage msg)
-			throws ProtocolSyntaxException, AuthenticationFailedException {
+			throws ProtocolSyntaxException, AuthenticationFailedException,
+			ServerBackendException {
 		if (msg == null)
 			throw new IllegalArgumentException();
 		try {
