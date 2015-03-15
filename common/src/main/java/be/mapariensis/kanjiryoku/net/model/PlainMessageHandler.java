@@ -234,11 +234,11 @@ public class PlainMessageHandler implements IMessageHandler {
 
 	@Override
 	public void dispose(NetworkMessage disconnectMessage) {
+		disposed = true;
 		try {
 			send(disconnectMessage);
 		} catch (IOException e) {
 			log.warn("I/O error during dispose.", e);
 		}
-		disposed = true;
 	}
 }
