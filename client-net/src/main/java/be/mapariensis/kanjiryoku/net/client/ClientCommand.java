@@ -1,5 +1,7 @@
 package be.mapariensis.kanjiryoku.net.client;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.text.ParseException;
 import java.util.Iterator;
 import java.util.Set;
@@ -7,6 +9,7 @@ import java.util.TreeSet;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.mindrot.jbcrypt.BCrypt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,8 +18,10 @@ import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ParserName;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
+import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
+import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
 import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
 // TODO : placeholders only
@@ -320,6 +325,42 @@ public enum ClientCommand {
 			else
 				throw new ServerCommunicationException(msg);
 		}
+	},
+	AUTH {
+
+		@Override
+		public void execute(NetworkMessage msg, UIBridge bridge)
+				throws ClientException {
+			checkArgs(msg, 2);
+			if (!bridge.getUplink().registered()) {
+				String serverSalt = msg.get(1);
+				// this should be the hash the server retrieved from the
+				// database
+				String pw = bridge.promptPassword();
+				if (pw == null) {
+					bridge.close();
+					return;
+				}
+				String dbHash = BCrypt.hashpw(pw, serverSalt);
+				// generate client salt and SHA256 hash
+
+				// doesn't have to be a bcrypt salt
+				String clientSalt = Long
+						.toString(new SecureRandom().nextLong());
+				String hash;
+				try {
+					hash = SecurityUtils.sha256(dbHash + clientSalt);
+				} catch (NoSuchAlgorithmException e) {
+					throw new ClientException(e,
+							ClientServerException.ERROR_NOT_SUPPORTED);
+				}
+				NetworkMessage reply = new NetworkMessage(
+						ServerCommandList.AUTH, hash, clientSalt);
+				bridge.getUplink().enqueueMessage(reply);
+			}
+
+		}
+
 	};
 
 	private static final Logger log = LoggerFactory

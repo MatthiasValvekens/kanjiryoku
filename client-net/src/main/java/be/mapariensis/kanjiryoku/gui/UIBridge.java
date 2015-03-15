@@ -11,5 +11,7 @@ public interface UIBridge {
 
 	public void setUsername(String username);
 
+	public String promptPassword();
+
 	public void close();
 }
