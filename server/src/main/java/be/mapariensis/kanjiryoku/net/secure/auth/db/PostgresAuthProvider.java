@@ -62,7 +62,7 @@ public class PostgresAuthProvider implements AuthHandlerProvider {
 	}
 
 	private static final String queryUserInfo = "select id, username, pwhash, salt, created, last_login from kanji_user where username=?";
-	private static final String updateLastLogin = "update user set last_login = now() where id=?";
+	private static final String updateLastLogin = "update kanji_user set last_login = now() where id=?";
 
 	private class AuthHandlerImpl implements AuthHandler {
 		final int id;
