@@ -25,6 +25,7 @@ import be.mapariensis.kanjiryoku.net.model.IMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
+import be.mapariensis.kanjiryoku.net.model.UserData;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandlerProvider;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthStatus;
 import be.mapariensis.kanjiryoku.net.secure.auth.ServerAuthEngine;
@@ -155,7 +156,15 @@ public class CommandReceiverFactory {
 					try {
 						Principal p = eng.getSession().getPeerPrincipal();
 						if (handle.equals(p.getName())) {
-							authenticate(handle, h);
+							// SSL-authed users automatically get admin status,
+							// since they are trusted by the server.
+							// If required, you can disable non-SSL auth for
+							// admins altogether by simply not having any db
+							// records for admin users.
+							UserData ud = new UserData.Builder()
+									.setUsername(handle).setAdmin(true)
+									.deliver();
+							authenticate(handle, h, ud);
 						} else {
 							log.info(
 									"Handle {} does not match principal name {}.",
@@ -173,11 +182,13 @@ public class CommandReceiverFactory {
 			} else {
 				// authentication has been turned off, go ahead and
 				// register.
-				authenticate(handle, h);
+				UserData ud = new UserData.Builder().setUsername(handle)
+						.deliver();
+				authenticate(handle, h, ud);
 			}
 		}
 
-		private void authenticate(String handle, IMessageHandler h)
+		private void authenticate(String handle, IMessageHandler h, UserData ud)
 				throws IOException, UserManagementException {
 			SelectionKey key = ch.keyFor(selector);
 			if (key == null) {
@@ -186,7 +197,7 @@ public class CommandReceiverFactory {
 					h.close();
 				return;
 			}
-			userman.register(new User(handle, ch, h));
+			userman.register(new User(handle, ch, h, ud));
 		}
 
 		private void setUpAuthEngine(IMessageHandler h)
@@ -245,10 +256,10 @@ public class CommandReceiverFactory {
 			}
 			if (eng.getStatus() == AuthStatus.SUCCESS) {
 				try {
-					cr.authenticate(eng.getUsername(), h);
+					cr.authenticate(eng.getUsername(), h, eng.getUserData());
 				} catch (UserManagementException e) {
 					h.dispose(e.protocolMessage);
-				} catch (IOException e) {
+				} catch (IOException | ServerBackendException e) {
 					log.warn("I/O error during user registration", e);
 					return;
 				}

@@ -13,6 +13,7 @@ import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
+import be.mapariensis.kanjiryoku.net.model.UserData;
 
 // The authentication state machine.
 public class ServerAuthEngine {
@@ -38,6 +39,10 @@ public class ServerAuthEngine {
 
 	public String getUsername() {
 		return username;
+	}
+
+	public UserData getUserData() throws ServerBackendException {
+		return backend.getUserData();
 	}
 
 	public synchronized NetworkMessage submit(NetworkMessage msg)
