@@ -15,28 +15,22 @@ public enum AdminCommand {
 
 	BROADCAST {
 		@Override
-		public Runnable getTask(final User issuer, final ConnectionMonitor mon,
+		public void execute(final User issuer, final ConnectionMonitor mon,
 				final NetworkMessage command) throws ArgumentCountException {
 			if (command.argCount() < 2)
 				throw new ArgumentCountException(Type.TOO_FEW, BROADCAST);
-			return new Runnable() {
-				@Override
-				public void run() {
-					NetworkMessage message = new NetworkMessage(
-							ClientCommandList.SAY, String.format(
-									"[GLOBAL from %s]\n%s", issuer.handle,
-									command.get(1)));
-					for (User u : mon.getStore()) {
-						mon.messageUser(u, message);
-					}
-				}
-			};
+			NetworkMessage message = new NetworkMessage(ClientCommandList.SAY,
+					String.format("[GLOBAL from %s]\n%s", issuer.handle,
+							command.get(1)));
+			for (User u : mon.getStore()) {
+				mon.messageUser(u, message);
+			}
 		}
 	},
 	KICK {
 
 		@Override
-		public Runnable getTask(User issuer, final ConnectionMonitor mon,
+		public void execute(User issuer, final ConnectionMonitor mon,
 				NetworkMessage command) throws ProtocolSyntaxException {
 			if (command.argCount() < 2)
 				throw new ArgumentCountException(Type.TOO_FEW, KICK);
@@ -46,22 +40,15 @@ public enum AdminCommand {
 				toBeKicked = mon.getUser(username);
 			} catch (UserManagementException e) {
 				log.warn("User {} not found, aborting.", username, e);
-				return null;
+				return;
 			}
-			return new Runnable() {
-
-				@Override
-				public void run() {
-					mon.deregister(toBeKicked);
-				}
-
-			};
+			mon.deregister(toBeKicked);
 		}
 
 	},
 	NUKESESSION {
 		@Override
-		public Runnable getTask(User issuer, final ConnectionMonitor mon,
+		public void execute(User issuer, final ConnectionMonitor mon,
 				NetworkMessage command) throws ProtocolSyntaxException {
 			if (command.argCount() < 2)
 				throw new ArgumentCountException(Type.TOO_FEW, NUKESESSION);
@@ -71,30 +58,19 @@ public enum AdminCommand {
 						Integer.parseInt(command.get(1)));
 			} catch (Exception e) {
 				log.warn("Exception in NUKESESSION prep", e);
-				return null;
+				return;
 			}
 
-			return target == null ? null : new Runnable() {
-
-				@Override
-				public void run() {
-					mon.getSessionManager().destroySession(target);
-				}
-			};
+			if (target != null)
+				mon.getSessionManager().destroySession(target);
 		}
 	},
 	SHUTDOWN {
 
 		@Override
-		public Runnable getTask(User issuer, final ConnectionMonitor mon,
+		public void execute(User issuer, final ConnectionMonitor mon,
 				NetworkMessage command) throws ProtocolSyntaxException {
-			return new Runnable() {
-
-				@Override
-				public void run() {
-					mon.shutdown();
-				}
-			};
+			mon.shutdown();
 		}
 
 	};
@@ -102,6 +78,6 @@ public enum AdminCommand {
 	private static final Logger log = LoggerFactory
 			.getLogger(AdminCommand.class);
 
-	public abstract Runnable getTask(User issuer, ConnectionMonitor mon,
+	public abstract void execute(User issuer, ConnectionMonitor mon,
 			NetworkMessage command) throws ProtocolSyntaxException;
 }
