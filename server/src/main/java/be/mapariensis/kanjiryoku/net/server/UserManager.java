@@ -53,7 +53,7 @@ public interface UserManager {
 
 	public void lobbyBroadcast(User user, NetworkMessage message);
 
-	public void adminCommand(User issuer, int id, NetworkMessage commandMessage)
+	public void adminCommand(User issuer, NetworkMessage commandMessage)
 			throws UserManagementException, ProtocolSyntaxException;
 
 	public UserStore getStore();

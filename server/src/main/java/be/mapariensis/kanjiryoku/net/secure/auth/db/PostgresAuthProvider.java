@@ -61,7 +61,7 @@ public class PostgresAuthProvider implements AuthHandlerProvider {
 		}
 	}
 
-	private static final String queryUserInfo = "select id, username, pwhash, salt, created, last_login from kanji_user where username=?";
+	private static final String queryUserInfo = "select id, username, pwhash, salt, created, last_login, admin from kanji_user where username=?";
 	private static final String updateLastLogin = "update kanji_user set last_login = now() where id=?";
 
 	private class AuthHandlerImpl implements AuthHandler {
@@ -86,9 +86,10 @@ public class PostgresAuthProvider implements AuthHandlerProvider {
 					DateTime created = new DateTime(res.getTimestamp("created"));
 					DateTime lastLogin = new DateTime(
 							res.getTimestamp("last_login"));
+					boolean isAdmin = res.getBoolean("admin");
 					this.ud = new UserData.Builder().setUsername(username)
 							.setCreated(created).setLastLogin(lastLogin)
-							.deliver();
+							.setAdmin(isAdmin).deliver();
 				}
 			}
 		}

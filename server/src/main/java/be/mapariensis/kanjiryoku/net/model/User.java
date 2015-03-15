@@ -23,17 +23,20 @@ public class User {
 	private static final Logger log = LoggerFactory.getLogger(User.class);
 	public final String handle;
 	public final SocketChannel channel;
+	public final UserData data;
 	protected final IMessageHandler outbox;
 	private Session session;
 	private final List<ClientResponseHandler> activeResponseHandlers = new LinkedList<ClientResponseHandler>();
 	private final Object sessionLock = new Object();
 
-	public User(String handle, SocketChannel channel, IMessageHandler outbox) {
-		if (handle == null || outbox == null)
+	public User(String handle, SocketChannel channel, IMessageHandler outbox,
+			UserData userData) {
+		if (handle == null || outbox == null || userData == null)
 			throw new IllegalArgumentException();
 		this.handle = handle;
 		this.channel = channel;
 		this.outbox = outbox;
+		this.data = userData;
 	}
 
 	@Override

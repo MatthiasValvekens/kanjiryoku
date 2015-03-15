@@ -7,9 +7,7 @@ import static be.mapariensis.kanjiryoku.net.Constants.protocolMinorVersion;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -45,7 +43,6 @@ import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
 import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
-import be.mapariensis.kanjiryoku.net.server.handlers.AdminTaskExecutor;
 import be.mapariensis.kanjiryoku.net.server.handlers.CommandReceiverFactory;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
@@ -98,7 +95,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 		requireAuth = config.getTyped(ConfigFields.REQUIRE_AUTH, Boolean.class,
 				ConfigFields.REQUIRE_AUTH_DEFAULT);
-		if (requireAuth && sslConfig != null) {
+		if (requireAuth && sslConfig == null) {
 			log.warn("Warning: authentication is enabled, but SSL is not configured properly.");
 		}
 	}
@@ -392,14 +389,20 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	}
 
 	@Override
-	public void adminCommand(User issuer, int id, NetworkMessage commandMessage)
+	public void adminCommand(User issuer, NetworkMessage commandMessage)
 			throws UserManagementException, ProtocolSyntaxException {
 		boolean adminEnabled = config.getSafely(ConfigFields.ENABLE_ADMIN,
 				Boolean.class, ConfigFields.ENABLE_ADMIN_DEFAULT);
-		@SuppressWarnings("unchecked")
-		List<String> allowedIps = config.getSafely(
-				ConfigFields.ADMIN_WHITELIST, List.class,
-				ConfigFields.ADMIN_WHITELIST_DEFAULT);
+		if (!issuer.data.isAdmin()) {
+			// this is a weak security precaution that isn't even that hard to
+			// circumvent
+			// still, admin commands should not expose anything vital
+			log.debug(
+					"Non-admin {} attempted to use admin command. Silently ignoring.",
+					issuer.handle);
+			return;
+		}
+
 		if (!adminEnabled) {
 			try {
 				queueProcessingError(issuer.channel, new ServerException(
@@ -410,59 +413,17 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			}
 			return;
 		}
+
 		if (commandMessage.argCount() == 0)
-			throw new ArgumentCountException(Type.TOO_FEW, ServerCommand.ADMIN); // never
-																					// hurts
-																					// to
-																					// be
-																					// extra
-																					// sure
-		InetAddress addr;
+			// never hurts to be extra sure
+			throw new ArgumentCountException(Type.TOO_FEW, ServerCommand.ADMIN);
 		try {
-			addr = ((InetSocketAddress) issuer.channel.getRemoteAddress())
-					.getAddress();
-		} catch (IOException e) {
-			log.error("Failed to get command issuer address. Aborting operation.");
-			return;
-		}
-		// FIXME: Do this with proper authentication/authorisation.
-		if (!addr.isLoopbackAddress() && !checkAddress(addr, allowedIps)) {
-			// this is a weak security precaution that isn't even that hard to
-			// circumvent
-			// still, admin commands should not expose anything vital
-			log.warn(
-					"Warning: non-loopback address {} (bound to user {}) issued admin command. Silently ignoring.",
-					addr, issuer.handle);
-			return;
-		}
-		ClientResponseHandler rh;
-		try {
-			Runnable task = AdminCommand.valueOf(
-					commandMessage.get(0).toUpperCase()).getTask(issuer, this,
-					commandMessage);
-			if (task == null)
-				return;
-			rh = new AdminTaskExecutor(issuer, id, task);
+			AdminCommand.valueOf(commandMessage.get(0).toUpperCase()).execute(
+					issuer, this, commandMessage);
 		} catch (IllegalArgumentException ex) {
 			throw new ProtocolSyntaxException("Unknown command "
 					+ commandMessage.get(0));
 		}
-		messageUser(issuer, new NetworkMessage(ClientCommandList.CONFIRMADMIN,
-				id, rh.id), rh);
-	}
-
-	private static boolean checkAddress(InetAddress addr,
-			List<String> allowedIps) {
-		for (String s : allowedIps) {
-			try {
-				if (InetAddress.getByName(s).equals(addr))
-					return true;
-			} catch (UnknownHostException e) {
-				log.warn("Unknown host {}", s);
-				continue;
-			}
-		}
-		return false;
 	}
 
 	@Override

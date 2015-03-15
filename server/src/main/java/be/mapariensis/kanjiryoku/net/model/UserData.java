@@ -19,20 +19,23 @@ public class UserData {
 		}
 
 		public Builder setCreated(DateTime created) {
-			if (created == null)
-				throw new IllegalArgumentException();
 			ud.created = created;
 			return this;
 		}
 
 		public Builder setLastLogin(DateTime lastLogin) {
-			if (lastLogin == null)
-				throw new IllegalArgumentException();
 			ud.previousLogin = lastLogin;
 			return this;
 		}
 
+		public Builder setAdmin(boolean isAdmin) {
+			ud.isAdmin = isAdmin;
+			return this;
+		}
+
 		public UserData deliver() {
+			if (ud.username == null)
+				throw new IllegalStateException();
 			return ud;
 		}
 	}
@@ -50,6 +53,11 @@ public class UserData {
 	 */
 	private DateTime previousLogin;
 
+	/**
+	 * Admin bit.
+	 */
+	private boolean isAdmin;
+
 	public String getUsername() {
 		return username;
 	}
@@ -60,6 +68,10 @@ public class UserData {
 
 	public DateTime getPreviousLogin() {
 		return previousLogin;
+	}
+
+	public boolean isAdmin() {
+		return isAdmin;
 	}
 
 }

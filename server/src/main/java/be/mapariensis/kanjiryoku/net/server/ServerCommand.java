@@ -343,16 +343,10 @@ public enum ServerCommand {
 		public void execute(NetworkMessage message, User client,
 				UserManager userman, SessionManager sessman)
 				throws ServerException {
-			if (message.argCount() < 3)
+			if (message.argCount() < 2)
 				throw new ArgumentCountException(Type.TOO_FEW, ADMIN);
-			NetworkMessage commandPart = message.truncate(2);
-			int id;
-			try {
-				id = Integer.parseInt(message.get(1));
-			} catch (RuntimeException ex) {
-				throw new ProtocolSyntaxException(ex);
-			}
-			userman.adminCommand(client, id, commandPart);
+			NetworkMessage commandPart = message.truncate(1);
+			userman.adminCommand(client, commandPart);
 		}
 
 	},
