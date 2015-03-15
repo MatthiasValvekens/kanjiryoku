@@ -44,7 +44,7 @@ import be.mapariensis.kanjiryoku.net.model.PlainMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
-import be.mapariensis.kanjiryoku.net.secure.SSLContextUtil;
+import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
 import be.mapariensis.kanjiryoku.net.server.handlers.AdminTaskExecutor;
 import be.mapariensis.kanjiryoku.net.server.handlers.CommandReceiverFactory;
 import be.mapariensis.kanjiryoku.util.IProperties;
@@ -63,7 +63,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	// SSL-related stuff
 	private final SSLContext sslContext;
 	private final int plaintextBufsize;
-	private final boolean enforceSSL;
+	private final boolean enforceSSL, requireAuth;
 	private final CommandReceiverFactory crf;
 
 	public ConnectionMonitor(ServerConfig config) throws IOException,
@@ -82,15 +82,13 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				ConfigFields.FORCE_SSL_DEFAULT);
 		threadPool = Executors.newFixedThreadPool(workerThreads);
 		sessman = new SessionManagerImpl(config, this);
-		int usernameCharLimit = config.getTyped(ConfigFields.USERNAME_LIMIT,
-				Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
-		crf = new CommandReceiverFactory(usernameCharLimit, this, selector,
-				sessman);
+
+		crf = new CommandReceiverFactory(config, this, selector, sessman);
 		setName("ConnectionMonitor:" + port);
 		IProperties sslConfig = config
 				.getTyped("sslContext", IProperties.class);
 		if (sslConfig != null) {
-			sslContext = SSLContextUtil.setUp(sslConfig);
+			sslContext = SecurityUtils.setUp(sslConfig);
 		} else if (!enforceSSL) {
 			log.info("No SSL configuration found. Starting server in plaintext-only mode.");
 			sslContext = null;
@@ -98,12 +96,15 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			throw new BadConfigurationException(
 					"Server was instructed to enforce SSL, but no SSL configuration could be found.");
 		}
+		requireAuth = config.getTyped(ConfigFields.REQUIRE_AUTH, Boolean.class,
+				ConfigFields.REQUIRE_AUTH_DEFAULT);
+		if (requireAuth && sslConfig != null) {
+			log.warn("Warning: authentication is enabled, but SSL is not configured properly.");
+		}
 	}
 
-	private void setMode(SelectionKey key, String mode) throws IOException {
-		SocketChannel ch = (SocketChannel) key.channel();
-		// caller checks this
-		PlainMessageHandler h = (PlainMessageHandler) key.attachment();
+	private void setMode(PlainMessageHandler h, SocketChannel ch, String mode)
+			throws IOException {
 		if (enforceSSL
 				|| (Constants.MODE_TLS.equals(mode) && sslContext != null)) {
 			// Send SETMODE before switching, otherwise the client won't
@@ -126,11 +127,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		int port = ch.socket().getPort();
 		SSLEngine engine = sslContext.createSSLEngine(addr, port);
 		engine.setUseClientMode(false);
-		engine.setNeedClientAuth(false);
-		engine.setWantClientAuth(false);
+		engine.setWantClientAuth(true);
 		SSLMessageHandler h = new SSLMessageHandler(key, engine, threadPool,
 				plaintextBufsize);
-		key.attach(h);
+		((ConnectionContext) key.attachment()).setMessageHandler(h);
 		return h;
 	}
 
@@ -181,7 +181,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 						readClient(key);
 					}
 					if (key.isWritable()) {
-						IMessageHandler h = (IMessageHandler) key.attachment();
+						IMessageHandler h = ((ConnectionContext) key
+								.attachment()).getMessageHandler();
 						h.flushMessageQueue();
 					}
 				} catch (EOFException ex) {
@@ -209,7 +210,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		// register a message handler
 		SelectionKey newKey = ch.register(selector, SelectionKey.OP_READ);
 		IMessageHandler h = new PlainMessageHandler(newKey, plaintextBufsize);
-		newKey.attach(h);
+		ConnectionContext context = new ConnectionContext();
+		context.setMessageHandler(h);
+		newKey.attach(context);
 		log.info("Registered message handler.");
 
 		queueMessage(ch, new NetworkMessage(ClientCommandList.HELLO, GREETING));
@@ -219,7 +222,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	private void readClient(SelectionKey key) throws IOException, EOFException {
 		SocketChannel ch = (SocketChannel) key.channel();
-		IMessageHandler h = (IMessageHandler) key.attachment();
+		IMessageHandler h = ((ConnectionContext) key.attachment())
+				.getMessageHandler();
 		if (h instanceof PlainMessageHandler
 				&& ((PlainMessageHandler) h).getStatus() == PlainMessageHandler.Status.LIMBO) {
 			// we need to switch message handlers first
@@ -234,8 +238,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				String command = msg.get(0);
 				if (msg.argCount() == 2
 						&& ServerCommand.HELLO.name().equals(command)) {
-					// handle mode switching in the same thread
-					setMode(key, msg.get(1));
+					if (h instanceof PlainMessageHandler) {
+						setMode((PlainMessageHandler) h, ch, msg.get(1));
+					} else {
+						log.info("Can't set mode now, moving on...");
+					}
 				} else {
 					threadPool.execute(crf.getReceiver(ch, msg));
 				}
@@ -252,8 +259,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private void queueMessage(SocketChannel ch, NetworkMessage message)
 			throws IOException {
 		try {
-			IMessageHandler h = (IMessageHandler) ch.keyFor(selector)
-					.attachment();
+			IMessageHandler h = ((ConnectionContext) ch.keyFor(selector)
+					.attachment()).getMessageHandler();
 			h.send(message);
 		} catch (CancelledKeyException | NullPointerException ex) {
 			// if we get a CancelledKeyException here, this means the user has
@@ -325,8 +332,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		store.removeUser(user);
 		log.info("Deregistered user {}", user);
 		try {
-			((IMessageHandler) user.channel.keyFor(selector).attachment())
-					.close();
+			((ConnectionContext) user.channel.keyFor(selector).attachment())
+					.getMessageHandler().close();
 		} catch (IOException e) {
 			log.warn("Error while closing messageHandler", e);
 		} finally {
@@ -418,6 +425,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			log.error("Failed to get command issuer address. Aborting operation.");
 			return;
 		}
+		// FIXME: Do this with proper authentication/authorisation.
 		if (!addr.isLoopbackAddress() && !checkAddress(addr, allowedIps)) {
 			// this is a weak security precaution that isn't even that hard to
 			// circumvent
@@ -469,6 +477,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	@Override
 	public UserStore getStore() {
 		return store;
+	}
+
+	@Override
+	public void delegate(Runnable run) {
+		threadPool.execute(run);
 	}
 
 	public SessionManager getSessionManager() {

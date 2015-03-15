@@ -1,4 +1,4 @@
-package be.mapariensis.kanjiryoku.net;
+package be.mapariensis.kanjiryoku.net.secure;
 
 import java.security.KeyStore;
 import java.security.KeyStoreException;

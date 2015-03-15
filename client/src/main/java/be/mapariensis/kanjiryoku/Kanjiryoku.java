@@ -21,8 +21,8 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.config.ConfigManager;
 import be.mapariensis.kanjiryoku.gui.InitWindow;
-import be.mapariensis.kanjiryoku.net.CustomX509TrustManager;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
+import be.mapariensis.kanjiryoku.net.secure.CustomX509TrustManager;
 
 public class Kanjiryoku {
 	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);

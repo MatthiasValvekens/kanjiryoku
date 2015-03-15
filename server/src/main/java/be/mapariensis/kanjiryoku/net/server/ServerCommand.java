@@ -42,6 +42,16 @@ public enum ServerCommand {
 		}
 
 	},
+	AUTH {
+
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException, BadConfigurationException {
+			// Auth is a special case
+		}
+
+	},
 	MESSAGE {
 
 		@Override

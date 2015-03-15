@@ -2,6 +2,8 @@ package be.mapariensis.kanjiryoku.gui;
 
 import java.awt.FlowLayout;
 import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -15,10 +17,13 @@ import java.nio.charset.Charset;
 import javax.net.ssl.SSLContext;
 import javax.swing.AbstractAction;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 
 import be.mapariensis.kanjiryoku.Kanjiryoku;
 import be.mapariensis.kanjiryoku.gui.dialogs.CreateSessionDialog;
@@ -204,5 +209,31 @@ public class MainWindow extends JFrame implements GUIBridge {
 		chatPanel.setChatLock(true);
 		gci.setLock(true);
 		serv.close();
+	}
+
+	@Override
+	public String promptPassword() {
+		JPanel optionPanel = new JPanel();
+		JLabel label = new JLabel(String.format(
+				"The server requested a password for user \"%s\"",
+				serv.getUsername()));
+		JPasswordField password = new JPasswordField(30);
+		optionPanel.setLayout(new GridBagLayout());
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.anchor = GridBagConstraints.LINE_START;
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		optionPanel.add(label, gbc);
+		gbc.gridy = 1;
+		optionPanel.add(password, gbc);
+
+		int res = JOptionPane.showOptionDialog(this, optionPanel,
+				"Password prompt", JOptionPane.OK_CANCEL_OPTION,
+				JOptionPane.PLAIN_MESSAGE, null, null, null);
+		if (res == JOptionPane.OK_OPTION) {
+			return new String(password.getPassword());
+		} else {
+			return null;
+		}
 	}
 }
