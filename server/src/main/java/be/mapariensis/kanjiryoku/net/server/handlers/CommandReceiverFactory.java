@@ -164,20 +164,11 @@ public class CommandReceiverFactory {
 					} catch (SSLPeerUnverifiedException ex) {
 						// peer is not verified
 						log.debug("SSL peer not verified. Falling back on password-based auth.");
+						setUpAuthEngine(h);
 					}
 
 				} else {
-					ConnectionContext context = (ConnectionContext) ch.keyFor(
-							selector).attachment();
-					// if the auth engine is already set, REGISTER has been
-					// called before. This should not be allowed.
-					if (context.getAuthEngine() != null)
-						throw new ProtocolSyntaxException();
-					ServerAuthEngine eng = new ServerAuthEngine(
-							authHandlerProvider);
-					// attach auth engine to connection context
-					context.setAuthEngine(eng);
-					userman.delegate(new AuthDelegate(h, this));
+					setUpAuthEngine(h);
 				}
 			} else {
 				// authentication has been turned off, go ahead and
@@ -196,6 +187,20 @@ public class CommandReceiverFactory {
 				return;
 			}
 			userman.register(new User(handle, ch, h));
+		}
+
+		private void setUpAuthEngine(IMessageHandler h)
+				throws ProtocolSyntaxException {
+			ConnectionContext context = (ConnectionContext) ch.keyFor(selector)
+					.attachment();
+			// if the auth engine is already set, REGISTER has been
+			// called before. This should not be allowed.
+			if (context.getAuthEngine() != null)
+				throw new ProtocolSyntaxException();
+			ServerAuthEngine eng = new ServerAuthEngine(authHandlerProvider);
+			// attach auth engine to connection context
+			context.setAuthEngine(eng);
+			userman.delegate(new AuthDelegate(h, this));
 		}
 	}
 
@@ -224,8 +229,9 @@ public class CommandReceiverFactory {
 		public void run() {
 			ServerAuthEngine eng = ((ConnectionContext) cr.ch.keyFor(selector)
 					.attachment()).getAuthEngine();
+			NetworkMessage reply = null;
 			try {
-				eng.submit(cr.msg);
+				reply = eng.submit(cr.msg);
 			} catch (AuthenticationFailedException e) {
 				h.dispose(e.protocolMessage);
 				return;
@@ -245,6 +251,14 @@ public class CommandReceiverFactory {
 				} catch (IOException e) {
 					log.warn("I/O error during user registration", e);
 					return;
+				}
+			}
+			if (reply != null) {
+				try {
+					h.send(reply);
+				} catch (IOException e) {
+					log.warn("I/O error while communicating auth reply");
+					h.dispose();
 				}
 			}
 		}

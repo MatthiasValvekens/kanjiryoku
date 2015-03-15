@@ -56,11 +56,13 @@ public class ServerAuthEngine {
 				try {
 					backend = provider.createHandler(username);
 				} catch (UserManagementException e) {
+					log.debug("User doesn't exist. Stringing along...");
 					// The user doesn't exist, but let's play along anyway.
 					stringAlong = true;
 					// doesn't really matter, we only need a vaguely convincing
 					// hash
-					return new NetworkMessage(BCrypt.gensalt(2, rng));
+					return new NetworkMessage(ClientCommandList.AUTH,
+							BCrypt.gensalt(5, rng));
 				}
 				String salt = backend.getSalt();
 				return new NetworkMessage(ClientCommandList.AUTH, salt);

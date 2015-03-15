@@ -61,7 +61,7 @@ public class PostgresAuthProvider implements AuthHandlerProvider {
 		}
 	}
 
-	private static final String queryUserInfo = "select id, username, pwhash, salt, created, last_login from user where username=?";
+	private static final String queryUserInfo = "select id, username, pwhash, salt, created, last_login from kanji_user where username=?";
 	private static final String updateLastLogin = "update user set last_login = now() where id=?";
 
 	private class AuthHandlerImpl implements AuthHandler {
@@ -75,6 +75,9 @@ public class PostgresAuthProvider implements AuthHandlerProvider {
 					PreparedStatement ps = conn.prepareStatement(queryUserInfo)) {
 				ps.setString(1, username);
 				try (ResultSet res = ps.executeQuery()) {
+					if (!res.next())
+						throw new UserManagementException(
+								"User does not exist.");
 					this.id = res.getInt("id");
 					this.salt = res.getString("salt");
 					this.pwHash = res.getString("pwHash");
