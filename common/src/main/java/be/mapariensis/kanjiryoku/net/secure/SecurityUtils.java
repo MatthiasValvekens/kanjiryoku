@@ -68,7 +68,7 @@ public class SecurityUtils {
 	}
 
 	public static byte[] sha256(byte[] data) throws NoSuchAlgorithmException {
-		MessageDigest md = MessageDigest.getInstance("SHA256");
+		MessageDigest md = MessageDigest.getInstance("SHA-256");
 		md.update(data);
 		return md.digest();
 	}
