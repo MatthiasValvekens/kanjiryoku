@@ -32,6 +32,8 @@ public class ConfigFields {
 	public static final String USERNAME_LIMIT = "usernameCharLimit";
 	public static final int USERNAME_LIMIT_DEFAULT = 10;
 
+	public static final String SERVER_GREETING = "serverGreeting";
+
 	public static final String ENABLE_ADMIN = "enableAdminCommands";
 	public static final boolean ENABLE_ADMIN_DEFAULT = false;
 

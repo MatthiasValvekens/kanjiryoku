@@ -250,6 +250,17 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		queueMessage(ch, new NetworkMessage(ClientCommandList.HELLO, GREETING));
 		queueMessage(ch, new NetworkMessage(ClientCommandList.VERSION,
 				protocolMajorVersion, protocolMinorVersion));
+
+		try {
+			String customGreeting = config.getTyped(
+					ConfigFields.SERVER_GREETING, String.class);
+			if (customGreeting != null)
+				queueMessage(ch, new NetworkMessage(ClientCommandList.SAY,
+						customGreeting));
+		} catch (BadConfigurationException e) {
+			log.debug("Server greeting field should be of type String.");
+		}
+
 	}
 
 	private void readClient(SelectionKey key) throws IOException, EOFException {
