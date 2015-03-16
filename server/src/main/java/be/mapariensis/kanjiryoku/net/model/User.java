@@ -170,4 +170,7 @@ public class User {
 		}
 	}
 
+	public boolean isConnectionSecure() {
+		return outbox instanceof SSLMessageHandler;
+	}
 }
