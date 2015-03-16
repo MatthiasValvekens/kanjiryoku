@@ -5,6 +5,7 @@ import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
+import be.mapariensis.kanjiryoku.net.secure.auth.AuthBackendProvider;
 
 public interface UserManager {
 	/**
@@ -55,6 +56,8 @@ public interface UserManager {
 
 	public void adminCommand(User issuer, NetworkMessage commandMessage)
 			throws UserManagementException, ProtocolSyntaxException;
+
+	public AuthBackendProvider getAuthBackend();
 
 	public UserStore getStore();
 

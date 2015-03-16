@@ -26,14 +26,12 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserData;
-import be.mapariensis.kanjiryoku.net.secure.auth.AuthBackendProvider;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthStatus;
 import be.mapariensis.kanjiryoku.net.secure.auth.ServerAuthEngine;
 import be.mapariensis.kanjiryoku.net.server.ConnectionContext;
 import be.mapariensis.kanjiryoku.net.server.ServerCommand;
 import be.mapariensis.kanjiryoku.net.server.SessionManager;
 import be.mapariensis.kanjiryoku.net.server.UserManager;
-import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class CommandReceiverFactory {
 	private static final Logger log = LoggerFactory
@@ -43,7 +41,6 @@ public class CommandReceiverFactory {
 	private final Selector selector;
 	private final SessionManager sessman;
 	private final boolean requireAuth, sslAuthSufficient;
-	private final AuthBackendProvider authHandlerProvider;
 
 	public CommandReceiverFactory(ServerConfig config, UserManager userman,
 			Selector selector, SessionManager sessman)
@@ -58,31 +55,7 @@ public class CommandReceiverFactory {
 		this.userman = userman;
 		this.selector = selector;
 		this.sessman = sessman;
-		if (requireAuth) {
-			IProperties authBackend = config.getRequired(
-					ConfigFields.AUTH_BACKEND, IProperties.class);
-			String providerFactory = authBackend.getRequired(
-					ConfigFields.AUTH_BACKEND_PROVIDER_CLASS, String.class);
-			// Load factory implementation from config
-			AuthBackendProvider.Factory factory;
-			try {
-				factory = (AuthBackendProvider.Factory) getClass()
-						.getClassLoader().loadClass(providerFactory)
-						.newInstance();
-			} catch (InstantiationException | IllegalAccessException
-					| ClassNotFoundException | ClassCastException e) {
-				log.error("Failed to instantiate authentication backend.", e);
-				throw new BadConfigurationException(e);
-			}
-			// This contains the configuration for the authentication backend
-			// e.g. database credentials, etc.
-			IProperties backendConfig = authBackend.getRequired(
-					ConfigFields.AUTH_BACKEND_CONFIG, IProperties.class);
-			// Initialise auth handler provider.
-			authHandlerProvider = factory.setUp(backendConfig);
-		} else {
-			authHandlerProvider = null;
-		}
+
 	}
 
 	public Runnable getReceiver(SocketChannel ch, NetworkMessage msg) {
@@ -208,7 +181,8 @@ public class CommandReceiverFactory {
 			// called before. This should not be allowed.
 			if (context.getAuthEngine() != null)
 				throw new ProtocolSyntaxException();
-			ServerAuthEngine eng = new ServerAuthEngine(authHandlerProvider);
+			ServerAuthEngine eng = new ServerAuthEngine(
+					userman.getAuthBackend());
 			// attach auth engine to connection context
 			context.setAuthEngine(eng);
 			userman.delegate(new AuthDelegate(h, this));
