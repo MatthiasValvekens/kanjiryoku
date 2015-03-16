@@ -1,5 +1,8 @@
 package be.mapariensis.kanjiryoku.net.server.handlers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
@@ -10,6 +13,9 @@ import be.mapariensis.kanjiryoku.net.server.ServerCommand;
 import be.mapariensis.kanjiryoku.net.server.UserManager;
 
 public class SignupResponseHandler extends ClientResponseHandler {
+	private static final Logger log = LoggerFactory
+			.getLogger(SignupResponseHandler.class);
+
 	private final String username, salt;
 	private final UserManager userman;
 
@@ -27,6 +33,7 @@ public class SignupResponseHandler extends ClientResponseHandler {
 					ServerCommand.RESPOND);
 		String hash = msg.get(2);
 		userman.getAuthBackend().createUser(username, hash, salt);
+		log.info("Registered user {}.", username);
 		userman.humanMessage(user,
 				String.format("Registered user %s.", username));
 	}
