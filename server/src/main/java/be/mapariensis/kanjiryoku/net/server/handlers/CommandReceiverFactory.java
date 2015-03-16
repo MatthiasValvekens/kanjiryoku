@@ -26,7 +26,7 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserData;
-import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandlerProvider;
+import be.mapariensis.kanjiryoku.net.secure.auth.AuthBackendProvider;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthStatus;
 import be.mapariensis.kanjiryoku.net.secure.auth.ServerAuthEngine;
 import be.mapariensis.kanjiryoku.net.server.ConnectionContext;
@@ -43,7 +43,7 @@ public class CommandReceiverFactory {
 	private final Selector selector;
 	private final SessionManager sessman;
 	private final boolean requireAuth, sslAuthSufficient;
-	private final AuthHandlerProvider authHandlerProvider;
+	private final AuthBackendProvider authHandlerProvider;
 
 	public CommandReceiverFactory(ServerConfig config, UserManager userman,
 			Selector selector, SessionManager sessman)
@@ -64,9 +64,9 @@ public class CommandReceiverFactory {
 			String providerFactory = authBackend.getRequired(
 					ConfigFields.AUTH_BACKEND_PROVIDER_CLASS, String.class);
 			// Load factory implementation from config
-			AuthHandlerProvider.Factory factory;
+			AuthBackendProvider.Factory factory;
 			try {
-				factory = (AuthHandlerProvider.Factory) getClass()
+				factory = (AuthBackendProvider.Factory) getClass()
 						.getClassLoader().loadClass(providerFactory)
 						.newInstance();
 			} catch (InstantiationException | IllegalAccessException

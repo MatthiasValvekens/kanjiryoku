@@ -17,20 +17,20 @@ import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.UserData;
 import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler;
-import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandlerProvider;
+import be.mapariensis.kanjiryoku.net.secure.auth.AuthBackendProvider;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
-public class PostgresAuthProvider implements AuthHandlerProvider {
+public class PostgresAuthProvider implements AuthBackendProvider {
 	public static final String SERVER_NAME = "serverName";
 	public static final String DATABASE_NAME = "databaseName";
 	public static final String DATABASE_USER = "user";
 	public static final String DATABASE_PASSWORD = "password";
 	public static final String DATABASE_PORT = "portNumber";
 
-	public static class Factory implements AuthHandlerProvider.Factory {
+	public static class Factory implements AuthBackendProvider.Factory {
 
 		@Override
-		public AuthHandlerProvider setUp(IProperties config)
+		public AuthBackendProvider setUp(IProperties config)
 				throws BadConfigurationException {
 			PGPoolingDataSource ds = new PGPoolingDataSource();
 

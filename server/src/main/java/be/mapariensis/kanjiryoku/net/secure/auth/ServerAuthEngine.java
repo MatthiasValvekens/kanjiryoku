@@ -22,13 +22,13 @@ public class ServerAuthEngine {
 			.getLogger(ServerAuthEngine.class);
 
 	private final SecureRandom rng = new SecureRandom();
-	private final AuthHandlerProvider provider;
+	private final AuthBackendProvider provider;
 	private AuthHandler backend;
 	private String username;
 	private volatile AuthStatus status;
 	private boolean stringAlong = false;
 
-	public ServerAuthEngine(AuthHandlerProvider provider) {
+	public ServerAuthEngine(AuthBackendProvider provider) {
 		this.status = AuthStatus.INIT;
 		this.provider = provider;
 	}
