@@ -146,7 +146,9 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 
 	@Override
 	public void displayErrorMessage(ClientServerException ex) {
-		displayErrorMessage(ex.errorCode, ex.getMessage());
+		String message = ex.protocolMessage.argCount() > 1 ? ex.protocolMessage
+				.get(1) : ex.getMessage();
+		displayErrorMessage(ex.errorCode, message);
 	}
 
 	@Override

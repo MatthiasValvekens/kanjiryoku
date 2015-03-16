@@ -43,6 +43,7 @@ import be.mapariensis.kanjiryoku.net.model.SSLMessageHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.model.UserStore;
 import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
+import be.mapariensis.kanjiryoku.net.secure.auth.AuthBackendProvider;
 import be.mapariensis.kanjiryoku.net.server.handlers.CommandReceiverFactory;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
@@ -61,6 +62,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final SSLContext sslContext;
 	private final int plaintextBufsize;
 	private final boolean enforceSSL, requireAuth;
+	private final AuthBackendProvider authBackendProvider;
 	private final CommandReceiverFactory crf;
 
 	public ConnectionMonitor(ServerConfig config) throws IOException,
@@ -71,6 +73,8 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		ssc = ServerSocketChannel.open();
 		ssc.bind(new InetSocketAddress(port));
 		selector = Selector.open();
+
+		// initialise threading and network settings
 		int workerThreads = config.getTyped(ConfigFields.WORKER_THREADS,
 				Integer.class, ConfigFields.WORKER_THREADS_DEFAULT);
 		plaintextBufsize = config.getTyped(ConfigFields.PLAINTEXT_BUFFER_SIZE,
@@ -80,8 +84,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		threadPool = Executors.newFixedThreadPool(workerThreads);
 		sessman = new SessionManagerImpl(config, this);
 
-		crf = new CommandReceiverFactory(config, this, selector, sessman);
 		setName("ConnectionMonitor:" + port);
+
+		// set up ssl context
 		IProperties sslConfig = config
 				.getTyped("sslContext", IProperties.class);
 		if (sslConfig != null) {
@@ -93,11 +98,41 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			throw new BadConfigurationException(
 					"Server was instructed to enforce SSL, but no SSL configuration could be found.");
 		}
+
+		// set up auth mechanism
 		requireAuth = config.getTyped(ConfigFields.REQUIRE_AUTH, Boolean.class,
 				ConfigFields.REQUIRE_AUTH_DEFAULT);
 		if (requireAuth && sslConfig == null) {
 			log.warn("Warning: authentication is enabled, but SSL is not configured properly.");
 		}
+		if (requireAuth) {
+			IProperties authBackend = config.getRequired(
+					ConfigFields.AUTH_BACKEND, IProperties.class);
+			String providerFactory = authBackend.getRequired(
+					ConfigFields.AUTH_BACKEND_PROVIDER_CLASS, String.class);
+			// Load factory implementation from config
+			AuthBackendProvider.Factory factory;
+			try {
+				factory = (AuthBackendProvider.Factory) getClass()
+						.getClassLoader().loadClass(providerFactory)
+						.newInstance();
+			} catch (InstantiationException | IllegalAccessException
+					| ClassNotFoundException | ClassCastException e) {
+				log.error("Failed to instantiate authentication backend.", e);
+				throw new BadConfigurationException(e);
+			}
+			// This contains the configuration for the authentication backend
+			// e.g. database credentials, etc.
+			IProperties backendConfig = authBackend.getRequired(
+					ConfigFields.AUTH_BACKEND_CONFIG, IProperties.class);
+			// Initialise auth handler provider.
+			authBackendProvider = factory.setUp(backendConfig);
+		} else {
+			authBackendProvider = null;
+		}
+
+		// Set up command handler
+		crf = new CommandReceiverFactory(config, this, selector, sessman);
 	}
 
 	private void setMode(PlainMessageHandler h, SocketChannel ch, String mode)
@@ -394,13 +429,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		boolean adminEnabled = config.getSafely(ConfigFields.ENABLE_ADMIN,
 				Boolean.class, ConfigFields.ENABLE_ADMIN_DEFAULT);
 		if (!issuer.data.isAdmin()) {
-			// this is a weak security precaution that isn't even that hard to
-			// circumvent
-			// still, admin commands should not expose anything vital
-			log.debug(
-					"Non-admin {} attempted to use admin command. Silently ignoring.",
+			log.debug("Non-admin {} attempted to use admin command.",
 					issuer.handle);
-			return;
+			throw new UserManagementException(String.format(
+					"User \"%s\" is not an administrator", issuer.handle));
 		}
 
 		if (!adminEnabled) {
@@ -451,5 +483,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	void shutdown() {
 		keepOn = false;
+	}
+
+	@Override
+	public AuthBackendProvider getAuthBackend() {
+		return authBackendProvider;
 	}
 }
