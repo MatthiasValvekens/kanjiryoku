@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.Kanjiryoku;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
+import be.mapariensis.kanjiryoku.net.secure.SSLContextUtil;
 import be.mapariensis.kanjiryoku.util.IProperties;
 import be.mapariensis.kanjiryoku.util.IPropertiesImpl;
 
@@ -24,7 +25,6 @@ public class ConfigManager {
 	private final Path configFile;
 	private JSONObject currentConfig;
 	private final ExecutorService saver = Executors.newSingleThreadExecutor();
-	private final SSLContext sslc;
 
 	public static final boolean SSL_DEFAULT = true;
 
@@ -66,15 +66,14 @@ public class ConfigManager {
 		return config;
 	}
 
-	public ConfigManager(Path configFile, SSLContext sslc)
-			throws BadConfigurationException, IOException {
+	public ConfigManager(Path configFile) throws BadConfigurationException,
+			IOException {
 		this.configFile = configFile;
 		if (Files.exists(configFile)) {
 			currentConfig = new JSONObject(readConfig());
 		} else {
 			currentConfig = new JSONObject();
 		}
-		this.sslc = sslc;
 	}
 
 	public <T> ConfigListener<T> watch(String key) {
@@ -85,7 +84,7 @@ public class ConfigManager {
 		return new IPropertiesImpl(currentConfig);
 	}
 
-	public SSLContext getSSLContext() {
-		return sslc;
+	public SSLContext getSSLContext(String destination) throws IOException {
+		return SSLContextUtil.sslSetUp(destination);
 	}
 }

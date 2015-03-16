@@ -115,7 +115,7 @@ public class InitWindow {
 				try {
 					MainWindow wind = new MainWindow(
 							InetAddress.getByName(p.host), p.port, p.username,
-							p.useSsl ? manager.getSSLContext() : null);
+							p.useSsl ? manager.getSSLContext(p.host) : null);
 					frame.setVisible(false);
 					frame.dispose();
 					wind.setVisible(true);

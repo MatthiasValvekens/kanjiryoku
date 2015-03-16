@@ -7,6 +7,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.security.cert.CertificateException;
 import java.text.ParseException;
 import java.util.LinkedList;
 import java.util.List;
@@ -15,7 +16,9 @@ import java.util.concurrent.Executors;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLHandshakeException;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -195,6 +198,20 @@ public class ServerUplink extends Thread implements Closeable {
 			if (key.isWritable()) {
 				try {
 					messageHandler.flushMessageQueue();
+				} catch (SSLHandshakeException e) {
+					log.error("SSL Handshake failed.", e);
+					// inform user about nature of certificate error
+					Throwable rootCause = ExceptionUtils.getRootCause(e);
+					StringBuilder errorMsg = new StringBuilder(
+							"SSL handshake failed due to ");
+					if (rootCause instanceof CertificateException) {
+						errorMsg.append("certificate problem.\n");
+						errorMsg.append(rootCause.getMessage());
+					} else {
+						errorMsg.append("unknown issue.");
+					}
+					bridge.getChat().displaySystemMessage(errorMsg.toString());
+					bridge.close();
 				} catch (IOException e) {
 					log.error("Failed to flush messages.", e);
 				}

@@ -6,12 +6,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.KeyStore;
 
 import javax.imageio.ImageIO;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
 import javax.swing.UIManager;
 import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.plaf.FontUIResource;
@@ -22,14 +18,10 @@ import org.slf4j.LoggerFactory;
 import be.mapariensis.kanjiryoku.config.ConfigManager;
 import be.mapariensis.kanjiryoku.gui.InitWindow;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
-import be.mapariensis.kanjiryoku.net.secure.CustomX509TrustManager;
 
 public class Kanjiryoku {
-	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);
-	private static final String KEYSTORE_NAME = "kanjiryoku-client.jks";
+	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);;
 	private static final String CONFIG_FILE_NAME = "kanjiclient.cfg";
-	private static final char[] KEYSTORE_PASS = "Cw2krWlMoEOAeCIqJoeB"
-			.toCharArray();
 	public static final String ICON_FILE = "icon.png";
 	public static final Image ICON;
 
@@ -45,31 +37,6 @@ public class Kanjiryoku {
 			log.warn("Failed to read icon file", e);
 		}
 		ICON = thing;
-	}
-
-	private static SSLContext sslSetUp() throws IOException {
-		log.info("Decrypting SSL key store...");
-
-		try {
-			KeyStore ks = KeyStore.getInstance("JKS");
-			try (InputStream in = Kanjiryoku.class.getClassLoader()
-					.getResourceAsStream(KEYSTORE_NAME)) {
-				if (in == null)
-					throw new IOException("Keystore not found");
-				ks.load(in, KEYSTORE_PASS);
-			}
-
-			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-			kmf.init(ks, KEYSTORE_PASS);
-
-			SSLContext context = SSLContext.getInstance("TLS");
-			TrustManager tm = new CustomX509TrustManager(ks);
-			context.init(kmf.getKeyManagers(), new TrustManager[] { tm }, null);
-			log.info("SSL context initialised successfully.");
-			return context;
-		} catch (Exception ex) {
-			throw new IOException(ex);
-		}
 	}
 
 	public static void main(String[] args) {
@@ -112,8 +79,7 @@ public class Kanjiryoku {
 		UIManager.getLookAndFeelDefaults().put("Label.font", boldfr);
 
 		try {
-			SSLContext sslc = sslSetUp();
-			InitWindow.show(new ConfigManager(configFile, sslc));
+			InitWindow.show(new ConfigManager(configFile));
 		} catch (BadConfigurationException | IOException e) {
 			log.error("Failed to process configuration.", e);
 			return;
