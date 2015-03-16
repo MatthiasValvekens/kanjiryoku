@@ -16,8 +16,8 @@ import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.UserData;
 import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
-import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthBackendProvider;
+import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class PostgresAuthProvider implements AuthBackendProvider {
@@ -135,6 +135,41 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 			return pwHash;
 		}
 
+	}
+
+	private static final String UNIQUE_VIOLATED_STATE = "23505";
+	private static final String addUser = "insert into kanji_user (username, pwhash, salt) values (?,?,?);";
+
+	@Override
+	public void createUser(String username, String hash, String salt)
+			throws UserManagementException, ServerBackendException {
+
+		try (Connection conn = ds.getConnection();
+				PreparedStatement ps = conn.prepareStatement(addUser)) {
+			ps.setString(1, username);
+			ps.setString(2, hash);
+			ps.setString(3, salt);
+			ps.execute();
+		} catch (SQLException e) {
+			if (UNIQUE_VIOLATED_STATE.equals(e.getSQLState()))
+				throw new UserManagementException(String.format(
+						"User %s already exists.", username));
+			else
+				throw new ServerBackendException(e);
+		}
+	}
+
+	private static final String deleteUser = "delete from kanji_user where username=?";
+
+	@Override
+	public void deleteUser(String username) throws ServerBackendException {
+		try (Connection conn = ds.getConnection();
+				PreparedStatement ps = conn.prepareStatement(deleteUser)) {
+			ps.setString(1, username);
+			ps.execute();
+		} catch (SQLException e) {
+			throw new ServerBackendException(e);
+		}
 	}
 
 }

@@ -13,4 +13,9 @@ public interface AuthBackendProvider {
 
 	public AuthHandler createHandler(String username)
 			throws UserManagementException, ServerBackendException;
+
+	public void createUser(String username, String hash, String salt)
+			throws UserManagementException, ServerBackendException;
+
+	public void deleteUser(String username) throws ServerBackendException;
 }
