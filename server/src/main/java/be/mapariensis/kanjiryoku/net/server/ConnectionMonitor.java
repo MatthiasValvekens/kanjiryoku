@@ -429,13 +429,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		boolean adminEnabled = config.getSafely(ConfigFields.ENABLE_ADMIN,
 				Boolean.class, ConfigFields.ENABLE_ADMIN_DEFAULT);
 		if (!issuer.data.isAdmin()) {
-			// this is a weak security precaution that isn't even that hard to
-			// circumvent
-			// still, admin commands should not expose anything vital
-			log.debug(
-					"Non-admin {} attempted to use admin command. Silently ignoring.",
+			log.debug("Non-admin {} attempted to use admin command.",
 					issuer.handle);
-			return;
+			throw new UserManagementException(String.format(
+					"User \"%s\" is not an administrator", issuer.handle));
 		}
 
 		if (!adminEnabled) {
