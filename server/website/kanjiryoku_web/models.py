@@ -13,11 +13,12 @@ class KanjiUser(models.Model):
 	class Meta:
 		verbose_name=_('Kanjiryoku user')
 		verbose_name_plural=_('Kanjiryoku users')
+		db_table='kanji_user'
 	
-	django_user = models.ForeignKey(User, verbose_name=_('Site user'))
+	django_user = models.ForeignKey(User, verbose_name=_('Site user'), null=True)
 	username = models.CharField(max_length=USERNAME_MAX, unique=True, verbose_name=_('Username'))
 	created = models.DateTimeField(auto_now_add=True, verbose_name=_('Creation date'))
-	modified = models.DateTimeField(auto_now=True, verbose_name=_('Last modified'))
+	last_login = models.DateTimeField(auto_now=True, verbose_name=_('Last login'))
 	pwhash = models.CharField(max_length=60, verbose_name=_('Password'))
 	salt = models.CharField(max_length=29, verbose_name=_('Salt'), editable=False, default=gensalt_string)
 	admin = models.BooleanField(verbose_name=_('Administrator'),default=False)
