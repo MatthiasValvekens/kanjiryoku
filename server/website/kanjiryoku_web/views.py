@@ -8,7 +8,7 @@ class SignupView(CreateView):
 	model = KanjiUser
 	form_class = KanjiryokuSignupForm
 	def get_success_url(self):
-		return reverse('success_url') 	
+		return reverse('kanjiryoku_signup_success') 	
 	def form_valid(self, form):
 		form.instance.django_user = self.request.user
 		return super(SignupView, self).form_valid(form)
