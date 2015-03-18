@@ -172,4 +172,23 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 		}
 	}
 
+	private static final String changePassword = "update kanji_user set pwhash=?, salt=? where username=?";
+
+	@Override
+	public void changePassword(String username, String newhash, String newsalt)
+			throws UserManagementException, ServerBackendException {
+		try (Connection conn = ds.getConnection();
+				PreparedStatement ps = conn.prepareStatement(changePassword)) {
+			ps.setString(1, newhash);
+			ps.setString(2, newsalt);
+			ps.setString(3, username);
+			int rowsAffected = ps.executeUpdate();
+			if (rowsAffected == 0)
+				throw new UserManagementException(String.format(
+						"User %s does not exist.", username));
+		} catch (SQLException e) {
+			throw new ServerBackendException(e);
+		}
+	}
+
 }

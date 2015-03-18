@@ -21,6 +21,7 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.ResponseHandler;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.server.handlers.SessionInvitationHandler;
+import be.mapariensis.kanjiryoku.net.server.handlers.UserPasswordResponseHandler;
 
 public enum ServerCommand {
 	BYE {
@@ -349,6 +350,33 @@ public enum ServerCommand {
 			userman.adminCommand(client, commandPart);
 		}
 
+	},
+	RESETPASS {
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			if (message.argCount() < 2)
+				throw new ArgumentCountException(Type.TOO_FEW, RESETPASS);
+			if (message.argCount() > 3)
+				throw new ArgumentCountException(Type.TOO_MANY, RESETPASS);
+			int responseCode;
+			try {
+				responseCode = Integer.parseInt(message.get(1));
+			} catch (RuntimeException ex) {
+				throw new ProtocolSyntaxException(ex);
+			}
+			// optional second argument specifying the username
+			String username = message.argCount() == 3 ? message.get(2)
+					: client.handle;
+
+			if (!client.data.isAdmin() && !client.handle.equals(username)) {
+				throw new UserManagementException(
+						"You can only reset your own password.");
+			}
+			UserPasswordResponseHandler.processPasswordOperation(client,
+					userman, username, responseCode, false);
+		}
 	},
 	HELLO {
 
