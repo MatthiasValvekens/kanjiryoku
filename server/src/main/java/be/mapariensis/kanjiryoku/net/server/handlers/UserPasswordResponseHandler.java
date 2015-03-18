@@ -39,12 +39,15 @@ public class UserPasswordResponseHandler extends ClientResponseHandler {
 		String hash = msg.get(2);
 		if (newUser) {
 			userman.getAuthBackend().createUser(username, hash, salt);
+			log.info("Registered user {}.", username);
+			userman.humanMessage(user,
+					String.format("Registered user %s.", username));
 		} else {
 			userman.getAuthBackend().changePassword(username, hash, salt);
+			log.info("Changed password for user {}.", username);
+			userman.humanMessage(user,
+					String.format("Changed password for user %s.", username));
 		}
-		log.info("Registered user {}.", username);
-		userman.humanMessage(user,
-				String.format("Registered user %s.", username));
 	}
 
 	public static void processPasswordOperation(User issuer, UserManager man,

@@ -17,6 +17,29 @@ public enum UserMacro {
 					.requestSignup();
 		}
 
+	},
+	RESETPASS {
+		@Override
+		public void execute(NetworkMessage msg, GUIBridge bridge)
+				throws MacroException {
+			int argcount = msg.argCount();
+			if (argcount < 2 || argcount > 3)
+				throw new MacroException(
+						String.format("This macro takes 1 or 2 arguments"));
+			String username, password;
+
+			// default to changing the user's own password
+			if (argcount == 2) {
+				username = bridge.getUplink().getUsername();
+				password = msg.get(1);
+			} else {
+				username = msg.get(1);
+				password = msg.get(2);
+			}
+
+			new SignupProtocolHandler(bridge.getUplink(), username, password)
+					.requestPasswordChange();
+		}
 	};
 	public abstract void execute(NetworkMessage msg, GUIBridge bridge)
 			throws MacroException;
