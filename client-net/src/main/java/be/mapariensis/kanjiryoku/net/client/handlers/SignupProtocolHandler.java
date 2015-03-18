@@ -26,6 +26,11 @@ public class SignupProtocolHandler extends ServerResponseHandler {
 		uplink.enqueueMessage(msg, this);
 	}
 
+	public void requestPasswordChange() {
+		NetworkMessage msg = new NetworkMessage("RESETPASS", id, username);
+		uplink.enqueueMessage(msg, this);
+	}
+
 	@Override
 	public void handle(NetworkMessage msg) throws ClientException {
 		if (msg.argCount() != 4)
