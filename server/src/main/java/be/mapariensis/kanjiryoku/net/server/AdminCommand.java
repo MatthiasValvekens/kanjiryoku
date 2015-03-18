@@ -1,6 +1,5 @@
 package be.mapariensis.kanjiryoku.net.server;
 
-import org.mindrot.jbcrypt.BCrypt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,7 +11,7 @@ import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
-import be.mapariensis.kanjiryoku.net.server.handlers.SignupResponseHandler;
+import be.mapariensis.kanjiryoku.net.server.handlers.UserPasswordResponseHandler;
 
 public enum AdminCommand {
 
@@ -84,13 +83,6 @@ public enum AdminCommand {
 				NetworkMessage command) throws ProtocolSyntaxException {
 			if (command.argCount() < 3)
 				throw new ArgumentCountException(Type.TOO_FEW, ADDUSER);
-			if (!issuer.isConnectionSecure())
-				throw new ProtocolSyntaxException(
-						"Cannot execute this command over plaintext connection");
-			if (mon.getAuthBackend() == null) {
-				mon.humanMessage(issuer, "No auth backend available.");
-				return;
-			}
 			int responseCode;
 			try {
 				responseCode = Integer.parseInt(command.get(1));
@@ -98,12 +90,8 @@ public enum AdminCommand {
 				throw new ProtocolSyntaxException(ex);
 			}
 			String username = command.get(2);
-			String salt = BCrypt.gensalt();
-			ClientResponseHandler rh = new SignupResponseHandler(username,
-					salt, mon);
-			NetworkMessage reply = new NetworkMessage(
-					ClientCommandList.RESPOND, responseCode, rh.id, salt);
-			mon.messageUser(issuer, reply, rh);
+			UserPasswordResponseHandler.processPasswordOperation(issuer, mon,
+					username, responseCode, true);
 		}
 
 	},
