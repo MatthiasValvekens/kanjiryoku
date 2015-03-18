@@ -3,6 +3,7 @@ package be.mapariensis.kanjiryoku.net.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.config.ConfigFields;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
@@ -90,6 +91,13 @@ public enum AdminCommand {
 				throw new ProtocolSyntaxException(ex);
 			}
 			String username = command.get(2);
+			int maxlen = mon.getConfig().getSafely(ConfigFields.USERNAME_LIMIT,
+					Integer.class, ConfigFields.USERNAME_LIMIT_DEFAULT);
+			if (username.length() > maxlen) {
+				mon.humanMessage(issuer, String.format(
+						"Username too long. Max length is %d characters.",
+						maxlen));
+			}
 			UserPasswordResponseHandler.processPasswordOperation(issuer, mon,
 					username, responseCode, true);
 		}

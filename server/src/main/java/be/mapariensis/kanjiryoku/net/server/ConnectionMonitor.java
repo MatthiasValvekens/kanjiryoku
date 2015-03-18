@@ -436,7 +436,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	@Override
 	public void adminCommand(User issuer, NetworkMessage commandMessage)
-			throws UserManagementException, ProtocolSyntaxException {
+			throws ProtocolSyntaxException, UserManagementException {
 		boolean adminEnabled = config.getSafely(ConfigFields.ENABLE_ADMIN,
 				Boolean.class, ConfigFields.ENABLE_ADMIN_DEFAULT);
 		if (!issuer.data.isAdmin()) {
@@ -499,5 +499,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	@Override
 	public AuthBackendProvider getAuthBackend() {
 		return authBackendProvider;
+	}
+
+	ServerConfig getConfig() {
+		return config;
 	}
 }
