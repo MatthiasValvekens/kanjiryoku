@@ -18,4 +18,7 @@ public interface AuthBackendProvider {
 			throws UserManagementException, ServerBackendException;
 
 	public void deleteUser(String username) throws ServerBackendException;
+
+	public void changePassword(String username, String newhash, String newsalt)
+			throws UserManagementException, ServerBackendException;
 }
