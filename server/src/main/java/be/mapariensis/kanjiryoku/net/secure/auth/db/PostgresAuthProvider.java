@@ -9,8 +9,8 @@ import java.sql.SQLException;
 import javax.sql.DataSource;
 
 import org.joda.time.DateTime;
-import org.postgresql.ds.PGPoolingDataSource;
 
+import be.mapariensis.kanjiryoku.config.ServerConfig;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
@@ -18,28 +18,25 @@ import be.mapariensis.kanjiryoku.net.model.UserData;
 import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthBackendProvider;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler;
+import be.mapariensis.kanjiryoku.persistent.PostgresProvider;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class PostgresAuthProvider implements AuthBackendProvider {
-	public static final String SERVER_NAME = "serverName";
-	public static final String DATABASE_NAME = "databaseName";
-	public static final String DATABASE_USER = "user";
-	public static final String DATABASE_PASSWORD = "password";
-	public static final String DATABASE_PORT = "portNumber";
 
 	public static class Factory implements AuthBackendProvider.Factory {
 
 		@Override
-		public AuthBackendProvider setUp(IProperties config)
-				throws BadConfigurationException {
-			PGPoolingDataSource ds = new PGPoolingDataSource();
+		public AuthBackendProvider setUp(ServerConfig serverConfig,
+				IProperties authConfig) throws BadConfigurationException {
+			DataSource ds = serverConfig.getDbConnection();
+			if (ds == null) {
+				// try postgresprovider
 
-			ds.setServerName(config.getRequired(SERVER_NAME, String.class));
-			ds.setPortNumber(config.getRequired(DATABASE_PORT, Integer.class));
-			ds.setDatabaseName(config.getRequired(DATABASE_NAME, String.class));
-			ds.setUser(config.getRequired(DATABASE_USER, String.class));
-			ds.setPassword(config.getRequired(DATABASE_PASSWORD, String.class));
-
+				if ((ds = (new PostgresProvider()).getDataSource(authConfig)) == null) {
+					throw new BadConfigurationException(
+							"No data source available");
+				}
+			}
 			return new PostgresAuthProvider(ds);
 		}
 

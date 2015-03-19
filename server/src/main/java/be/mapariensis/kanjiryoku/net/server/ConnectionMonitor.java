@@ -126,7 +126,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			IProperties backendConfig = authBackend.getRequired(
 					ConfigFields.AUTH_BACKEND_CONFIG, IProperties.class);
 			// Initialise auth handler provider.
-			authBackendProvider = factory.setUp(backendConfig);
+			authBackendProvider = factory.setUp(config, backendConfig);
 		} else {
 			authBackendProvider = null;
 		}
