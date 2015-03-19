@@ -17,6 +17,8 @@ import static be.mapariensis.kanjiryoku.config.ConfigFields.RESET_AFTER_CATEGORY
 
 import java.util.Set;
 
+import javax.sql.DataSource;
+
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import be.mapariensis.kanjiryoku.cr.KanjiGuesserFactory;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.server.ConnectionMonitor;
+import be.mapariensis.kanjiryoku.persistent.DataSourceProvider;
 import be.mapariensis.kanjiryoku.problemsets.ProblemSetManager;
 import be.mapariensis.kanjiryoku.problemsets.ProblemSetManagerImpl;
 import be.mapariensis.kanjiryoku.util.IProperties;
@@ -35,6 +38,7 @@ public class ServerConfigImpl implements ServerConfig {
 	private final IPropertiesImpl backend;
 	private KanjiGuesserFactory kgf;
 	private ProblemSetManager psm;
+	private DataSource ds;
 	private final Object LOCK = new Object();
 
 	public ServerConfigImpl(IPropertiesImpl config)
@@ -170,6 +174,31 @@ public class ServerConfigImpl implements ServerConfig {
 			psm.loadNewConfig(name,
 					psconfig.getRequired(name, IProperties.class));
 		}
+
+		// set up db
+		IProperties dbConfig = getTyped(ConfigFields.DB_CONFIG,
+				IProperties.class);
+		if (dbConfig == null) {
+			ds = null;
+		} else {
+			DataSourceProvider dsp;
+			className = dbConfig.getRequired(ConfigFields.DATA_SOURCE_PROVIDER,
+					String.class);
+			try {
+				log.info("Loading data source factory {}", className);
+				dsp = (DataSourceProvider) ConnectionMonitor.class
+						.getClassLoader().loadClass(className).newInstance();
+			} catch (Exception ex) {
+				throw new BadConfigurationException(
+						"Failed to data source factory.", ex);
+			}
+			ds = dsp.getDataSource(dbConfig);
+		}
+	}
+
+	@Override
+	public DataSource getDbConnection() {
+		return ds;
 	}
 
 }
