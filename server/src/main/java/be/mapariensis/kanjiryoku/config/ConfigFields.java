@@ -85,6 +85,9 @@ public class ConfigFields {
 	public static final String ENABLE_BATON_PASS = "enableBatonPass";
 	public static final boolean ENABLE_BATON_PASS_DEFAULT = false;
 
+	// DB settings
+	public static final String DB_CONFIG = "dbConfig";
+	public static final String DATA_SOURCE_PROVIDER = "dataSourceProvider";
 	// Auth
 	public static final String REQUIRE_AUTH = "requireAuthentication";
 	public static final boolean REQUIRE_AUTH_DEFAULT = true;
