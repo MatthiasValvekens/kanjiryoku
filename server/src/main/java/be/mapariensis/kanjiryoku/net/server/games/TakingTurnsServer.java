@@ -41,24 +41,20 @@ public class TakingTurnsServer implements GameServerInterface {
 	private static final Logger log = LoggerFactory
 			.getLogger(TakingTurnsServer.class);
 
-	private static class Statistics {
-		int correct, skipped;
-	}
-
 	// TURN ITERATOR LOGIC
 	private static class TurnIterator {
 		private int ix = 0;
 		private final List<User> players;
-		private final List<Statistics> stats;
+		private final List<GameStatistics> stats;
 
 		public TurnIterator(Collection<User> players) {
 			this.players = new LinkedList<User>(players);
-			this.stats = new ArrayList<Statistics>(players.size());
-			for (int i = 0; i < players.size(); i++)
-				stats.add(new Statistics());
+			this.stats = new ArrayList<GameStatistics>(players.size());
+			for (User u : players)
+				stats.add(new GameStatistics(u));
 		}
 
-		public Statistics currentUserStats() {
+		public GameStatistics currentUserStats() {
 			return stats.get(ix);
 		}
 
@@ -241,11 +237,8 @@ public class TakingTurnsServer implements GameServerInterface {
 		JSONObject res = new JSONObject();
 		for (int i = 0; i < ti.players.size(); i++) {
 			String uname = ti.players.get(i).handle;
-			Statistics stats = ti.stats.get(i);
-			JSONObject o = new JSONObject();
-			o.put("Correct answers", stats.correct);
-			o.put("Failed problems", stats.skipped);
-			res.put(uname, o);
+			GameStatistics stats = ti.stats.get(i);
+			res.put(uname, stats.toJSON());
 		}
 		return res;
 	}
