@@ -14,6 +14,7 @@ import be.mapariensis.kanjiryoku.util.IntegerSpiral;
 public class SingleCategoryOrganizer implements ProblemOrganizer {
 	public final RatedProblemList rpl;
 
+	private final String name;
 	private final int maxProblems;
 	private int problemsSet = 0;
 	private int difficulty;
@@ -25,8 +26,9 @@ public class SingleCategoryOrganizer implements ProblemOrganizer {
 	private boolean hasMore = true;
 	private Problem nextUp, nextDown;
 
-	public SingleCategoryOrganizer(RatedProblemList rpl, int maxProblems,
-			Random rng, int minDifficulty, int maxDifficulty) {
+	public SingleCategoryOrganizer(String name, RatedProblemList rpl,
+			int maxProblems, Random rng, int minDifficulty, int maxDifficulty) {
+		this.name = name;
 		this.rpl = rpl;
 		this.maxProblems = maxProblems;
 		this.rng = rng;
@@ -101,5 +103,10 @@ public class SingleCategoryOrganizer implements ProblemOrganizer {
 
 	private static int restrict(int x, int min, int max) {
 		return Math.max(min, Math.min(x, max));
+	}
+
+	@Override
+	public String getCategoryName() {
+		return name;
 	}
 }

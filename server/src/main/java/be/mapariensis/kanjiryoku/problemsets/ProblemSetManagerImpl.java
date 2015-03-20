@@ -1,11 +1,16 @@
 package be.mapariensis.kanjiryoku.problemsets;
 
-import static be.mapariensis.kanjiryoku.config.ConfigFields.*;
-import static be.mapariensis.kanjiryoku.util.ProblemCollectionUtils.*;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.FILE_ENCODING;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.FILE_NAME_DIFFICULTY_FORMAT;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.FILE_NAME_FORMAT;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.MAX_DIFFICULTY;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.MIN_DIFFICULTY;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.PARSER_FACTORY_CLASS;
+import static be.mapariensis.kanjiryoku.config.ConfigFields.PARSER_FACTORY_SETTINGS;
+import static be.mapariensis.kanjiryoku.util.ProblemCollectionUtils.readRatedProblems;
 
 import java.nio.charset.Charset;
 import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -96,7 +101,7 @@ public class ProblemSetManagerImpl implements ProblemSetManager {
 	public ProblemOrganizer getProblemSets(int seed, List<String> names)
 			throws BadConfigurationException {
 		// seed and build organizer (allows for resource sharing)
-		List<RatedProblemList> sets = new ArrayList<RatedProblemList>(
+		Map<String, RatedProblemList> sets = new HashMap<String, RatedProblemList>(
 				names.size());
 		for (String name : names) {
 			RatedProblemList rpl = psets.get(name);
@@ -104,7 +109,7 @@ public class ProblemSetManagerImpl implements ProblemSetManager {
 				throw new BadConfigurationException(new StringBuilder(
 						"Problem set ").append(name).append(" does not exist.")
 						.toString());
-			sets.add(rpl);
+			sets.put(name, rpl);
 		}
 		return new CategoryOrganizer(sets, problemsPerCategory,
 				new Random(seed), resetDifficulty, minDiff, maxDiff);

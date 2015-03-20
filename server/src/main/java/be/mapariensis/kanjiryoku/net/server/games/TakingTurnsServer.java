@@ -223,7 +223,7 @@ public class TakingTurnsServer implements GameServerInterface {
 
 	private void doSkipProblem(User submitter) {
 		log.debug("Skipping problem.");
-		ti.currentUserStats().skipped++;
+		ti.currentUserStats().fail(problemSource.getCategoryName());
 		// If there are still players left, try a baton pass
 		// If not, drop the problem
 		boolean batonPass = enableBatonPass
@@ -279,6 +279,8 @@ public class TakingTurnsServer implements GameServerInterface {
 		if (statistics != null)
 			session.broadcastMessage(null, new NetworkMessage(
 					ClientCommandList.STATISTICS, statistics));
+		session.broadcastMessage(null, new NetworkMessage(
+				ClientCommandList.RESETUI));
 		session.destroy();
 	}
 
@@ -366,7 +368,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		if (answer
 				&& currentProblem.getFullSolution().length() == nextPosition()) {
 			rh = new NextTurnHandler(true);
-			ti.currentUserStats().correct++;
+			ti.currentUserStats().correct(problemSource.getCategoryName());
 		} else if (!answer
 				&& currentProblem.getInputMethod() == InputMethod.MULTIPLE_CHOICE) {
 			// Mistakes on multiple choice problems are not allowed
