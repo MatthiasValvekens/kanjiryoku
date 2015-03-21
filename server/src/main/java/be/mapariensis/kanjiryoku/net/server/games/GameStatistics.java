@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku.net.server.games;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.joda.time.DateTime;
 import org.json.JSONObject;
@@ -12,8 +13,16 @@ public class GameStatistics {
 	private final User user;
 	private final DateTime dt;
 
-	private static class Score {
-		int correct, failed;
+	public static class Score {
+		private int correct, failed;
+
+		public int getCorrect() {
+			return correct;
+		}
+
+		public int getFailed() {
+			return failed;
+		}
 	}
 
 	private final Map<String, Score> categoryScores = new HashMap<String, Score>();
@@ -48,18 +57,85 @@ public class GameStatistics {
 	}
 
 	public void correct(String cat) {
-		get(cat).correct++;
+		ensure(cat).correct++;
 	}
 
 	public void fail(String cat) {
-		get(cat).failed++;
+		ensure(cat).failed++;
 	}
 
-	private Score get(String cat) {
+	private Score ensure(String cat) {
 		Score sc = categoryScores.get(cat);
 		if (sc == null) {
 			categoryScores.put(cat, sc = new Score());
 		}
 		return sc;
 	}
+
+	public Score get(String cat) {
+		return categoryScores.get(cat);
+	}
+
+	public Set<String> keySet() {
+		return categoryScores.keySet();
+	}
+
+	public Set<Map.Entry<String, Score>> entrySet() {
+		return categoryScores.entrySet();
+	}
+
+	public int size() {
+		return categoryScores.size();
+	}
+
+	public boolean isEmpty() {
+		return categoryScores.isEmpty();
+	}
+
+	public boolean containsKey(Object key) {
+		return categoryScores.containsKey(key);
+	}
+
+	public boolean containsValue(Object value) {
+		return categoryScores.containsValue(value);
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((categoryScores == null) ? 0 : categoryScores.hashCode());
+		result = prime * result + ((dt == null) ? 0 : dt.hashCode());
+		result = prime * result + ((user == null) ? 0 : user.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		GameStatistics other = (GameStatistics) obj;
+		if (categoryScores == null) {
+			if (other.categoryScores != null)
+				return false;
+		} else if (!categoryScores.equals(other.categoryScores))
+			return false;
+		if (dt == null) {
+			if (other.dt != null)
+				return false;
+		} else if (!dt.equals(other.dt))
+			return false;
+		if (user == null) {
+			if (other.user != null)
+				return false;
+		} else if (!user.equals(other.user))
+			return false;
+		return true;
+	}
+
 }
