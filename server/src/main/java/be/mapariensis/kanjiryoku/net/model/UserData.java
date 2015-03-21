@@ -33,6 +33,11 @@ public class UserData {
 			return this;
 		}
 
+		public Builder setId(int id) {
+			ud.id = id;
+			return this;
+		}
+
 		public UserData deliver() {
 			if (ud.username == null)
 				throw new IllegalStateException();
@@ -58,6 +63,11 @@ public class UserData {
 	 */
 	private boolean isAdmin;
 
+	/**
+	 * Internal user ID
+	 */
+	private int id = -1;
+
 	public String getUsername() {
 		return username;
 	}
@@ -74,4 +84,7 @@ public class UserData {
 		return isAdmin;
 	}
 
+	public int getId() {
+		return id;
+	}
 }

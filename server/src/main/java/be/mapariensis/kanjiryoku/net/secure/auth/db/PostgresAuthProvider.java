@@ -86,7 +86,7 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 					boolean isAdmin = res.getBoolean("admin");
 					this.ud = new UserData.Builder().setUsername(username)
 							.setCreated(created).setLastLogin(lastLogin)
-							.setAdmin(isAdmin).deliver();
+							.setAdmin(isAdmin).setId(id).deliver();
 				}
 			}
 		}
