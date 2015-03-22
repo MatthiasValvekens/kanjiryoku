@@ -16,6 +16,14 @@ public class GameStatistics {
 	public static class Score {
 		private int correct, failed;
 
+		private Score() {
+		}
+
+		public Score(int correct, int failed) {
+			this.correct = correct;
+			this.failed = failed;
+		}
+
 		public int getCorrect() {
 			return correct;
 		}
@@ -26,6 +34,12 @@ public class GameStatistics {
 	}
 
 	private final Map<String, Score> categoryScores = new HashMap<String, Score>();
+
+	public GameStatistics(User user, Map<String, Score> categoryScores) {
+		this.user = user;
+		this.categoryScores.putAll(categoryScores);
+		this.dt = null;
+	}
 
 	public GameStatistics(User user) {
 		this.user = user;
