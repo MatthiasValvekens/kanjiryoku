@@ -2,7 +2,6 @@ package be.mapariensis.kanjiryoku.net.secure.auth.db;
 
 import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -19,6 +18,8 @@ import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthBackendProvider;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthHandler;
 import be.mapariensis.kanjiryoku.persistent.PostgresProvider;
+import be.mapariensis.kanjiryoku.persistent.util.NamedPreparedStatement;
+import be.mapariensis.kanjiryoku.persistent.util.StatementIndexer;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class PostgresAuthProvider implements AuthBackendProvider {
@@ -58,8 +59,12 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 		}
 	}
 
-	private static final String queryUserInfo = "select id, username, pwhash, salt, created, last_login, admin from kanji_user where username=?";
-	private static final String updateLastLogin = "update kanji_user set last_login = now() where id=?";
+	private static final String queryUserInfoSql = "select id, username, pwhash, salt, created, last_login, admin from kanji_user where username=${username}";
+	private static final StatementIndexer queryUserInfo = new StatementIndexer(
+			queryUserInfoSql);
+	private static final String updateLastLoginSql = "update kanji_user set last_login = now() where id=${id}";
+	private static final StatementIndexer updateLastLogin = new StatementIndexer(
+			updateLastLoginSql);
 
 	private class AuthHandlerImpl implements AuthHandler {
 		final int id;
@@ -69,8 +74,9 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 		public AuthHandlerImpl(String username) throws SQLException,
 				UserManagementException, IllegalArgumentException {
 			try (Connection conn = ds.getConnection();
-					PreparedStatement ps = conn.prepareStatement(queryUserInfo)) {
-				ps.setString(1, username);
+					NamedPreparedStatement ps = queryUserInfo
+							.prepareStatement(conn)) {
+				ps.setString("username", username);
 				try (ResultSet res = ps.executeQuery()) {
 					if (!res.next())
 						throw new UserManagementException(
@@ -116,9 +122,9 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 			if (ok) {
 				// update last login in database
 				try (Connection conn = ds.getConnection();
-						PreparedStatement ps = conn
-								.prepareStatement(updateLastLogin)) {
-					ps.setInt(1, id);
+						NamedPreparedStatement ps = updateLastLogin
+								.prepareStatement(conn)) {
+					ps.setInt("id", id);
 					ps.execute();
 				} catch (SQLException e) {
 					throw new ServerBackendException(e);
@@ -135,17 +141,19 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 	}
 
 	private static final String UNIQUE_VIOLATED_STATE = "23505";
-	private static final String addUser = "insert into kanji_user (username, pwhash, salt) values (?,?,?);";
+	private static final String addUserSql = "insert into kanji_user (username, pwhash, salt) values (${username},${pwhash},${salt});";
+	private static final StatementIndexer addUser = new StatementIndexer(
+			addUserSql);
 
 	@Override
 	public void createUser(String username, String hash, String salt)
 			throws UserManagementException, ServerBackendException {
 
 		try (Connection conn = ds.getConnection();
-				PreparedStatement ps = conn.prepareStatement(addUser)) {
-			ps.setString(1, username);
-			ps.setString(2, hash);
-			ps.setString(3, salt);
+				NamedPreparedStatement ps = addUser.prepareStatement(conn)) {
+			ps.setString("username", username);
+			ps.setString("pwhash", hash);
+			ps.setString("salt", salt);
 			ps.execute();
 		} catch (SQLException e) {
 			if (UNIQUE_VIOLATED_STATE.equals(e.getSQLState()))
@@ -156,29 +164,34 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 		}
 	}
 
-	private static final String deleteUser = "delete from kanji_user where username=?";
+	private static final String deleteUserSql = "delete from kanji_user where username=${username}";
+	private static final StatementIndexer deleteUser = new StatementIndexer(
+			deleteUserSql);
 
 	@Override
 	public void deleteUser(String username) throws ServerBackendException {
 		try (Connection conn = ds.getConnection();
-				PreparedStatement ps = conn.prepareStatement(deleteUser)) {
-			ps.setString(1, username);
+				NamedPreparedStatement ps = deleteUser.prepareStatement(conn)) {
+			ps.setString("username", username);
 			ps.execute();
 		} catch (SQLException e) {
 			throw new ServerBackendException(e);
 		}
 	}
 
-	private static final String changePassword = "update kanji_user set pwhash=?, salt=? where username=?";
+	private static final String changePasswordSql = "update kanji_user set pwhash=${pwhash}, salt=${salt} where username=${username}";
+	private static final StatementIndexer changePassword = new StatementIndexer(
+			changePasswordSql);
 
 	@Override
 	public void changePassword(String username, String newhash, String newsalt)
 			throws UserManagementException, ServerBackendException {
 		try (Connection conn = ds.getConnection();
-				PreparedStatement ps = conn.prepareStatement(changePassword)) {
-			ps.setString(1, newhash);
-			ps.setString(2, newsalt);
-			ps.setString(3, username);
+				NamedPreparedStatement ps = changePassword
+						.prepareStatement(conn)) {
+			ps.setString("pwhash", newhash);
+			ps.setString("salt", newsalt);
+			ps.setString("username", username);
 			int rowsAffected = ps.executeUpdate();
 			if (rowsAffected == 0)
 				throw new UserManagementException(String.format(

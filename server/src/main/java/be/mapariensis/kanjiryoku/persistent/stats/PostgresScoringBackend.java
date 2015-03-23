@@ -11,11 +11,11 @@ import javax.sql.DataSource;
 
 import be.mapariensis.kanjiryoku.config.ServerConfig;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
-import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.server.games.GameStatistics;
 import be.mapariensis.kanjiryoku.net.server.games.GameStatistics.Score;
+import be.mapariensis.kanjiryoku.persistent.PersistenceException;
 import be.mapariensis.kanjiryoku.persistent.PostgresProvider;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
@@ -49,10 +49,10 @@ public class PostgresScoringBackend implements ScoringBackend {
 
 	@Override
 	public void updateScores(Game game, GameStatistics statistics)
-			throws ServerBackendException {
+			throws PersistenceException {
 		int type = getGameType(game);
 		if (type == 0)
-			throw new ServerBackendException(String.format("Unknown game: %s",
+			throw new PersistenceException(String.format("Unknown game: %s",
 					game.toString()));
 		try (Connection conn = ds.getConnection();
 				PreparedStatement ps = conn.prepareStatement(updateScores)) {
@@ -70,7 +70,7 @@ public class PostgresScoringBackend implements ScoringBackend {
 			ps.executeBatch();
 			conn.setAutoCommit(true);
 		} catch (SQLException e) {
-			throw new ServerBackendException(e);
+			throw new PersistenceException(e);
 		}
 	}
 
@@ -79,7 +79,7 @@ public class PostgresScoringBackend implements ScoringBackend {
 
 	@Override
 	public GameStatistics aggregateScores(Game game, User user)
-			throws ServerBackendException {
+			throws PersistenceException {
 		int uid = user.data.getId();
 		int gameid = getGameType(game);
 		try (Connection conn = ds.getConnection();
@@ -97,7 +97,7 @@ public class PostgresScoringBackend implements ScoringBackend {
 			}
 			return new GameStatistics(user, data);
 		} catch (SQLException e) {
-			throw new ServerBackendException(e);
+			throw new PersistenceException(e);
 		}
 	}
 
