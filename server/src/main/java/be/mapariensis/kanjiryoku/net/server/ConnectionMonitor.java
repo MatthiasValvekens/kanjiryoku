@@ -45,6 +45,7 @@ import be.mapariensis.kanjiryoku.net.model.UserStore;
 import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
 import be.mapariensis.kanjiryoku.net.secure.auth.AuthBackendProvider;
 import be.mapariensis.kanjiryoku.net.server.handlers.CommandReceiverFactory;
+import be.mapariensis.kanjiryoku.persistent.stats.ScoringBackend;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class ConnectionMonitor extends Thread implements UserManager, Closeable {
@@ -82,7 +83,29 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		enforceSSL = config.getTyped(ConfigFields.FORCE_SSL, Boolean.class,
 				ConfigFields.FORCE_SSL_DEFAULT);
 		threadPool = Executors.newFixedThreadPool(workerThreads);
-		sessman = new SessionManagerImpl(config, this);
+
+		// set up scoring backend
+		ScoringBackend scorer;
+		IProperties scoringConfig = config.getTyped(
+				ConfigFields.SCORING_CONFIG, IProperties.class);
+		if (scoringConfig != null) {
+			ScoringBackend.Factory factory;
+			String factoryClassname = scoringConfig.getTyped(
+					ConfigFields.SCORING_BACKEND_CLASS, String.class);
+			try {
+				factory = (ScoringBackend.Factory) getClass().getClassLoader()
+						.loadClass(factoryClassname).newInstance();
+			} catch (InstantiationException | IllegalAccessException
+					| ClassNotFoundException | ClassCastException e) {
+				log.error("Failed to instantiate scoring backend.", e);
+				throw new BadConfigurationException(e);
+			}
+			scorer = factory.setUp(config, scoringConfig);
+		} else {
+			scorer = null;
+		}
+
+		sessman = new SessionManagerImpl(config, this, scorer);
 
 		setName("ConnectionMonitor:" + port);
 

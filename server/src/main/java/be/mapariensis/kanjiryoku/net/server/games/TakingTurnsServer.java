@@ -7,7 +7,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -233,12 +232,12 @@ public class TakingTurnsServer implements GameServerInterface {
 		problemSkipped(submitter, batonPass, rh);
 	}
 
-	private JSONObject stats() {
-		JSONObject res = new JSONObject();
-		for (int i = 0; i < ti.players.size(); i++) {
-			String uname = ti.players.get(i).handle;
+	private List<GameStatistics> stats() {
+		int playercount = ti.players.size();
+		List<GameStatistics> res = new ArrayList<GameStatistics>(playercount);
+		for (int i = 0; i < playercount; i++) {
 			GameStatistics stats = ti.stats.get(i);
-			res.put(uname, stats.toJSON());
+			res.add(stats);
 		}
 		return res;
 	}
@@ -271,14 +270,14 @@ public class TakingTurnsServer implements GameServerInterface {
 	}
 
 	private void broadcastClearInput(User submitter) {
+		log.trace("Clearing input.");
 		session.broadcastMessage(submitter, new NetworkMessage(
 				ClientCommandList.CLEAR));
 	}
 
-	private void finished(JSONObject statistics) {
+	private void finished(List<GameStatistics> statistics) {
 		if (statistics != null)
-			session.broadcastMessage(null, new NetworkMessage(
-					ClientCommandList.STATISTICS, statistics));
+			session.statistics(statistics);
 		session.broadcastMessage(null, new NetworkMessage(
 				ClientCommandList.RESETUI));
 		session.destroy();

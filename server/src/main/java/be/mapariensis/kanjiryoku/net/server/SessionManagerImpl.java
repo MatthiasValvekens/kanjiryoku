@@ -16,6 +16,7 @@ import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
 import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.User;
+import be.mapariensis.kanjiryoku.persistent.stats.ScoringBackend;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class SessionManagerImpl implements SessionManager {
@@ -25,10 +26,16 @@ public class SessionManagerImpl implements SessionManager {
 	private final UserManager uman;
 	private final Object LOCK = new Object();
 	private final ServerConfig config;
+	private final ScoringBackend scorer;
 
-	public SessionManagerImpl(ServerConfig config, UserManager uman) {
+	public SessionManagerImpl(ServerConfig config, UserManager uman,
+			ScoringBackend scorer) {
 		this.uman = uman;
 		this.config = config;
+		// For now, this gets passed as-is to any session created.
+		// This will probably change when there's support for user-specified
+		// session settings.
+		this.scorer = scorer;
 	}
 
 	@Override
@@ -47,7 +54,8 @@ public class SessionManagerImpl implements SessionManager {
 			throw new ServerBackendException(e);
 		}
 		synchronized (LOCK) {
-			Session res = new Session(this, freeSpot(), master, uman, host);
+			Session res = new Session(this, freeSpot(), master, uman, host,
+					scorer);
 			sessions.set(res.getId(), res);
 			log.info("Established a session with id {}, master is {}",
 					res.getId(), master);

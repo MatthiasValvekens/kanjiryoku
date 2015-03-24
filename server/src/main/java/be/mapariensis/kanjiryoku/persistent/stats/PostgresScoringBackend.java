@@ -1,5 +1,6 @@
 package be.mapariensis.kanjiryoku.persistent.stats;
 
+import java.sql.BatchUpdateException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -72,6 +73,8 @@ public class PostgresScoringBackend implements ScoringBackend {
 			}
 			ps.executeBatch();
 			conn.setAutoCommit(true);
+		} catch (BatchUpdateException e) {
+			throw new PersistenceException(e.getNextException());
 		} catch (SQLException e) {
 			throw new PersistenceException(e);
 		}
