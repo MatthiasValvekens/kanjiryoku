@@ -98,7 +98,7 @@ public class ZinniaGuesser implements KanjiGuesser {
 		for (int i = 0; i < tolerance; i++) {
 			String value = res.value(i);
 			float score = res.score(i);
-			log.debug("Candidate {} is {} with score {}", i + 1, value, score);
+			log.trace("Candidate {} is {} with score {}", i + 1, value, score);
 			chars.add(value.charAt(0));
 		}
 		return chars;
