@@ -1,7 +1,6 @@
 package be.mapariensis.kanjiryoku.persistent.stats;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -17,6 +16,8 @@ import be.mapariensis.kanjiryoku.net.server.games.GameStatistics;
 import be.mapariensis.kanjiryoku.net.server.games.GameStatistics.Score;
 import be.mapariensis.kanjiryoku.persistent.PersistenceException;
 import be.mapariensis.kanjiryoku.persistent.PostgresProvider;
+import be.mapariensis.kanjiryoku.persistent.util.NamedPreparedStatement;
+import be.mapariensis.kanjiryoku.persistent.util.StatementIndexer;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class PostgresScoringBackend implements ScoringBackend {
@@ -45,7 +46,9 @@ public class PostgresScoringBackend implements ScoringBackend {
 		this.ds = ds;
 	}
 
-	private static final String updateScores = "insert into kanji_gamestats (userid,game,category,correct,failed) values (?,?,?,?,?)";
+	private static final String updateScoresSql = "insert into kanji_gamestats (userid,game,category,correct,failed) values (${userid},${game},${category},${correct},${failed})";
+	private static final StatementIndexer updateScores = new StatementIndexer(
+			updateScoresSql);
 
 	@Override
 	public void updateScores(Game game, GameStatistics statistics)
@@ -55,16 +58,16 @@ public class PostgresScoringBackend implements ScoringBackend {
 			throw new PersistenceException(String.format("Unknown game: %s",
 					game.toString()));
 		try (Connection conn = ds.getConnection();
-				PreparedStatement ps = conn.prepareStatement(updateScores)) {
+				NamedPreparedStatement ps = updateScores.prepareStatement(conn)) {
 			int uid = statistics.getUser().data.getId();
 			int gameid = getGameType(game);
 			conn.setAutoCommit(false);
 			for (Map.Entry<String, Score> entry : statistics.entrySet()) {
-				ps.setInt(1, uid);
-				ps.setInt(2, gameid);
-				ps.setString(3, entry.getKey());
-				ps.setInt(4, entry.getValue().getCorrect());
-				ps.setInt(5, entry.getValue().getFailed());
+				ps.setInt("userid", uid);
+				ps.setInt("game", gameid);
+				ps.setString("category", entry.getKey());
+				ps.setInt("correct", entry.getValue().getCorrect());
+				ps.setInt("failed", entry.getValue().getFailed());
 				ps.addBatch();
 			}
 			ps.executeBatch();
@@ -74,8 +77,10 @@ public class PostgresScoringBackend implements ScoringBackend {
 		}
 	}
 
-	private static final String aggregateScores = "select category, sum(correct) as correctTotal, sum(failed) as failedTotal"
-			+ " from kanji_gamestats where userid=? and game=? group by category";
+	private static final String aggregateScoresSql = "select category, sum(correct) as correctTotal, sum(failed) as failedTotal"
+			+ " from kanji_gamestats where userid=${userid} and game=${game} group by category";
+	private static final StatementIndexer aggregateScores = new StatementIndexer(
+			aggregateScoresSql);
 
 	@Override
 	public GameStatistics aggregateScores(Game game, User user)
@@ -83,9 +88,10 @@ public class PostgresScoringBackend implements ScoringBackend {
 		int uid = user.data.getId();
 		int gameid = getGameType(game);
 		try (Connection conn = ds.getConnection();
-				PreparedStatement ps = conn.prepareStatement(aggregateScores)) {
-			ps.setInt(1, uid);
-			ps.setInt(2, gameid);
+				NamedPreparedStatement ps = aggregateScores
+						.prepareStatement(conn)) {
+			ps.setInt("userid", uid);
+			ps.setInt("game", gameid);
 			Map<String, Score> data = new HashMap<String, Score>();
 			try (ResultSet res = ps.executeQuery()) {
 				while (res.next()) {
