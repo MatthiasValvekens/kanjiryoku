@@ -4,7 +4,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashSet;
@@ -14,13 +13,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
+import be.mapariensis.kanjiryoku.persistent.util.NamedPreparedStatement;
+import be.mapariensis.kanjiryoku.persistent.util.StatementIndexer;
 import be.mapariensis.kanjiryoku.util.IProperties;
 import be.mapariensis.kanjiryoku.util.IPropertiesImpl;
 
 public class SqliteInterface implements KanjidicInterface {
 	private static final Logger log = LoggerFactory
 			.getLogger(SqliteInterface.class);
-	// TODO: allow for named parameters in queries
 	public static final String SEARCH_BY_KUN = "searchByKun";
 	public static final String SEARCH_BY_ON = "searchByOn";
 	public static final String QUERY_ON_READINGS = "queryOnReadings";
@@ -29,6 +29,10 @@ public class SqliteInterface implements KanjidicInterface {
 	public static final String FIND_SIMILAR = "findSimilar";
 	public static final String DBFILE = "dbFile";
 	public static final String QUERYFILE = "queryFile";
+
+	public static final String VAR_ON = "on";
+	public static final String VAR_KUN = "kun";
+	public static final String VAR_KANJI = "kanji";
 
 	public static class Factory implements KanjidicInterface.Factory {
 
@@ -43,7 +47,7 @@ public class SqliteInterface implements KanjidicInterface {
 
 	private final String repr;
 	private final Connection conn;
-	private final String searchByOn, searchByKun, queryOnReadings,
+	private final StatementIndexer searchByOn, searchByKun, queryOnReadings,
 			queryKunReadings, findSimilar, selectRandom;
 
 	protected SqliteInterface(String dbFile, String queryFile)
@@ -75,20 +79,24 @@ public class SqliteInterface implements KanjidicInterface {
 		}
 
 		// find queries
-		searchByOn = queryConfig.getRequired(SEARCH_BY_ON, String.class);
-		searchByKun = queryConfig.getRequired(SEARCH_BY_KUN, String.class);
-		queryOnReadings = queryConfig.getRequired(QUERY_ON_READINGS,
-				String.class);
-		queryKunReadings = queryConfig.getRequired(QUERY_KUN_READINGS,
-				String.class);
-		findSimilar = queryConfig.getRequired(FIND_SIMILAR, String.class);
-		selectRandom = queryConfig.getRequired(SELECT_RANDOM, String.class);
+		searchByOn = new StatementIndexer(queryConfig.getRequired(SEARCH_BY_ON,
+				String.class));
+		searchByKun = new StatementIndexer(queryConfig.getRequired(
+				SEARCH_BY_KUN, String.class));
+		queryOnReadings = new StatementIndexer(queryConfig.getRequired(
+				QUERY_ON_READINGS, String.class));
+		queryKunReadings = new StatementIndexer(queryConfig.getRequired(
+				QUERY_KUN_READINGS, String.class));
+		findSimilar = new StatementIndexer(queryConfig.getRequired(
+				FIND_SIMILAR, String.class));
+		selectRandom = new StatementIndexer(queryConfig.getRequired(
+				SELECT_RANDOM, String.class));
 	}
 
-	private PreparedStatement setUpQuery(String query)
+	private NamedPreparedStatement setUpQuery(StatementIndexer query)
 			throws DictionaryAccessException {
 		try {
-			return conn.prepareStatement(query);
+			return query.prepareStatement(conn);
 		} catch (SQLException e) {
 			try {
 				conn.close();
@@ -101,10 +109,10 @@ public class SqliteInterface implements KanjidicInterface {
 	}
 
 	// 1-parameter query which returns an 1-column table of strings
-	protected Set<String> queryStringSet(String query, String param)
-			throws DictionaryAccessException {
-		try (PreparedStatement ps = setUpQuery(query)) {
-			ps.setString(1, param);
+	protected Set<String> queryStringSet(StatementIndexer query,
+			String paramName, String param) throws DictionaryAccessException {
+		try (NamedPreparedStatement ps = setUpQuery(query)) {
+			ps.setString(paramName, param);
 			try (ResultSet res = ps.executeQuery()) {
 				Set<String> results = new HashSet<String>();
 				while (res.next()) {
@@ -117,9 +125,9 @@ public class SqliteInterface implements KanjidicInterface {
 		}
 	}
 
-	protected Set<Character> queryCharSet(String query, String param)
-			throws DictionaryAccessException {
-		Set<String> asStrings = queryStringSet(query, param);
+	protected Set<Character> queryCharSet(StatementIndexer query,
+			String paramName, String param) throws DictionaryAccessException {
+		Set<String> asStrings = queryStringSet(query, paramName, param);
 		Set<Character> res = new HashSet<Character>();
 		for (String s : asStrings) {
 			if (s.length() > 1)
@@ -132,30 +140,32 @@ public class SqliteInterface implements KanjidicInterface {
 
 	@Override
 	public Set<String> getOn(char kanji) throws DictionaryAccessException {
-		return queryStringSet(queryOnReadings, Character.toString(kanji));
+		return queryStringSet(queryOnReadings, VAR_KANJI,
+				Character.toString(kanji));
 	}
 
 	@Override
 	public Set<String> getKun(char kanji) throws DictionaryAccessException {
-		return queryStringSet(queryKunReadings, Character.toString(kanji));
+		return queryStringSet(queryKunReadings, VAR_KANJI,
+				Character.toString(kanji));
 	}
 
 	@Override
 	public Set<Character> getKanjiByOn(String on)
 			throws DictionaryAccessException {
-		return queryCharSet(searchByOn, on);
+		return queryCharSet(searchByOn, VAR_ON, on);
 	}
 
 	@Override
 	public Set<Character> getKanjiByKun(String kun)
 			throws DictionaryAccessException {
-		return queryCharSet(searchByKun, kun);
+		return queryCharSet(searchByKun, VAR_KUN, kun);
 	}
 
 	@Override
 	public Set<Character> getSimilar(char kanji)
 			throws DictionaryAccessException {
-		return queryCharSet(findSimilar, Character.toString(kanji));
+		return queryCharSet(findSimilar, VAR_KANJI, Character.toString(kanji));
 	}
 
 	@Override
@@ -180,7 +190,7 @@ public class SqliteInterface implements KanjidicInterface {
 
 	@Override
 	public Set<Character> randomKanji() throws DictionaryAccessException {
-		try (PreparedStatement ps = setUpQuery(selectRandom)) {
+		try (NamedPreparedStatement ps = setUpQuery(selectRandom)) {
 			try (ResultSet res = ps.executeQuery()) {
 				Set<Character> results = new HashSet<Character>();
 				while (res.next()) {

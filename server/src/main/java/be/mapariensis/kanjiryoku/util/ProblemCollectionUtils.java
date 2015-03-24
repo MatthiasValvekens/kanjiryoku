@@ -65,6 +65,11 @@ public class ProblemCollectionUtils {
 			public boolean hasNext() {
 				return iter.hasNext();
 			}
+
+			@Override
+			public String getCategoryName() {
+				return "default";
+			}
 		};
 	}
 

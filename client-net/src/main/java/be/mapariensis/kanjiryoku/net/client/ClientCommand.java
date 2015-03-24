@@ -53,9 +53,17 @@ public enum ClientCommand {
 					JSONObject data = json.getJSONObject(username);
 					// sort data keys alphabetically
 					Set<String> dataKeys = new TreeSet<String>(data.keySet());
-					for (String key : dataKeys)
-						sb.append("\n\t").append(key).append(": ")
-								.append(data.get(key));
+					// format scores per category
+					for (String key : dataKeys) {
+						sb.append("\n\t").append(key).append(": ");
+						JSONObject userStats = data.getJSONObject(key);
+						Set<String> scoreKeys = new TreeSet<String>(
+								userStats.keySet());
+						for (String scoreKey : scoreKeys) {
+							sb.append("\n\t\t").append(scoreKey).append(": ")
+									.append(userStats.get(scoreKey));
+						}
+					}
 				}
 			} catch (JSONException ex) {
 				throw new ServerCommunicationException(ex);

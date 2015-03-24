@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku.problemsets.organizers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
 
@@ -23,13 +24,15 @@ public class CategoryOrganizer implements ProblemOrganizer {
 
 	private boolean hasMore = true;
 
-	public CategoryOrganizer(List<RatedProblemList> cats, int perCategory,
-			Random rng, boolean resetDifficulty, int minDifficulty,
-			int maxDifficulty) {
+	public CategoryOrganizer(Map<String, RatedProblemList> cats,
+			int perCategory, Random rng, boolean resetDifficulty,
+			int minDifficulty, int maxDifficulty) {
 		this.cats = new ArrayList<SingleCategoryOrganizer>(cats.size());
-		for (RatedProblemList rpl : cats) {
-			this.cats.add(new SingleCategoryOrganizer(rpl, perCategory, rng,
-					minDifficulty, maxDifficulty));
+		for (Map.Entry<String, RatedProblemList> entry : cats.entrySet()) {
+			this.cats
+					.add(new SingleCategoryOrganizer(entry.getKey(), entry
+							.getValue(), perCategory, rng, minDifficulty,
+							maxDifficulty));
 		}
 		this.resetDifficulty = resetDifficulty;
 		this.minDifficulty = minDifficulty;
@@ -78,5 +81,11 @@ public class CategoryOrganizer implements ProblemOrganizer {
 
 	private static int restrict(int x, int min, int max) {
 		return Math.max(min, Math.min(x, max));
+	}
+
+	@Override
+	public String getCategoryName() {
+		SingleCategoryOrganizer sco = cats.get(curCatIx);
+		return sco.getCategoryName();
 	}
 }
