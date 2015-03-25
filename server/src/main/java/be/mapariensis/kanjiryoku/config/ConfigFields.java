@@ -88,6 +88,11 @@ public class ConfigFields {
 	// DB settings
 	public static final String DB_CONFIG = "dbConfig";
 	public static final String DATA_SOURCE_PROVIDER = "dataSourceProvider";
+
+	// Scoring settings
+	public static final String SCORING_CONFIG = "scoring";
+	public static final String SCORING_BACKEND_CLASS = "backendFactory";
+
 	// Auth
 	public static final String REQUIRE_AUTH = "requireAuthentication";
 	public static final boolean REQUIRE_AUTH_DEFAULT = true;

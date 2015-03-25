@@ -2,11 +2,14 @@ package be.mapariensis.kanjiryoku.net.server;
 
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
@@ -14,6 +17,9 @@ import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
+import be.mapariensis.kanjiryoku.net.server.games.GameStatistics;
+import be.mapariensis.kanjiryoku.persistent.PersistenceException;
+import be.mapariensis.kanjiryoku.persistent.stats.ScoringBackend;
 
 public class Session {
 	private static final Logger log = LoggerFactory.getLogger(Session.class);
@@ -25,9 +31,11 @@ public class Session {
 	protected final Object LOCK = new Object();
 	private final UserManager uman;
 	private final GameServerInterface game;
+	private final ScoringBackend scorer;
 
 	public Session(SessionManager manager, int id, User master,
-			UserManager uman, GameServerInterface game) throws ServerException {
+			UserManager uman, GameServerInterface game, ScoringBackend scorer)
+			throws ServerException {
 		if (game == null)
 			throw new UnsupportedGameException("null");
 		this.id = id;
@@ -37,6 +45,10 @@ public class Session {
 		this.manager = manager;
 		this.uman = uman;
 		this.game = game;
+		this.scorer = scorer;
+		if (scorer == null) {
+			log.debug("No scoring backend available. Scores will not be saved.");
+		}
 		synchronized (master.sessionLock()) {
 			master.joinSession(this); // session is locked until we're done. No
 										// threads can access our partially
@@ -233,5 +245,23 @@ public class Session {
 
 	public GameServerInterface getGame() {
 		return game;
+	}
+
+	public void statistics(List<GameStatistics> statistics) {
+		JSONObject res = new JSONObject();
+		for (GameStatistics data : statistics) {
+			String uname = data.getUser().handle;
+			res.put(uname, data.toJSON());
+			if (scorer != null) {
+				try {
+					log.debug("Updating scores for user {}", uname);
+					scorer.updateScores(game.getGame(), data);
+				} catch (PersistenceException e) {
+					log.warn("Failed to update scores for user {}.", uname, e);
+				}
+			}
+		}
+		broadcastMessage(null, new NetworkMessage(ClientCommandList.STATISTICS,
+				res));
 	}
 }

@@ -7,7 +7,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +20,7 @@ import be.mapariensis.kanjiryoku.model.YojiProblem;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.commands.ParserName;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
+import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
 import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
@@ -69,8 +69,8 @@ public class TakingTurnsServer implements GameServerInterface {
 	private class NextTurnHandler extends AnswerFeedbackHandler {
 		final boolean answer;
 
-		NextTurnHandler(boolean answer) {
-			super(ti.players);
+		NextTurnHandler(User submitter, boolean answer) {
+			super(Arrays.asList(submitter));
 			this.answer = answer;
 		}
 
@@ -92,8 +92,8 @@ public class TakingTurnsServer implements GameServerInterface {
 
 	private class BatonPassHandler extends AnswerFeedbackHandler {
 
-		public BatonPassHandler() {
-			super(ti.players);
+		public BatonPassHandler(User submitter) {
+			super(Arrays.asList(submitter));
 		}
 
 		@Override
@@ -144,6 +144,22 @@ public class TakingTurnsServer implements GameServerInterface {
 				break;
 			case MULTIPLE_CHOICE:
 				multipleChoiceSubmit(msg, source);
+			}
+		}
+	}
+
+	@Override
+	public void update(NetworkMessage msg, User source)
+			throws GameFlowException, ProtocolSyntaxException {
+		if (!canPlay(source))
+			throw new GameFlowException("You can't do that now.");
+		synchronized (submitLock) {
+			switch (currentProblem.getInputMethod()) {
+			case HANDWRITTEN:
+				handwrittenUpdate(msg, source);
+				break;
+			case MULTIPLE_CHOICE:
+				multipleChoiceUpdate(msg, source);
 			}
 		}
 	}
@@ -228,17 +244,17 @@ public class TakingTurnsServer implements GameServerInterface {
 		// If not, drop the problem
 		boolean batonPass = enableBatonPass
 				&& (problemRepetitions < ti.players.size() - 1);
-		AnswerFeedbackHandler rh = batonPass ? new BatonPassHandler()
-				: new NextTurnHandler(false);
+		AnswerFeedbackHandler rh = batonPass ? new BatonPassHandler(submitter)
+				: new NextTurnHandler(submitter, false);
 		problemSkipped(submitter, batonPass, rh);
 	}
 
-	private JSONObject stats() {
-		JSONObject res = new JSONObject();
-		for (int i = 0; i < ti.players.size(); i++) {
-			String uname = ti.players.get(i).handle;
+	private List<GameStatistics> stats() {
+		int playercount = ti.players.size();
+		List<GameStatistics> res = new ArrayList<GameStatistics>(playercount);
+		for (int i = 0; i < playercount; i++) {
 			GameStatistics stats = ti.stats.get(i);
-			res.put(uname, stats.toJSON());
+			res.add(stats);
 		}
 		return res;
 	}
@@ -271,14 +287,14 @@ public class TakingTurnsServer implements GameServerInterface {
 	}
 
 	private void broadcastClearInput(User submitter) {
+		log.trace("Clearing input.");
 		session.broadcastMessage(submitter, new NetworkMessage(
 				ClientCommandList.CLEAR));
 	}
 
-	private void finished(JSONObject statistics) {
+	private void finished(List<GameStatistics> statistics) {
 		if (statistics != null)
-			session.broadcastMessage(null, new NetworkMessage(
-					ClientCommandList.STATISTICS, statistics));
+			session.statistics(statistics);
 		session.broadcastMessage(null, new NetworkMessage(
 				ClientCommandList.RESETUI));
 		session.destroy();
@@ -304,45 +320,62 @@ public class TakingTurnsServer implements GameServerInterface {
 				List<Character> chars = guess.guess(width, height, strokes);
 				log.trace("Retrieved {} characters", chars.size());
 				checkAnswer(chars, source);
-				localClear();
-			}
-			// submit one stroke
-			// SUBMIT [list_of_dots]
-			else if (msg.argCount() == 2) {
-				List<Dot> stroke = ParsingUtils.parseDots(msg.get(1));
-				strokes.add(stroke);
-				deliverStroke(source, stroke);
+				clearInput(null);
 			} else
-				throw new ArgumentCountException(
-						ArgumentCountException.Type.UNEQUAL,
+				throw new ArgumentCountException(Type.UNEQUAL,
 						ServerCommand.SUBMIT);
 		} catch (NumberFormatException ex) {
 			throw new ProtocolSyntaxException(ex);
 		}
+	}
 
+	private void handwrittenUpdate(NetworkMessage msg, User source)
+			throws ProtocolSyntaxException {
+		// submit one stroke
+		// SUBMIT [list_of_dots]
+		if (msg.argCount() == 2) {
+			List<Dot> stroke;
+			try {
+				stroke = ParsingUtils.parseDots(msg.get(1));
+			} catch (NumberFormatException ex) {
+				throw new ProtocolSyntaxException(ex);
+			}
+			strokes.add(stroke);
+			deliverStroke(source, stroke);
+		} else
+			throw new ArgumentCountException(Type.UNEQUAL, ServerCommand.UPDATE);
 	}
 
 	private void multipleChoiceSubmit(NetworkMessage msg, User source)
 			throws ProtocolSyntaxException, GameFlowException {
-		try {
-			if (msg.argCount() == 1) {
-				if (multiProblemChoice == -1)
-					throw new GameFlowException("No input.");
-				log.debug("Submitting multiple choice answer");
-				char c = multiProblemOptions.get(multiProblemChoice).charAt(0);
-				// FIXME remove the charAt 0 once I properly generalize the
-				// solution model
-				checkAnswer(Arrays.asList(c), source);
-			} else if (msg.argCount() == 2) {
-				int i = Integer.parseInt(msg.get(1));
-				if (i < 0)
-					throw new ProtocolSyntaxException();
-				multiProblemChoice = i;
-				broadcastSelection(source, i);
+		if (msg.argCount() == 1) {
+			if (multiProblemChoice == -1)
+				throw new GameFlowException("No input.");
+			log.debug("Submitting multiple choice answer");
+			char c = multiProblemOptions.get(multiProblemChoice).charAt(0);
+			// FIXME remove the charAt 0 once I properly generalize the
+			// solution model
+			checkAnswer(Arrays.asList(c), source);
+			clearInput(null);
+		} else
+			throw new ArgumentCountException(Type.UNEQUAL, ServerCommand.SUBMIT);
+	}
+
+	private void multipleChoiceUpdate(NetworkMessage msg, User source)
+			throws ProtocolSyntaxException {
+		if (msg.argCount() == 2) {
+			int i;
+			try {
+				i = Integer.parseInt(msg.get(1));
+				if (i < 0 || i > multiProblemOptions.size())
+					throw new ProtocolSyntaxException("No such option.");
+			} catch (NumberFormatException ex) {
+				throw new ProtocolSyntaxException(ex);
 			}
-		} catch (NumberFormatException ex) {
-			throw new ProtocolSyntaxException(ex);
-		}
+			multiProblemChoice = i;
+			broadcastSelection(source, i);
+		} else
+			throw new ArgumentCountException(Type.UNEQUAL, ServerCommand.UPDATE);
 	}
 
 	private void checkAnswer(List<Character> chars, User source) {
@@ -367,7 +400,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		// move on to next position in problem
 		if (answer
 				&& currentProblem.getFullSolution().length() == nextPosition()) {
-			rh = new NextTurnHandler(true);
+			rh = new NextTurnHandler(source, true);
 			ti.currentUserStats().correct(problemSource.getCategoryName());
 		} else if (!answer
 				&& currentProblem.getInputMethod() == InputMethod.MULTIPLE_CHOICE) {
@@ -378,8 +411,6 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 		log.debug("Delivering answer " + res);
 		deliverAnswer(source, answer, res, rh);
-		if (rh == null)
-			broadcastClearInput(null); // do not clear on final input
 	}
 
 	private int nextPosition() {

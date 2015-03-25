@@ -37,7 +37,7 @@ public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 	@Override
 	public void sendStroke(List<Dot> dots) {
 		bridge.getUplink().enqueueMessage(
-				new NetworkMessage(ServerCommandList.SUBMIT, dots));
+				new NetworkMessage(ServerCommandList.UPDATE, dots));
 	}
 
 	@Override

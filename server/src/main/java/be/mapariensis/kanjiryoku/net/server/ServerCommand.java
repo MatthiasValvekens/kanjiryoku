@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
@@ -24,6 +26,7 @@ import be.mapariensis.kanjiryoku.net.server.handlers.SessionInvitationHandler;
 import be.mapariensis.kanjiryoku.net.server.handlers.UserPasswordResponseHandler;
 
 public enum ServerCommand {
+
 	BYE {
 		@Override
 		public void execute(NetworkMessage message, User client,
@@ -243,6 +246,19 @@ public enum ServerCommand {
 		}
 
 	},
+	UPDATE {
+		@Override
+		public void execute(NetworkMessage message, User client,
+				UserManager userman, SessionManager sessman)
+				throws ServerException {
+			synchronized (client.sessionLock()) {
+				Session sess = client.getSession();
+				if (sess == null || !sess.getGame().running())
+					throw new SessionException("No game running.");
+				sess.getGame().update(message, client);
+			}
+		}
+	},
 	SKIPPROBLEM {
 
 		@Override
@@ -324,6 +340,7 @@ public enum ServerCommand {
 			} catch (RuntimeException ex) {
 				throw new ProtocolSyntaxException(ex);
 			}
+			log.debug("Compiling game list...");
 			// send the list of games as a JSON list
 			JSONArray arr = new JSONArray();
 			for (Game g : Game.values()) {
@@ -332,7 +349,7 @@ public enum ServerCommand {
 				wrapper.put(Constants.GAMELIST_JSON_HUMANNAME, g.toString());
 				arr.put(wrapper);
 			}
-
+			log.debug("Sending game list...");
 			userman.messageUser(client, new NetworkMessage(
 					ClientCommandList.RESPOND, responseCode, arr));
 		}
@@ -388,6 +405,9 @@ public enum ServerCommand {
 		}
 
 	};
+	private static final Logger log = LoggerFactory
+			.getLogger(ServerCommand.class);
+
 	public abstract void execute(NetworkMessage message, User client,
 			UserManager userman, SessionManager sessman)
 			throws ServerException, BadConfigurationException;

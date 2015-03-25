@@ -1,7 +1,7 @@
 package be.mapariensis.kanjiryoku.net.input;
 
-import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.gui.MultipleChoiceInputInterface;
+import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.model.InputMethod;
 import be.mapariensis.kanjiryoku.model.MultipleChoiceOptions;
 import be.mapariensis.kanjiryoku.model.Problem;
@@ -58,7 +58,7 @@ public class MultipleChoiceInputHandlerImpl implements
 	@Override
 	public void broadcastSelect(int choice) {
 		bridge.getUplink().enqueueMessage(
-				new NetworkMessage(ServerCommandList.SUBMIT, choice));
+				new NetworkMessage(ServerCommandList.UPDATE, choice));
 	}
 
 	@Override
