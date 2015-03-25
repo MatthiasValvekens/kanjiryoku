@@ -16,6 +16,9 @@ public interface GameServerInterface extends AutoCloseable {
 	public void submit(NetworkMessage msg, User user) throws GameFlowException,
 			ProtocolSyntaxException;
 
+	public void update(NetworkMessage msg, User user) throws GameFlowException,
+			ProtocolSyntaxException;
+
 	public boolean canPlay(User u);
 
 	public boolean running();

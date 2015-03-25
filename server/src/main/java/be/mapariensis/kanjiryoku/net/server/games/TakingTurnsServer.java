@@ -20,6 +20,7 @@ import be.mapariensis.kanjiryoku.model.YojiProblem;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.commands.ParserName;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
+import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
 import be.mapariensis.kanjiryoku.net.exceptions.GameFlowException;
 import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
@@ -143,6 +144,22 @@ public class TakingTurnsServer implements GameServerInterface {
 				break;
 			case MULTIPLE_CHOICE:
 				multipleChoiceSubmit(msg, source);
+			}
+		}
+	}
+
+	@Override
+	public void update(NetworkMessage msg, User source)
+			throws GameFlowException, ProtocolSyntaxException {
+		if (!canPlay(source))
+			throw new GameFlowException("You can't do that now.");
+		synchronized (submitLock) {
+			switch (currentProblem.getInputMethod()) {
+			case HANDWRITTEN:
+				handwrittenUpdate(msg, source);
+				break;
+			case MULTIPLE_CHOICE:
+				multipleChoiceUpdate(msg, source);
 			}
 		}
 	}
@@ -304,44 +321,60 @@ public class TakingTurnsServer implements GameServerInterface {
 				log.trace("Retrieved {} characters", chars.size());
 				checkAnswer(chars, source);
 				localClear();
-			}
-			// submit one stroke
-			// SUBMIT [list_of_dots]
-			else if (msg.argCount() == 2) {
-				List<Dot> stroke = ParsingUtils.parseDots(msg.get(1));
-				strokes.add(stroke);
-				deliverStroke(source, stroke);
 			} else
-				throw new ArgumentCountException(
-						ArgumentCountException.Type.UNEQUAL,
+				throw new ArgumentCountException(Type.UNEQUAL,
 						ServerCommand.SUBMIT);
 		} catch (NumberFormatException ex) {
 			throw new ProtocolSyntaxException(ex);
 		}
+	}
 
+	private void handwrittenUpdate(NetworkMessage msg, User source)
+			throws ProtocolSyntaxException {
+		// submit one stroke
+		// SUBMIT [list_of_dots]
+		if (msg.argCount() == 2) {
+			List<Dot> stroke;
+			try {
+				stroke = ParsingUtils.parseDots(msg.get(1));
+			} catch (NumberFormatException ex) {
+				throw new ProtocolSyntaxException(ex);
+			}
+			strokes.add(stroke);
+			deliverStroke(source, stroke);
+		} else
+			throw new ArgumentCountException(Type.UNEQUAL, ServerCommand.UPDATE);
 	}
 
 	private void multipleChoiceSubmit(NetworkMessage msg, User source)
 			throws ProtocolSyntaxException, GameFlowException {
-		try {
-			if (msg.argCount() == 1) {
-				if (multiProblemChoice == -1)
-					throw new GameFlowException("No input.");
-				log.debug("Submitting multiple choice answer");
-				char c = multiProblemOptions.get(multiProblemChoice).charAt(0);
-				// FIXME remove the charAt 0 once I properly generalize the
-				// solution model
-				checkAnswer(Arrays.asList(c), source);
-			} else if (msg.argCount() == 2) {
-				int i = Integer.parseInt(msg.get(1));
-				if (i < 0)
-					throw new ProtocolSyntaxException();
-				multiProblemChoice = i;
-				broadcastSelection(source, i);
+		if (msg.argCount() == 1) {
+			if (multiProblemChoice == -1)
+				throw new GameFlowException("No input.");
+			log.debug("Submitting multiple choice answer");
+			char c = multiProblemOptions.get(multiProblemChoice).charAt(0);
+			// FIXME remove the charAt 0 once I properly generalize the
+			// solution model
+			checkAnswer(Arrays.asList(c), source);
+		} else
+			throw new ArgumentCountException(Type.UNEQUAL, ServerCommand.SUBMIT);
+	}
+
+	private void multipleChoiceUpdate(NetworkMessage msg, User source)
+			throws ProtocolSyntaxException {
+		if (msg.argCount() == 2) {
+			int i;
+			try {
+				i = Integer.parseInt(msg.get(1));
+				if (i < 0 || i > multiProblemOptions.size())
+					throw new ProtocolSyntaxException("No such option.");
+			} catch (NumberFormatException ex) {
+				throw new ProtocolSyntaxException(ex);
 			}
-		} catch (NumberFormatException ex) {
-			throw new ProtocolSyntaxException(ex);
-		}
+			multiProblemChoice = i;
+			broadcastSelection(source, i);
+		} else
+			throw new ArgumentCountException(Type.UNEQUAL, ServerCommand.UPDATE);
 	}
 
 	private void checkAnswer(List<Character> chars, User source) {
