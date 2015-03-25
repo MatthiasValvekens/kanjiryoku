@@ -122,4 +122,9 @@ public class AdminConsole implements UIBridge, ChatInterface {
 		displaySystemMessage("Closing connection.");
 		uplink.close();
 	}
+
+	@Override
+	public String promptPassword() {
+		return new String(System.console().readPassword());
+	}
 }
