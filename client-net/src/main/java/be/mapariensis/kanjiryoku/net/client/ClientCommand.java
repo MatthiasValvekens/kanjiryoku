@@ -273,6 +273,7 @@ public enum ClientCommand {
 		@Override
 		public void execute(NetworkMessage msg, UIBridge bridge)
 				throws ClientException {
+			log.debug("Received CLEAR...");
 			bridge.getClient().getInputHandler().clearLocalInput();
 		}
 	},

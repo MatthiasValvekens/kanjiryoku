@@ -320,7 +320,7 @@ public class TakingTurnsServer implements GameServerInterface {
 				List<Character> chars = guess.guess(width, height, strokes);
 				log.trace("Retrieved {} characters", chars.size());
 				checkAnswer(chars, source);
-				localClear();
+				clearInput(null);
 			} else
 				throw new ArgumentCountException(Type.UNEQUAL,
 						ServerCommand.SUBMIT);
@@ -356,6 +356,7 @@ public class TakingTurnsServer implements GameServerInterface {
 			// FIXME remove the charAt 0 once I properly generalize the
 			// solution model
 			checkAnswer(Arrays.asList(c), source);
+			clearInput(null);
 		} else
 			throw new ArgumentCountException(Type.UNEQUAL, ServerCommand.SUBMIT);
 	}
@@ -410,8 +411,6 @@ public class TakingTurnsServer implements GameServerInterface {
 		}
 		log.debug("Delivering answer " + res);
 		deliverAnswer(source, answer, res, rh);
-		if (rh == null)
-			broadcastClearInput(null); // do not clear on final input
 	}
 
 	private int nextPosition() {
