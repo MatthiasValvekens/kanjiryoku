@@ -69,8 +69,8 @@ public class TakingTurnsServer implements GameServerInterface {
 	private class NextTurnHandler extends AnswerFeedbackHandler {
 		final boolean answer;
 
-		NextTurnHandler(boolean answer) {
-			super(ti.players);
+		NextTurnHandler(User submitter, boolean answer) {
+			super(Arrays.asList(submitter));
 			this.answer = answer;
 		}
 
@@ -92,8 +92,8 @@ public class TakingTurnsServer implements GameServerInterface {
 
 	private class BatonPassHandler extends AnswerFeedbackHandler {
 
-		public BatonPassHandler() {
-			super(ti.players);
+		public BatonPassHandler(User submitter) {
+			super(Arrays.asList(submitter));
 		}
 
 		@Override
@@ -244,8 +244,8 @@ public class TakingTurnsServer implements GameServerInterface {
 		// If not, drop the problem
 		boolean batonPass = enableBatonPass
 				&& (problemRepetitions < ti.players.size() - 1);
-		AnswerFeedbackHandler rh = batonPass ? new BatonPassHandler()
-				: new NextTurnHandler(false);
+		AnswerFeedbackHandler rh = batonPass ? new BatonPassHandler(submitter)
+				: new NextTurnHandler(submitter, false);
 		problemSkipped(submitter, batonPass, rh);
 	}
 
@@ -399,7 +399,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		// move on to next position in problem
 		if (answer
 				&& currentProblem.getFullSolution().length() == nextPosition()) {
-			rh = new NextTurnHandler(true);
+			rh = new NextTurnHandler(source, true);
 			ti.currentUserStats().correct(problemSource.getCategoryName());
 		} else if (!answer
 				&& currentProblem.getInputMethod() == InputMethod.MULTIPLE_CHOICE) {
