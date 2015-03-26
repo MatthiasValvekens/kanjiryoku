@@ -451,9 +451,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		try {
 			queueMessage(user.channel, message);
 		} catch (IOException e) {
-			log.warn("Failed to message user {}, disconnecting.", user);
-			// this might happen during deregistration, so just cancel the key
-			user.channel.keyFor(selector).cancel();
+			log.warn("Failed to message user {}, disconnecting.", user, e);
 		}
 	}
 
