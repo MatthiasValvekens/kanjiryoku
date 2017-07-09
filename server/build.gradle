@@ -25,3 +25,7 @@ task fatJar(type: Jar) {
     from { (configurations.compile - configurations.provided).collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
+
+build {
+    dependsOn fatJar
+}
