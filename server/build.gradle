@@ -7,7 +7,9 @@ configurations {
 }
 
 dependencies {
-    provided project(':zinnia-swig')
+    // TODO: this is a hack
+    provided files('../libzinnia.0.dylib')
+    compile project(':zinnia-swig')
     compile project(':common')
     compile group: 'org.apache.commons', name: 'commons-lang3', version:'3.3.2'
     compile group: 'org.xerial', name: 'sqlite-jdbc', version:'3.8.7'

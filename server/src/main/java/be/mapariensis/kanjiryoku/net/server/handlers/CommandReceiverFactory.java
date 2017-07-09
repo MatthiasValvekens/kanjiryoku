@@ -54,8 +54,7 @@ public class CommandReceiverFactory {
 				ConfigFields.SSL_AUTH_SUFFICIENT_DEFAULT);
 		this.userman = userman;
 		this.selector = selector;
-		this.sessman = sessman;
-
+		this.sessman = sessman; 
 	}
 
 	public Runnable getReceiver(SocketChannel ch, NetworkMessage msg) {
@@ -224,7 +223,7 @@ public class CommandReceiverFactory {
 				log.debug("Protocol syntax exception in auth engine. Ignoring.");
 				return;
 			} catch (ServerBackendException e) {
-				log.debug("Error in server backend", e);
+				log.error("Error in server backend", e);
 				h.dispose(e.protocolMessage);
 				return;
 			}

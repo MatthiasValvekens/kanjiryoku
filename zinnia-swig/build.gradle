@@ -1,6 +1,7 @@
 description = 'zinnia-swig'
 group = 'org.chasen.crfpp'
 version = '0.06-JAVA'
+
 apply plugin: 'java'
 
 task runSwig(type: Exec) {
@@ -30,6 +31,9 @@ task compileBridgeObject(type: Exec, dependsOn: runSwig) {
 task linkBridge(type: Exec) {
      dependsOn compileBridgeObject
      // g++ -dynamiclib build/libjzinnia-0.06-JAVA.o -o build/libjzinnia-0.06-JAVA.jnilib ../libzinnia.0.dylib
+     // TODO: for some reason there is a failure at runtime when libzinnia.0.dylib
+     // is not in /usr/local/lib, DYLD_LIBRARY_PATH and the like don't seem to affect
+     // this. ???
      commandLine 'g++', '-dynamiclib', 'build/libjzinnia-0.06-JAVA.o', '-o', 'build/libjzinnia-0.06-JAVA.jnilib', '../libzinnia.0.dylib'
      outputs.file 'build/libjzinnia-0.06-JAVA.jnilib'
 }
@@ -41,5 +45,3 @@ dependencies {
 compileJava {
     dependsOn runSwig, linkBridge
 }
-
-
