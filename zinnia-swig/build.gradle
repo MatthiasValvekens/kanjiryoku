@@ -5,22 +5,41 @@ apply plugin: 'java'
 
 task runSwig(type: Exec) {
     doFirst {
+        mkdir('build')
         mkdir('src/main/java/org/chasen/crfpp')
     }
     executable = 'swig' // TODO: detect presence of swig
+    outputs.dirs 'build', 'src/main/java/org/chasen/crfpp'
     args '-c++', '-java',
+      '-package', 'org.chasen.crfpp',
       '-Isrc/main/include', 
       '-o', 'build/ZinniaJNI.cpp', 
       '-outdir', 'src/main/java/org/chasen/crfpp',
       'src/main/swig/zinnia.i'
 }
 
-// TODO: compiling JNI code in a platform-neutral way is complicated.
-// Will deal with this soon (TM). This build file only compiles the java half.
-// on osx:
-//      g++ -Isrc/main/include -I/System/Library/Frameworks/JavaVM.framework/Headers -o build/libjzinnia-0.06-JAVA.o -c build/ZinniaJNI.cpp
-//      g++ -dynamiclib build/libjzinnia-0.06-JAVA.o -o build/libjzinnia-0.06-JAVA.jnilib libzinnia.0.dylib
+// TODO: compiling JNI code in a platform-agnostic way is complicated.
+// Will deal with this soon (TM).
+
+task compileBridgeObject(type: Exec, dependsOn: runSwig) {
+     // g++ -Isrc/main/include -I/System/Library/Frameworks/JavaVM.framework/Headers -o build/libjzinnia-0.06-JAVA.o -c build/ZinniaJNI.cpp
+     commandLine 'g++', '-Isrc/main/include', '-I/System/Library/Frameworks/JavaVM.framework/Headers', '-o', 'build/libjzinnia-0.06-JAVA.o', '-c', 'build/ZinniaJNI.cpp'
+     outputs.file 'build/libjzinnia-0.06-JAVA.o'
+}
+
+task linkBridge(type: Exec) {
+     dependsOn compileBridgeObject
+     // g++ -dynamiclib build/libjzinnia-0.06-JAVA.o -o build/libjzinnia-0.06-JAVA.jnilib ../libzinnia.0.dylib
+     commandLine 'g++', '-dynamiclib', 'build/libjzinnia-0.06-JAVA.o', '-o', 'build/libjzinnia-0.06-JAVA.jnilib', '../libzinnia.0.dylib'
+     outputs.file 'build/libjzinnia-0.06-JAVA.jnilib'
+}
+
+dependencies {
+    compile files('../libzinnia.0.dylib')
+}
 
 compileJava {
-    dependsOn runSwig
+    dependsOn runSwig, linkBridge
 }
+
+

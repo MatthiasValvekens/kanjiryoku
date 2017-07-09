@@ -2,7 +2,7 @@ allprojects  {
   apply plugin: 'maven'
 
   group = 'be.mapariensis'
-version = '0.2-SNAPSHOT'
+  version = '0.2-SNAPSHOT'
 }
 
 subprojects {
@@ -10,7 +10,7 @@ subprojects {
   sourceCompatibility = 1.7
   targetCompatibility = 1.7
   tasks.withType(JavaCompile) {
-  	options.encoding = 'UTF-8'
+    options.encoding = 'UTF-8'
   }
 
   

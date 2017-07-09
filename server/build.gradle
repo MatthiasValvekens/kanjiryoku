@@ -1,10 +1,27 @@
 
 description = 'server'
+
+configurations {
+    provided
+    compile.extendsFrom provided
+}
+
 dependencies {
-    compile group: 'org.chasen.crfpp', name: 'zinnia', version:'0.06-JAVA'
-  compile project(':common')
+    provided project(':zinnia-swig')
+    compile project(':common')
     compile group: 'org.apache.commons', name: 'commons-lang3', version:'3.3.2'
     compile group: 'org.xerial', name: 'sqlite-jdbc', version:'3.8.7'
     compile group: 'joda-time', name: 'joda-time', version:'2.7'
     compile group: 'org.postgresql', name: 'postgresql', version:'9.3-1102-jdbc41'
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Kanjiryoku server',
+            'Implementation-Version': version,
+            'Main-Class': 'be.mapariensis.kanjiryoku.KanjiServer'
+    }
+    baseName = 'kanjiryoku-server'
+    from { (configurations.compile - configurations.provided).collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
 }
