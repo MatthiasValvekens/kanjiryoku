@@ -1,0 +1,26 @@
+description = 'zinnia-swig'
+group = 'org.chasen.crfpp'
+version = '0.06-JAVA'
+apply plugin: 'java'
+
+task runSwig(type: Exec) {
+    doFirst {
+        mkdir('src/main/java/org/chasen/crfpp')
+    }
+    executable = 'swig' // TODO: detect presence of swig
+    args '-c++', '-java',
+      '-Isrc/main/include', 
+      '-o', 'build/ZinniaJNI.cpp', 
+      '-outdir', 'src/main/java/org/chasen/crfpp',
+      'src/main/swig/zinnia.i'
+}
+
+// TODO: compiling JNI code in a platform-neutral way is complicated.
+// Will deal with this soon (TM). This build file only compiles the java half.
+// on osx:
+//      g++ -Isrc/main/include -I/System/Library/Frameworks/JavaVM.framework/Headers -o build/libjzinnia-0.06-JAVA.o -c build/ZinniaJNI.cpp
+//      g++ -dynamiclib build/libjzinnia-0.06-JAVA.o -o build/libjzinnia-0.06-JAVA.jnilib libzinnia.0.dylib
+
+compileJava {
+    dependsOn runSwig
+}
