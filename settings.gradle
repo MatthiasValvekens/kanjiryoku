@@ -1,0 +1,12 @@
+rootProject.name = 'kanjiryoku'
+include ':common'
+include ':client-net'
+include ':server'
+include ':client'
+include ':admin'
+
+project(':common').projectDir = "$rootDir/common" as File
+project(':client-net').projectDir = "$rootDir/client-net" as File
+project(':server').projectDir = "$rootDir/server" as File
+project(':client').projectDir = "$rootDir/client" as File
+project(':admin').projectDir = "$rootDir/admin" as File

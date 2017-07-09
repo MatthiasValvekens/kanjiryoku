@@ -17,9 +17,16 @@ hs_err_pid*
 *.dll
 *.so
 *.so.*
+*.dylib
 test_*
 *.cfg
 .settings/
 .project
 .classpath
 data/
+
+.gradle
+*/build/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
