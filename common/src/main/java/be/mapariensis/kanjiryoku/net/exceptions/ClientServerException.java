@@ -13,11 +13,11 @@ public class ClientServerException extends Exception {
 	public static final int ERROR_SYNTAX = 4;
 	public static final int ERROR_QUEUE = 5;
 	public static final int ERROR_NOT_SUPPORTED = 6;
-	public static final int ERROR_BACKEND = 6;
-	public static final int ERROR_GAME_INTERNAL = 7;
-	public static final int ERROR_SERVER_COMM = 8;
-	public static final int ERROR_SERVER_CONFIG = 9;
-	public static final int ERROR_UI = 10;
+	public static final int ERROR_BACKEND = 7;
+	public static final int ERROR_GAME_INTERNAL = 8;
+	public static final int ERROR_SERVER_COMM = 9;
+	public static final int ERROR_SERVER_CONFIG = 10;
+	public static final int ERROR_UI = 11;
 
 	public final int errorCode;
 	public final NetworkMessage protocolMessage;

@@ -40,7 +40,11 @@ public class ZinniaGuesser implements KanjiGuesser {
 				String modelfile = config.getRequired(ConfigFields.MODEL_FILE,
 						String.class);
 				Recognizer r = new Recognizer();
-				r.open(modelfile);
+				// FIXME: This exception will not propagate to the user
+				// even though it is pretty much fatal
+				// look into the docs of apache's pooling code
+				if (!r.open(modelfile))
+					throw new IOException("Failed to read model file.");
 				eng = r; // avoid invalid state if open throws an exception
 			}
 			return new ZinniaGuesser(eng, tolerance);
