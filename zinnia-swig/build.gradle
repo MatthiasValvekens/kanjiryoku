@@ -9,9 +9,8 @@ task runSwig(type: Exec) {
         mkdir('build')
         mkdir('src/main/java/org/chasen/crfpp')
     }
-    executable = 'swig' // TODO: detect presence of swig
     outputs.dirs 'build', 'src/main/java/org/chasen/crfpp'
-    args '-c++', '-java',
+    commandLine 'swig', '-c++', '-java',
       '-package', 'org.chasen.crfpp',
       '-Isrc/main/include', 
       '-o', 'build/ZinniaJNI.cpp', 
@@ -23,9 +22,9 @@ task runSwig(type: Exec) {
 // Will deal with this soon (TM).
 
 task compileBridgeObject(type: Exec, dependsOn: runSwig) {
-     // g++ -Isrc/main/include -I/System/Library/Frameworks/JavaVM.framework/Headers -o build/libjzinnia-0.06-JAVA.o -c build/ZinniaJNI.cpp
-     commandLine 'g++', '-Isrc/main/include', '-I/System/Library/Frameworks/JavaVM.framework/Headers', '-o', 'build/libjzinnia-0.06-JAVA.o', '-c', 'build/ZinniaJNI.cpp'
-     outputs.file 'build/libjzinnia-0.06-JAVA.o'
+    // g++ -Isrc/main/include -I$(java_home)/include -o build/libjzinnia-0.06-JAVA.o -c build/ZinniaJNI.cpp
+    commandLine 'g++', '-Isrc/main/include', "-I${System.env.JAVA_HOME}/include", '-o', 'build/libjzinnia-0.06-JAVA.o', '-c', 'build/ZinniaJNI.cpp'
+    outputs.file 'build/libjzinnia-0.06-JAVA.o'
 }
 
 task linkBridge(type: Exec) {
@@ -34,7 +33,7 @@ task linkBridge(type: Exec) {
      // TODO: for some reason there is a failure at runtime when libzinnia.0.dylib
      // is not in /usr/local/lib, DYLD_LIBRARY_PATH and the like don't seem to affect
      // this. ???
-     commandLine 'g++', '-dynamiclib', 'build/libjzinnia-0.06-JAVA.o', '-o', 'build/libjzinnia-0.06-JAVA.jnilib', '../libzinnia.0.dylib'
+     commandLine 'g++', '-dynamiclib', 'build/libjzinnia-0.06-JAVA.o', '-o', 'build/libjzinnia-0.06-JAVA.jnilib', 'libzinnia.0.dylib'
      outputs.file 'build/libjzinnia-0.06-JAVA.jnilib'
 }
 
