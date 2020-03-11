@@ -182,7 +182,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		int port = ch.socket().getPort();
 		SSLEngine engine = sslContext.createSSLEngine(addr, port);
 		engine.setUseClientMode(false);
-		engine.setWantClientAuth(true);
 		SSLMessageHandler h = new SSLMessageHandler(key, engine, threadPool,
 				plaintextBufsize);
 		((ConnectionContext) key.attachment()).setMessageHandler(h);
