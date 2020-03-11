@@ -45,7 +45,12 @@ public enum AdminCommand {
 				log.warn("User {} not found, aborting.", username, e);
 				return;
 			}
-			mon.deregister(toBeKicked);
+			try {
+				mon.deregister(toBeKicked);
+			} catch (UserManagementException e) {
+				log.warn("User {} could not be deregistered, aborting.", username, e);
+				return;
+			}
 		}
 
 	},
