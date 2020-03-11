@@ -2,26 +2,26 @@ package be.mapariensis.kanjiryoku.config;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
 
+import be.mapariensis.kanjiryoku.net.secure.SimpleX509TrustManager;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import be.mapariensis.kanjiryoku.Kanjiryoku;
-import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
-import be.mapariensis.kanjiryoku.net.secure.SSLContextUtil;
 import be.mapariensis.kanjiryoku.util.IProperties;
 import be.mapariensis.kanjiryoku.util.IPropertiesImpl;
 
 public class ConfigManager {
-	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);
+	private static final Logger log = LoggerFactory.getLogger(ConfigManager.class);
 	private final Path configFile;
 	private JSONObject currentConfig;
 	private final ExecutorService saver = Executors.newSingleThreadExecutor();
@@ -32,11 +32,10 @@ public class ConfigManager {
 		@Override
 		public void run() {
 			try (BufferedWriter bw = Files.newBufferedWriter(configFile,
-					Charset.forName("UTF-8"))) {
+					StandardCharsets.UTF_8)) {
 				bw.write(currentConfig.toString());
 			} catch (IOException e) {
 				log.error("Failed to write to config file.", e);
-				return;
 			}
 		}
 	}
@@ -57,8 +56,7 @@ public class ConfigManager {
 	private String readConfig() throws IOException {
 		String config;
 		try {
-			config = new String(Files.readAllBytes(configFile),
-					Charset.forName("UTF-8"));
+			config = Files.readString(configFile);
 		} catch (Exception ex) {
 			throw new IOException("Failed to read configuration file "
 					+ configFile.toString(), ex);
@@ -66,8 +64,7 @@ public class ConfigManager {
 		return config;
 	}
 
-	public ConfigManager(Path configFile) throws BadConfigurationException,
-			IOException {
+	public ConfigManager(Path configFile) throws IOException {
 		this.configFile = configFile;
 		if (Files.exists(configFile)) {
 			currentConfig = new JSONObject(readConfig());
@@ -77,7 +74,7 @@ public class ConfigManager {
 	}
 
 	public <T> ConfigListener<T> watch(String key) {
-		return new ConfigListener<T>(key);
+		return new ConfigListener<>(key);
 	}
 
 	public IProperties getCurrentConfig() {
@@ -85,6 +82,15 @@ public class ConfigManager {
 	}
 
 	public SSLContext getSSLContext(String destination) throws IOException {
-		return SSLContextUtil.sslSetUp(destination);
+		try {
+			SSLContext context = SSLContext.getInstance("TLS");
+			TrustManager tm = new SimpleX509TrustManager(destination, this);
+			// we're not presenting any certificates, so no key managers necessary
+			context.init(new KeyManager[0], new TrustManager[] { tm }, null);
+			log.info("SSL context initialised successfully.");
+			return context;
+		} catch (Exception ex) {
+			throw new IOException(ex);
+		}
 	}
 }

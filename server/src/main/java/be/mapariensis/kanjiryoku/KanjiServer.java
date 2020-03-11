@@ -52,16 +52,12 @@ public class KanjiServer {
 		}
 		final ServerConfigImpl props = new ServerConfigImpl(
 				new IPropertiesImpl(readConfig()));
-		Runnable reconf = new Runnable() {
-
-			@Override
-			public void run() {
-				log.info("Rereading configuration file");
-				try {
-					props.swapBackend(readConfig());
-				} catch (BadConfigurationException | IOException e) {
-					log.info("Failed to update config", e);
-				}
+		Runnable reconf = () -> {
+			log.info("Rereading configuration file");
+			try {
+				props.swapBackend(readConfig());
+			} catch (BadConfigurationException | IOException e) {
+				log.info("Failed to update config", e);
 			}
 		};
 		@SuppressWarnings("resource")

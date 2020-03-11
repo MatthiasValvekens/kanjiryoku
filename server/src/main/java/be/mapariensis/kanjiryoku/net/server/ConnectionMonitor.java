@@ -7,6 +7,7 @@ import static be.mapariensis.kanjiryoku.net.Constants.protocolMinorVersion;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
@@ -62,7 +63,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	// SSL-related stuff
 	private final SSLContext sslContext;
 	private final int plaintextBufsize;
-	private final boolean enforceSSL, requireAuth;
+	private final boolean enforceSSL;
 	private final AuthBackendProvider authBackendProvider;
 	private final CommandReceiverFactory crf;
 
@@ -94,9 +95,9 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 					ConfigFields.SCORING_BACKEND_CLASS, String.class);
 			try {
 				factory = (ScoringBackend.Factory) getClass().getClassLoader()
-						.loadClass(factoryClassname).newInstance();
-			} catch (InstantiationException | IllegalAccessException
-					| ClassNotFoundException | ClassCastException e) {
+						.loadClass(factoryClassname).getDeclaredConstructor().newInstance();
+			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException |
+					ClassCastException | NoSuchMethodException | InvocationTargetException e) {
 				log.error("Failed to instantiate scoring backend.", e);
 				throw new BadConfigurationException(e);
 			}
@@ -123,7 +124,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 
 		// set up auth mechanism
-		requireAuth = config.getTyped(ConfigFields.REQUIRE_AUTH, Boolean.class,
+		boolean requireAuth = config.getTyped(ConfigFields.REQUIRE_AUTH, Boolean.class,
 				ConfigFields.REQUIRE_AUTH_DEFAULT);
 		if (requireAuth && sslConfig == null) {
 			log.warn("Warning: authentication is enabled, but SSL is not configured properly.");
@@ -138,9 +139,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			try {
 				factory = (AuthBackendProvider.Factory) getClass()
 						.getClassLoader().loadClass(providerFactory)
+						.getDeclaredConstructor()
 						.newInstance();
-			} catch (InstantiationException | IllegalAccessException
-					| ClassNotFoundException | ClassCastException e) {
+			} catch (InstantiationException | IllegalAccessException | ClassNotFoundException |
+					ClassCastException | NoSuchMethodException | InvocationTargetException e) {
 				log.error("Failed to instantiate authentication backend.", e);
 				throw new BadConfigurationException(e);
 			}
@@ -182,7 +184,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		int port = ch.socket().getPort();
 		SSLEngine engine = sslContext.createSSLEngine(addr, port);
 		engine.setUseClientMode(false);
-		engine.setWantClientAuth(true);
 		SSLMessageHandler h = new SSLMessageHandler(key, engine, threadPool,
 				plaintextBufsize);
 		((ConnectionContext) key.attachment()).setMessageHandler(h);
@@ -200,7 +201,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			log.error("Failed to register socket.", e1);
 			try {
 				close();
-			} catch (IOException e) {
+			} catch (IOException ignored) {
 			}
 			return;
 		}
@@ -253,7 +254,12 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		}
 		log.info("Connection listener shut down.");
 		for (User u : store) {
-			deregister(u);
+			try {
+				deregister(u);
+			} catch (UserManagementException e) {
+			    // harmless, but worth keeping track of for debugging, perhaps
+			    log.debug("Failed to deregister user '{}' on shutdown.", u.toString(), e);
+			}
 		}
 		threadPool.shutdownNow();
 	}
@@ -286,7 +292,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	}
 
-	private void readClient(SelectionKey key) throws IOException, EOFException {
+	private void readClient(SelectionKey key) throws IOException {
 		SocketChannel ch = (SocketChannel) key.channel();
 		IMessageHandler h = ((ConnectionContext) key.attachment())
 				.getMessageHandler();
@@ -317,11 +323,6 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 
 	}
 
-	void stopListening() {
-		log.info("Received listener shutdown request.");
-		keepOn = false;
-	}
-
 	private void queueMessage(SocketChannel ch, NetworkMessage message)
 			throws IOException {
 		try {
@@ -349,20 +350,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		for (SelectionKey key : keys) {
 			try {
 				key.channel().close();
-			} catch (IOException e) {
+			} catch (IOException ignored) {
 			} // letting this one slip risks a resource leak
 			key.cancel();
 		}
 		selector.close();
-	}
-
-	@Override
-	public void finalize() {
-		try {
-			log.warn("Mopping up unclosed connection monitor.");
-			close();
-		} catch (IOException e) {
-		}
 	}
 
 	@Override
@@ -381,7 +373,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	}
 
 	@Override
-	public void deregister(User user) {
+	public void deregister(User user) throws UserManagementException {
 		// TODO allow for disconnect handlers?
 		if (user == null)
 			throw new IllegalArgumentException("null is not a user");
@@ -392,7 +384,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 			try {
 				sessman.removeUser(user);
 			} catch (SessionException e) {
-				new UserManagementException(e);
+				throw new UserManagementException(e);
 			}
 		}
 		store.removeUser(user);
@@ -414,14 +406,18 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		key.cancel();
 		try {
 			key.channel().close();
-		} catch (IOException e) {
+		} catch (IOException ignored) {
 		}
 	}
 
 	private void deregisterAndClose(SelectionKey key) {
 		User u;
 		if ((u = store.getUser((SocketChannel) key.channel())) != null) {
-			deregister(u);
+			try {
+				deregister(u);
+			} catch (UserManagementException e) {
+				log.warn("Deregistration failed for user {}", u.toString(), e);
+			}
 		} else {
 			closeQuietly(key);
 		}
@@ -451,9 +447,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		try {
 			queueMessage(user.channel, message);
 		} catch (IOException e) {
-			log.warn("Failed to message user {}, disconnecting.", user);
-			// this might happen during deregistration, so just cancel the key
-			user.channel.keyFor(selector).cancel();
+			log.warn("Failed to message user {}, disconnecting.", user, e);
 		}
 	}
 
