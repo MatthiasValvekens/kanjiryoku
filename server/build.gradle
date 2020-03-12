@@ -7,7 +7,7 @@ configurations {
 }
 
 dependencies {
-    provided files('../zinnia-swig/libzinnia.so', '../zinnia-swig/libzinnia.dylib')
+    provided files('../zinnia-swig/libzinnia.so.0', '../zinnia-swig/libzinnia.dylib')
     compile project(':zinnia-swig')
     compile project(':common')
     compile group: 'org.apache.commons', name: 'commons-lang3', version:'3.3.2'

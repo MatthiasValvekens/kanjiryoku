@@ -36,18 +36,19 @@ task compileBridgeObject(type: Exec, dependsOn: runSwig) {
 task linkBridge(type: Exec) {
      dependsOn compileBridgeObject
      if (DefaultNativePlatform.currentOperatingSystem.isMacOsX()) {
-         commandLine 'g++', '-fPIC', '-dynamiclib', "build/${jniOut}.o", '-o', "build/${jniOut}.jnilib", 'libzinnia.dylib' 
+         commandLine 'g++', '-fPIC', '-dynamiclib', "build/${jniOut}.o", '-o', "build/${jniOut}.dylib", 'libzinnia.dylib' 
+         outputs.file "build/${jniOut}.dylib"
      } else if (DefaultNativePlatform.currentOperatingSystem.isLinux()) {
-         commandLine 'g++', '-fPIC', '-shared', "build/${jniOut}.o", '-o', "build/${jniOut}.jnilib", 'libzinnia.so' 
+         commandLine 'g++', '-fPIC', '-shared', "build/${jniOut}.o", '-o', "build/${jniOut}.so", 'libzinnia.so.0' 
+         outputs.file "build/${jniOut}.so"
      }
-     outputs.file "build/${jniOut}.jnilib"
 }
 
 dependencies {
     if (DefaultNativePlatform.currentOperatingSystem.isMacOsX()) {
         compile files('libzinnia.dylib')
     } else if (DefaultNativePlatform.currentOperatingSystem.isLinux()) {
-        compile files('libzinnia.so')
+        compile files('libzinnia.so.0')
     }
 }
 
