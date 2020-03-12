@@ -26,7 +26,7 @@ task runSwig(type: Exec) {
 
 task compileBridgeObject(type: Exec, dependsOn: runSwig) {
     if (DefaultNativePlatform.currentOperatingSystem.isMacOsX()) {
-        commandLine 'g++', '-fPIC', '-Isrc/main/include', "-I${javaHome}/include", '-o', "build/${jniOut}.o", '-c', 'build/ZinniaJNI.cpp'
+        commandLine 'g++', '-fPIC', '-Isrc/main/include', "-I${javaHome}/include", "-I${javaHome}/include/darwin", '-o', "build/${jniOut}.o", '-c', 'build/ZinniaJNI.cpp'
     } else if (DefaultNativePlatform.currentOperatingSystem.isLinux()) {
         commandLine 'g++', '-fPIC', '-Isrc/main/include', "-I${javaHome}/include", "-I${javaHome}/include/linux", '-o', "build/${jniOut}.o", '-c', 'build/ZinniaJNI.cpp'
     }
