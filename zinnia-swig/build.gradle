@@ -1,8 +1,14 @@
+// this is not ideal, but I can't be arsed to deal with Gradle's declarative magic right now
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+
 description = 'zinnia-swig'
 group = 'org.chasen.crfpp'
 version = '0.06-JAVA'
 
 apply plugin: 'java'
+
+def javaHome = org.gradle.internal.jvm.Jvm.current().javaHome
+def jniOut = "libjzinnia-${version}"
 
 task runSwig(type: Exec) {
     doFirst {
@@ -18,27 +24,31 @@ task runSwig(type: Exec) {
       'src/main/swig/zinnia.i'
 }
 
-// TODO: compiling JNI code in a platform-agnostic way is complicated.
-// Will deal with this soon (TM).
-
 task compileBridgeObject(type: Exec, dependsOn: runSwig) {
-    // g++ -Isrc/main/include -I$(java_home)/include -o build/libjzinnia-0.06-JAVA.o -c build/ZinniaJNI.cpp
-    commandLine 'g++', '-Isrc/main/include', "-I${System.env.JAVA_HOME}/include", '-o', 'build/libjzinnia-0.06-JAVA.o', '-c', 'build/ZinniaJNI.cpp'
-    outputs.file 'build/libjzinnia-0.06-JAVA.o'
+    if (DefaultNativePlatform.currentOperatingSystem.isMacOsX()) {
+        commandLine 'g++', '-fPIC', '-Isrc/main/include', "-I${javaHome}/include", '-o', "build/${jniOut}.o", '-c', 'build/ZinniaJNI.cpp'
+    } else if (DefaultNativePlatform.currentOperatingSystem.isLinux()) {
+        commandLine 'g++', '-fPIC', '-Isrc/main/include', "-I${javaHome}/include", "-I${javaHome}/include/linux", '-o', "build/${jniOut}.o", '-c', 'build/ZinniaJNI.cpp'
+    }
+    outputs.file "build/${jniOut}.o"
 }
 
 task linkBridge(type: Exec) {
      dependsOn compileBridgeObject
-     // g++ -dynamiclib build/libjzinnia-0.06-JAVA.o -o build/libjzinnia-0.06-JAVA.jnilib ../libzinnia.0.dylib
-     // TODO: for some reason there is a failure at runtime when libzinnia.0.dylib
-     // is not in /usr/local/lib, DYLD_LIBRARY_PATH and the like don't seem to affect
-     // this. ???
-     commandLine 'g++', '-dynamiclib', 'build/libjzinnia-0.06-JAVA.o', '-o', 'build/libjzinnia-0.06-JAVA.jnilib', 'libzinnia.0.dylib'
-     outputs.file 'build/libjzinnia-0.06-JAVA.jnilib'
+     if (DefaultNativePlatform.currentOperatingSystem.isMacOsX()) {
+         commandLine 'g++', '-fPIC', '-dynamiclib', "build/${jniOut}.o", '-o', "build/${jniOut}.jnilib", 'libzinnia.dylib' 
+     } else if (DefaultNativePlatform.currentOperatingSystem.isLinux()) {
+         commandLine 'g++', '-fPIC', '-shared', "build/${jniOut}.o", '-o', "build/${jniOut}.jnilib", 'libzinnia.so' 
+     }
+     outputs.file "build/${jniOut}.jnilib"
 }
 
 dependencies {
-    compile files('../libzinnia.0.dylib')
+    if (DefaultNativePlatform.currentOperatingSystem.isMacOsX()) {
+        compile files('libzinnia.dylib')
+    } else if (DefaultNativePlatform.currentOperatingSystem.isLinux()) {
+        compile files('libzinnia.so')
+    }
 }
 
 compileJava {
