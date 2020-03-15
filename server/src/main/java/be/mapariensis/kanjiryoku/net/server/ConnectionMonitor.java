@@ -64,6 +64,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final SSLContext sslContext;
 	private final int plaintextBufsize;
 	private final boolean enforceSSL;
+	private final boolean debugSSL;
 	private final AuthBackendProvider authBackendProvider;
 	private final CommandReceiverFactory crf;
 
@@ -83,6 +84,10 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 				Integer.class, ConfigFields.PLAINTEXT_BUFFER_SIZE_DEFAULT);
 		enforceSSL = config.getTyped(ConfigFields.FORCE_SSL, Boolean.class,
 				ConfigFields.FORCE_SSL_DEFAULT);
+		debugSSL = config.getTyped(ConfigFields.DEBUG_SSL, Boolean.class,
+				ConfigFields.DEBUG_SSL_DEFAULT);
+		if(debugSSL)
+		    log.info("Enabling SSL debug mode");
 		threadPool = Executors.newFixedThreadPool(workerThreads);
 
 		// set up scoring backend
@@ -183,6 +188,11 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 		String addr = ch.socket().getInetAddress().toString();
 		int port = ch.socket().getPort();
 		SSLEngine engine = sslContext.createSSLEngine(addr, port);
+		if(debugSSL) {
+		    // choose a protocol/cipher combo that Wireshark can deal with
+			engine.setEnabledProtocols(new String[]{"TLSv1.2"});
+			engine.setEnabledCipherSuites(new String[]{"TLS_RSA_WITH_AES_128_CBC_SHA256"});
+		}
 		engine.setUseClientMode(false);
 		SSLMessageHandler h = new SSLMessageHandler(key, engine, threadPool,
 				plaintextBufsize);

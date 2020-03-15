@@ -29,6 +29,12 @@ public class ConfigFields {
 	public static final String FORCE_SSL = "disablePlaintext";
 	public static final boolean FORCE_SSL_DEFAULT = false;
 
+	/**
+	 * Deliberately choose a cipher suite that Wireshark can intercept without issues.
+	 */
+	public static final String DEBUG_SSL = "sslDebug";
+	public static final boolean DEBUG_SSL_DEFAULT = false;
+
 	public static final String USERNAME_LIMIT = "usernameCharLimit";
 	public static final int USERNAME_LIMIT_DEFAULT = 10;
 
