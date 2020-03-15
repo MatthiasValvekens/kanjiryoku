@@ -30,6 +30,7 @@ import be.mapariensis.kanjiryoku.gui.dialogs.CreateSessionDialog;
 import be.mapariensis.kanjiryoku.gui.dialogs.SingleInputDialog;
 import be.mapariensis.kanjiryoku.net.client.ServerUplink;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public class MainWindow extends JFrame implements GUIBridge {
@@ -129,8 +130,12 @@ public class MainWindow extends JFrame implements GUIBridge {
 				if (JOptionPane.showConfirmDialog(MainWindow.this,
 						"Are you sure you want to kill the current session?",
 						"Confirm session kill", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-					serv.enqueueMessage(new NetworkMessage(
-							ServerCommandList.KILLSESSION));
+					try {
+						serv.enqueueMessage(new NetworkMessage(
+								ServerCommandList.KILLSESSION));
+					} catch (ServerSubmissionException ex) {
+						chat.displayErrorMessage(ex);
+					}
 				}
 			}
 
@@ -139,7 +144,11 @@ public class MainWindow extends JFrame implements GUIBridge {
 		sessionMenu.add(new JMenuItem(new AbstractAction("Leave") {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				serv.enqueueMessage(new NetworkMessage(ServerCommandList.LEAVE));
+				try {
+					serv.enqueueMessage(new NetworkMessage(ServerCommandList.LEAVE));
+				} catch (ServerSubmissionException ex) {
+					chat.displayErrorMessage(ex);
+				}
 			}
 		}));
 
@@ -149,8 +158,12 @@ public class MainWindow extends JFrame implements GUIBridge {
 		gameMenu.add(new JMenuItem(new AbstractAction("Start game") {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				serv.enqueueMessage(new NetworkMessage(
-						ServerCommandList.STARTGAME));
+				try {
+					serv.enqueueMessage(new NetworkMessage(
+							ServerCommandList.STARTGAME));
+				} catch (ServerSubmissionException ex) {
+					chat.displayErrorMessage(ex);
+				}
 			}
 		}));
 

@@ -11,8 +11,12 @@ public class ServerCommunicationException extends ClientException {
 		this("Error while processing data from server: " + msg);
 	}
 
-	public ServerCommunicationException(RuntimeException ex) {
-		super("Runtime exception raised while processing server data", ex,
+	public ServerCommunicationException(Exception ex) {
+		super("Exception raised while processing server data", ex,
+				ERROR_GENERIC);
+	}
+	public ServerCommunicationException(NetworkMessage msg, Exception ex) {
+		super("Exception raised while processing server data: "+ msg, ex,
 				ERROR_GENERIC);
 	}
 }

@@ -9,6 +9,7 @@ import be.mapariensis.kanjiryoku.model.InputMethod;
 import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.util.ParsingUtils;
 
@@ -35,7 +36,7 @@ public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 	}
 
 	@Override
-	public void sendStroke(List<Dot> dots) {
+	public void sendStroke(List<Dot> dots) throws ServerSubmissionException {
 		bridge.getUplink().enqueueMessage(
 				new NetworkMessage(ServerCommandList.UPDATE, dots));
 	}
@@ -46,7 +47,7 @@ public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 	}
 
 	@Override
-	public void broadcastClearInput() {
+	public void broadcastClearInput() throws ServerSubmissionException {
 		bridge.getUplink().enqueueMessage(
 				new NetworkMessage(ServerCommandList.CLEAR));
 	}
@@ -57,7 +58,7 @@ public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
 	}
 
 	@Override
-	public void submit() {
+	public void submit() throws ServerSubmissionException {
 		bridge.getUplink().enqueueMessage(
 				new NetworkMessage(ServerCommandList.SUBMIT, dpi.getWidth(),
 						dpi.getHeight()));

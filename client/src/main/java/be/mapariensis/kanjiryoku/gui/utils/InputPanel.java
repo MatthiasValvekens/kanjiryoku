@@ -12,6 +12,7 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -121,7 +122,7 @@ public class InputPanel extends JPanel implements InputHandler {
 	}
 
 	@Override
-	public void broadcastClearInput() {
+	public void broadcastClearInput() throws ServerSubmissionException {
 		if (currentComponent != null
 				&& currentComponent.getInputHandler() != null)
 			currentComponent.getInputHandler().broadcastClearInput();
@@ -146,7 +147,7 @@ public class InputPanel extends JPanel implements InputHandler {
 	}
 
 	@Override
-	public void submit() {
+	public void submit() throws ServerSubmissionException {
 		if (currentComponent != null
 				&& currentComponent.getInputHandler() != null)
 			currentComponent.getInputHandler().submit();

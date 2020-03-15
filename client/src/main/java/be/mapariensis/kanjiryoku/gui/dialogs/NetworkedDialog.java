@@ -11,6 +11,7 @@ import java.awt.event.WindowEvent;
 import javax.swing.*;
 import javax.swing.border.EtchedBorder;
 
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +73,12 @@ public abstract class NetworkedDialog extends JDialog {
 					return;
 				}
 				message = constructMessage();
-				NetworkedDialog.this.serv.enqueueMessage(message);
+				try {
+					NetworkedDialog.this.serv.enqueueMessage(message);
+				} catch (ServerSubmissionException ex) {
+				    log.error("Failed to send message", ex);
+				    statusLabel.setText(errorString);
+				}
 				statusLabel.setText(teardownString);
 				try {
 					tearDown();

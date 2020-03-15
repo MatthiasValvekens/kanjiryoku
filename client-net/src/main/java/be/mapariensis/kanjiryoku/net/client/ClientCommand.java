@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
 
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.mindrot.jbcrypt.BCrypt;
@@ -120,7 +121,7 @@ public enum ClientCommand {
 								String.format(
 										"Received an invite from user [%s] for %s. Do you accept?",
 										msg.get(4), msg.get(2)), ifYes, ifNo);
-			} catch (IllegalArgumentException ex) {
+			} catch (IllegalArgumentException | ServerSubmissionException ex) {
 				throw new ServerCommunicationException(ex);
 			}
 		}
@@ -191,10 +192,13 @@ public enum ClientCommand {
 							wasCorrect ? "correct"
 									: "unfortunately not the right answer"));
 			bridge.getClient().deliverAnswer(wasCorrect, inputChar);
-			bridge.getUplink()
-					.enqueueMessage(
-							new NetworkMessage(ServerCommandList.RESPOND,
-									responseCode)); // acknowledge
+			try {
+				// acknowledge
+			    NetworkMessage resp = new NetworkMessage(ServerCommandList.RESPOND, responseCode);
+				bridge.getUplink().enqueueMessage(resp);
+			} catch (ServerSubmissionException e) {
+			    throw new ServerCommunicationException(msg, e);
+			}
 		}
 	},
 	PROBLEMSKIPPED {

@@ -17,6 +17,7 @@ import be.mapariensis.kanjiryoku.gui.macros.MacroException;
 import be.mapariensis.kanjiryoku.gui.macros.UserMacro;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.util.History;
 import be.mapariensis.kanjiryoku.util.StandardHistoryImpl;
@@ -59,8 +60,12 @@ public class ChatPanel extends JPanel {
 					firstManualCommandSent = true;
 				}
 				// interpret the rest as a command
-				bridge.getUplink().enqueueMessage(
-						NetworkMessage.buildArgs(msg.substring(1)));
+				try {
+					bridge.getUplink().enqueueMessage(
+							NetworkMessage.buildArgs(msg.substring(1)));
+				} catch (ServerSubmissionException ex) {
+					bridge.getChat().displayErrorMessage(ex);
+				}
 				input.setText("");
 			} else if (msg.charAt(0) == macroChar && msg.length() > 1) {
 				// execute user macro
@@ -88,7 +93,11 @@ public class ChatPanel extends JPanel {
 						ServerCommandList.SESSIONMESSAGE, msg);
 				bridge.getChat().displayUserMessage(nmsg.timestamp,
 						bridge.getUplink().getUsername(), msg, true);
-				bridge.getUplink().enqueueMessage(nmsg);
+				try {
+					bridge.getUplink().enqueueMessage(nmsg);
+				} catch (ServerSubmissionException ex) {
+				    bridge.getChat().displayErrorMessage(ex);
+				}
 			}
 			input.setText("");
 		});

@@ -3,6 +3,7 @@ package be.mapariensis.kanjiryoku;
 import java.io.IOException;
 import java.net.InetAddress;
 
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,8 +44,7 @@ public class AdminConsole implements UIBridge, ChatInterface {
 	@Override
 	public void setUsername(String username) {
 		displaySystemMessage(String.format("Username set to %s", username));
-		uplink.enqueueMessage(new NetworkMessage(ServerCommandList.ADMIN,
-				System.currentTimeMillis() % 10000, "BROADCAST", "elloello")); // test
+		// TODO placeholder
 	}
 
 	@Override
@@ -86,7 +86,7 @@ public class AdminConsole implements UIBridge, ChatInterface {
 
 	@Override
 	public void yesNoPrompt(String question, NetworkMessage ifYes,
-			NetworkMessage ifNo) {
+			NetworkMessage ifNo) throws ServerSubmissionException {
 		// TODO make this an actual prompt, unless in auto task mode
 		uplink.enqueueMessage(ifYes);
 	}

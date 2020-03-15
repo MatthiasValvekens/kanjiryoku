@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku.gui.macros;
 
 import be.mapariensis.kanjiryoku.gui.GUIBridge;
 import be.mapariensis.kanjiryoku.net.client.handlers.SignupProtocolHandler;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 @SuppressWarnings("unused")
@@ -14,8 +15,12 @@ public enum UserMacro {
 			checkArgs(msg, 3);
 			String username = msg.get(1);
 			String password = msg.get(2);
-			new SignupProtocolHandler(bridge.getUplink(), username, password)
-					.requestSignup();
+			try {
+				new SignupProtocolHandler(bridge.getUplink(), username, password)
+						.requestSignup();
+			} catch (ServerSubmissionException e) {
+			    throw new MacroException(e);
+			}
 		}
 
 	},
@@ -37,8 +42,12 @@ public enum UserMacro {
 				password = msg.get(2);
 			}
 
-			new SignupProtocolHandler(bridge.getUplink(), username, password)
-					.requestPasswordChange();
+			try {
+				new SignupProtocolHandler(bridge.getUplink(), username, password)
+						.requestPasswordChange();
+			} catch (ServerSubmissionException e) {
+				throw new MacroException(e);
+			}
 		}
 	};
 	public abstract void execute(NetworkMessage msg, GUIBridge bridge)

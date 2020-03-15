@@ -8,6 +8,7 @@ import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.net.client.ClientCommand;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public class MultipleChoiceInputHandlerImpl implements
@@ -34,7 +35,7 @@ public class MultipleChoiceInputHandlerImpl implements
 	}
 
 	@Override
-	public void broadcastClearInput() {
+	public void broadcastClearInput() throws ServerSubmissionException {
 		bridge.getUplink().enqueueMessage(
 				new NetworkMessage(ServerCommandList.CLEAR));
 	}
@@ -50,13 +51,13 @@ public class MultipleChoiceInputHandlerImpl implements
 	}
 
 	@Override
-	public void submit() {
+	public void submit() throws ServerSubmissionException {
 		bridge.getUplink().enqueueMessage(
 				new NetworkMessage(ServerCommandList.SUBMIT));
 	}
 
 	@Override
-	public void broadcastSelect(int choice) {
+	public void broadcastSelect(int choice) throws ServerSubmissionException {
 		bridge.getUplink().enqueueMessage(
 				new NetworkMessage(ServerCommandList.UPDATE, choice));
 	}

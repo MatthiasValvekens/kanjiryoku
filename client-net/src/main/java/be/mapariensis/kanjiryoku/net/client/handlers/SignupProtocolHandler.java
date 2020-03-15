@@ -1,5 +1,6 @@
 package be.mapariensis.kanjiryoku.net.client.handlers;
 
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import org.mindrot.jbcrypt.BCrypt;
 
 import be.mapariensis.kanjiryoku.net.client.ServerResponseHandler;
@@ -20,13 +21,13 @@ public class SignupProtocolHandler extends ServerResponseHandler {
 		this.uplink = uplink;
 	}
 
-	public void requestSignup() {
+	public void requestSignup() throws ServerSubmissionException {
 		NetworkMessage msg = new NetworkMessage("ADMIN", "ADDUSER", id,
 				username);
 		uplink.enqueueMessage(msg, this);
 	}
 
-	public void requestPasswordChange() {
+	public void requestPasswordChange() throws ServerSubmissionException {
 		NetworkMessage msg = new NetworkMessage("RESETPASS", id, username);
 		uplink.enqueueMessage(msg, this);
 	}

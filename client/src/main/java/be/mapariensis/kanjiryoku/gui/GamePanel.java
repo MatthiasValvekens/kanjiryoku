@@ -13,6 +13,7 @@ import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,11 @@ public class GamePanel extends JPanel implements GameClientInterface {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				inputContainer.submit();
+				try {
+					inputContainer.submit();
+				} catch (ServerSubmissionException ex) {
+				    bridge.getChat().displayErrorMessage(ex);
+				}
 			}
 		});
 		add(submitButton, BorderLayout.SOUTH);
@@ -60,8 +65,12 @@ public class GamePanel extends JPanel implements GameClientInterface {
 			@Override
 			public void mouseClicked(MouseEvent ev) {
 				if (!locked && ev.getClickCount() == 2) {
-					bridge.getUplink().enqueueMessage(
-							new NetworkMessage(ServerCommandList.SKIPPROBLEM));
+					try {
+						bridge.getUplink().enqueueMessage(
+								new NetworkMessage(ServerCommandList.SKIPPROBLEM));
+					} catch (ServerSubmissionException e) {
+						bridge.getChat().displayErrorMessage(e);
+					}
 				}
 			}
 		});

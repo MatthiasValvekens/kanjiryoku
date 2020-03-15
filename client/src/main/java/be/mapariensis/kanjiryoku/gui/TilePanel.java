@@ -18,6 +18,7 @@ import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 
 import be.mapariensis.kanjiryoku.gui.utils.TextRendering;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import be.mapariensis.kanjiryoku.net.input.InputComponent;
 import be.mapariensis.kanjiryoku.net.input.MultipleChoiceInputHandler;
 import be.mapariensis.kanjiryoku.net.input.MultipleChoiceInputHandlerImpl;
@@ -29,6 +30,7 @@ public class TilePanel extends InputComponent implements
 			(float) 0.4);
 	private static final Color highlightColor = TextRendering.rgb(41, 82, 229,
 			(float) 0.2);
+	private final UIBridge bridge;
 
 	private class Tile extends JComponent {
 		final String content;
@@ -42,7 +44,11 @@ public class TilePanel extends InputComponent implements
 				public void mouseClicked(MouseEvent ev) {
 					if (!locked) {
 						optionSelected(id);
-						ih.broadcastSelect(selectedTile);
+						try {
+							ih.broadcastSelect(selectedTile);
+						} catch (ServerSubmissionException e) {
+							bridge.getChat().displayErrorMessage(e);
+						}
 					}
 				}
 
@@ -120,6 +126,7 @@ public class TilePanel extends InputComponent implements
 
 	public TilePanel(UIBridge bridge) {
 		this.ih = new MultipleChoiceInputHandlerImpl(bridge, this);
+		this.bridge = bridge;
 		setBackground(Color.WHITE);
 	}
 

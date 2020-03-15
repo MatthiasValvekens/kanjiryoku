@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku.gui;
 
 import be.mapariensis.kanjiryoku.net.client.ServerResponseHandler;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public interface ChatInterface {
@@ -19,7 +20,7 @@ public interface ChatInterface {
 	void displaySystemMessage(String message);
 
 	void yesNoPrompt(String question, NetworkMessage ifYes,
-			NetworkMessage ifNo);
+			NetworkMessage ifNo) throws ServerSubmissionException;
 
 	ServerResponseHandler getDefaultResponseHandler();
 

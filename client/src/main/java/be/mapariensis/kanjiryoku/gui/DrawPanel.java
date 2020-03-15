@@ -17,6 +17,7 @@ import java.util.List;
 
 import javax.swing.SwingUtilities;
 
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,11 +36,13 @@ public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 			BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER);
 	private final Dimension size;
 	private boolean locked = true;
+	private final UIBridge bridge;
 
 	private final HandwrittenInputHandler ih;
 
 	public DrawPanel(Dimension size, UIBridge bridge) {
 		this.size = size;
+		this.bridge = bridge;
 		this.ih = new HandwrittenInputHandlerImpl(this, bridge);
 		DrawingListener listener = new DrawingListener();
 		addMouseListener(listener);
@@ -119,7 +122,11 @@ public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 		public void mouseClicked(MouseEvent e) {
 			if (!locked && SwingUtilities.isRightMouseButton(e)) {
 				clearStrokes();
-				ih.broadcastClearInput();
+				try {
+					ih.broadcastClearInput();
+				} catch (ServerSubmissionException ex) {
+					bridge.getChat().displayErrorMessage(ex);
+				}
 			}
 		}
 
@@ -133,7 +140,11 @@ public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 				currentStroke.add(new Dot(e.getX(), e.getY()));
 				log.debug("\nFinished stroke {}: {} ", strokes.size(),
 						currentStroke);
-				ih.sendStroke(currentStroke);
+				try {
+					ih.sendStroke(currentStroke);
+				} catch (ServerSubmissionException ex) {
+					bridge.getChat().displayErrorMessage(ex);
+				}
 
 				currentStroke = new LinkedList<>();
 				strokes.add(currentStroke);

@@ -4,6 +4,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -18,6 +19,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLHandshakeException;
 
+import be.mapariensis.kanjiryoku.net.exceptions.ServerSubmissionException;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +80,7 @@ public class ServerUplink extends Thread implements Closeable {
 		return pmh.getStatus() == PlainMessageHandler.Status.PERMANENT;
 	}
 
-	public void sslMode() {
+	public void sslMode() throws ServerSubmissionException {
 		if (!modeFixed()) {
 			if (context == null) {
 				bridge.getChat().displaySystemMessage(
@@ -97,7 +99,7 @@ public class ServerUplink extends Thread implements Closeable {
 		}
 	}
 
-	public void plaintextMode() {
+	public void plaintextMode() throws ServerSubmissionException {
 		if (!modeFixed()) {
 			if (context != null) {
 				// this means we attempted to connect using SSL, but the server
@@ -275,17 +277,17 @@ public class ServerUplink extends Thread implements Closeable {
 		log.error("Error while parsing server message", ex);
 	}
 
-	public void enqueueMessage(NetworkMessage msg) {
+	public void enqueueMessage(NetworkMessage msg) throws ServerSubmissionException {
 		if (messageHandler != null) {
 			try {
 				messageHandler.send(msg);
-			} catch (IOException e) {
-				log.error("Failed to send message.", e);
+			} catch (IOException | CancelledKeyException e) {
+			    throw new ServerSubmissionException(msg, e);
 			}
 		}
 	}
 
-	public void enqueueMessage(NetworkMessage msg, ServerResponseHandler rh) {
+	public void enqueueMessage(NetworkMessage msg, ServerResponseHandler rh) throws ServerSubmissionException {
 		activeResponseHandlers.add(rh);
 		enqueueMessage(msg);
 	}
@@ -293,7 +295,7 @@ public class ServerUplink extends Thread implements Closeable {
 	public static final int BLOCK_SLEEP_DELAY = 200;
 
 	public NetworkMessage blockUntilResponse(NetworkMessage msg,
-			WaitingResponseHandler wrh, long timeout) {
+			WaitingResponseHandler wrh, long timeout) throws ServerSubmissionException {
 		enqueueMessage(msg, wrh);
 		NetworkMessage result;
 		long startTime = System.currentTimeMillis();

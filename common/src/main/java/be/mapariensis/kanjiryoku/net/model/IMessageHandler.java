@@ -9,34 +9,28 @@ public interface IMessageHandler extends Closeable {
 
 	/**
 	 * Enqueue a message without flushing the message buffer
-	 * 
-	 * @param message
 	 */
-	public abstract void enqueue(NetworkMessage message);
+	void enqueue(NetworkMessage message);
 
 	/**
 	 * Buffer a message and flush the buffer while holding the lock on this
 	 * handler's application output buffer.
-	 * 
-	 * @param message
-	 * @throws IOException
 	 */
-	public abstract void send(NetworkMessage message) throws IOException;
+	void send(NetworkMessage message) throws IOException;
 
-	public abstract void flushMessageQueue() throws IOException;
+	void flushMessageQueue() throws IOException;
 
-	public abstract List<NetworkMessage> readRaw() throws IOException,
-			EOFException;
+	List<NetworkMessage> readRaw() throws IOException;
 
-	public abstract boolean needSend();
+	boolean needSend();
 
 	/**
 	 * Close the handler after the next flush that completes successfully.
 	 */
-	public void dispose();
+	void dispose();
 
-	public void dispose(String disconnectMessage);
+	void dispose(String disconnectMessage);
 
-	public void dispose(NetworkMessage disconnectMessage);
+	void dispose(NetworkMessage disconnectMessage);
 
 }
