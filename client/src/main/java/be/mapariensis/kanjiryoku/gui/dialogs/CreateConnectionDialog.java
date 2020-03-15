@@ -101,7 +101,7 @@ public class CreateConnectionDialog extends JDialog {
 					if (user.isEmpty() || profile.isEmpty())
 						throw new RuntimeException("Required field empty");
 					profiles.replaceProfile(initialProfile, profile, host,
-							Integer.valueOf(port.getText()), user, ssl);
+							Integer.parseInt(port.getText()), user, ssl);
 					setVisible(false);
 					dispose();
 				} catch (RuntimeException ex) {

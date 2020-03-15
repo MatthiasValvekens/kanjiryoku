@@ -45,6 +45,8 @@ public class InputPanel extends JPanel implements InputHandler {
 		BufferedImage thing = null;
 		try (InputStream is = DrawPanel.class.getClassLoader()
 				.getResourceAsStream(CHECKMARK_FILE)) {
+			if(is == null)
+				throw new IOException("Image resource not found.");
 			thing = ImageIO.read(is);
 		} catch (IOException | IllegalArgumentException e) {
 			log.warn("Failed to read checkmark.png", e);

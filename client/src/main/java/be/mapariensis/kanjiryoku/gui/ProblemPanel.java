@@ -33,7 +33,7 @@ public class ProblemPanel extends JPanel {
 
 	static {
 		// TODO move renderer storage to another class
-		renderers = new HashMap<Class<? extends Problem>, ProblemRenderer>();
+		renderers = new HashMap<>();
 		renderers.put(KakiProblem.class, new KakiRenderer());
 		renderers.put(YomiProblem.class, new YomiRenderer());
 	}
@@ -48,7 +48,7 @@ public class ProblemPanel extends JPanel {
 	}
 
 	private Problem problem;
-	private final List<Character> correctInputs = new ArrayList<Character>();
+	private final List<Character> correctInputs = new ArrayList<>();
 	private int counter;
 	private String actualSolution;
 
@@ -60,10 +60,6 @@ public class ProblemPanel extends JPanel {
 		return actualSolution;
 	}
 
-	protected List<Character> getCorrectInputs() {
-		return correctInputs;
-	}
-
 	public void setProblem(Problem problem) {
 		this.problem = problem;
 		lastWrongInput = null;
@@ -71,10 +67,6 @@ public class ProblemPanel extends JPanel {
 		counter = 0;
 		actualSolution = problem != null ? problem.getFullSolution() : null;
 		repaint();
-	}
-
-	protected int getCounter() {
-		return counter;
 	}
 
 	private static final int BORDER = 10;
@@ -100,8 +92,7 @@ public class ProblemPanel extends JPanel {
 			if (r != null) {
 				r.drawProblem(g2d, correctInputs, problem, lastWrongInput);
 			} else {
-				log.warn("Could not render problem %s",
-						problem.getFullSolution());
+				log.warn("Could not render problem {}", problem.getFullSolution());
 				TextRendering.renderWord(g2d,
 						"No renderer available for this problem", "", null);
 			}

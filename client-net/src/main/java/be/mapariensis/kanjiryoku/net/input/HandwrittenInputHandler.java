@@ -5,6 +5,6 @@ import java.util.List;
 import be.mapariensis.kanjiryoku.cr.Dot;
 
 public interface HandwrittenInputHandler extends InputHandler {
-	public void sendStroke(List<Dot> dots);
+	void sendStroke(List<Dot> dots);
 
 }

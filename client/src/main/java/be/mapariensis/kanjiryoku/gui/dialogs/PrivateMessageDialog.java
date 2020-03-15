@@ -35,12 +35,7 @@ public class PrivateMessageDialog extends SingleInputDialog {
 	@Override
 	protected void tearDown() {
 		chat.displayUserMessage(time, me,
-				String.format("(To %s) %s", username, message), false); // TODO
-																		// : Is
-																		// this
-																		// the
-																		// right
-																		// design?
+				String.format("(To %s) %s", username, message), false);
 	}
 
 }

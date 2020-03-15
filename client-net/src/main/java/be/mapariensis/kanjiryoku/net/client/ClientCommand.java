@@ -24,7 +24,7 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.secure.SecurityUtils;
 import be.mapariensis.kanjiryoku.providers.ProblemParser;
 
-// TODO : placeholders only
+@SuppressWarnings("unused")
 public enum ClientCommand {
 
 	SAY {
@@ -95,7 +95,7 @@ public enum ClientCommand {
 			checkArgs(msg, 4);
 			try {
 				bridge.getChat().displayUserMessage(msg.timestamp, msg.get(1),
-						msg.get(2), Boolean.valueOf(msg.get(3)));
+						msg.get(2), Boolean.parseBoolean(msg.get(3)));
 			} catch (RuntimeException ex) {
 				throw new ServerCommunicationException(msg);
 			}
@@ -228,8 +228,7 @@ public enum ClientCommand {
 	RESETUI {
 
 		@Override
-		public void execute(NetworkMessage msg, UIBridge bridge)
-				throws ClientException {
+		public void execute(NetworkMessage msg, UIBridge bridge) {
 			log.info("Resetting UI");
 			bridge.getClient().getInputHandler().clearLocalInput();
 			bridge.getClient().setLock(true);
@@ -271,8 +270,7 @@ public enum ClientCommand {
 	},
 	CLEAR {
 		@Override
-		public void execute(NetworkMessage msg, UIBridge bridge)
-				throws ClientException {
+		public void execute(NetworkMessage msg, UIBridge bridge) {
 			log.debug("Received CLEAR...");
 			bridge.getClient().getInputHandler().clearLocalInput();
 		}

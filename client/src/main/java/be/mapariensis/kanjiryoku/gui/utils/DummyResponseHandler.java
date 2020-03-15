@@ -13,7 +13,7 @@ public class DummyResponseHandler extends ServerResponseHandler {
 	}
 
 	@Override
-	public void handle(NetworkMessage msg) throws ClientException {
+	public void handle(NetworkMessage msg) {
 		chat.displayServerMessage(msg.timestamp, msg.toString(2));
 	}
 

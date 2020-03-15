@@ -4,6 +4,7 @@ import be.mapariensis.kanjiryoku.gui.GUIBridge;
 import be.mapariensis.kanjiryoku.net.client.handlers.SignupProtocolHandler;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
+@SuppressWarnings("unused")
 public enum UserMacro {
 	SIGNUP {
 
@@ -24,8 +25,7 @@ public enum UserMacro {
 				throws MacroException {
 			int argcount = msg.argCount();
 			if (argcount < 2 || argcount > 3)
-				throw new MacroException(
-						String.format("This macro takes 1 or 2 arguments"));
+				throw new MacroException("This macro takes 1 or 2 arguments");
 			String username, password;
 
 			// default to changing the user's own password

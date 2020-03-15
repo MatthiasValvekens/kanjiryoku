@@ -31,7 +31,6 @@ public class TextRendering {
 	public static int renderWord(Graphics2D g2d, String main, String furigana,
 			MistakeMarker mark) {
 		Graphics2D g = (Graphics2D) g2d.create();
-		g2d = null;
 		Rectangle rect = g.getClipBounds();
 
 		Font normal = new Font(FONT_NAME, Font.PLAIN, normalSize);

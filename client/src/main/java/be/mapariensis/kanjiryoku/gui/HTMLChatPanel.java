@@ -39,15 +39,8 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 	private static final Logger log = LoggerFactory
 			.getLogger(HTMLChatPanel.class);
 	private final JEditorPane textPane;
-	private final Executor promptThreads = Executors.newSingleThreadExecutor(); // ensure
-																				// only
-																				// one
-																				// prompt
-																				// can
-																				// exist
-																				// at
-																				// a
-																				// time
+	// ensure only one prompt can exist at a time
+	private final Executor promptThreads = Executors.newSingleThreadExecutor();
 	private HTMLDocument document;
 	private Element table;
 	private final GUIBridge bridge;
@@ -76,31 +69,27 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 		textPane.setEditorKit(kit);
 		textPane.setContentType("text/html");
 		documentSetup();
-		textPane.addHyperlinkListener(new HyperlinkListener() {
+		textPane.addHyperlinkListener(e -> {
+			if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+				try {
+					AttributeSet anchorAttributes = (AttributeSet) e
+							.getSourceElement().getAttributes()
+							.getAttribute(HTML.Tag.A);
+					String anchorClass = String.valueOf(anchorAttributes
+							.getAttribute(HTML.Attribute.CLASS));
+					String href = String.valueOf(anchorAttributes
+							.getAttribute(HTML.Attribute.HREF));
 
-			@Override
-			public void hyperlinkUpdate(HyperlinkEvent e) {
-				if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-					try {
-						AttributeSet anchorAttributes = (AttributeSet) e
-								.getSourceElement().getAttributes()
-								.getAttribute(HTML.Tag.A);
-						String anchorClass = String.valueOf(anchorAttributes
-								.getAttribute(HTML.Attribute.CLASS));
-						String href = String.valueOf(anchorAttributes
-								.getAttribute(HTML.Attribute.HREF));
-
-						switch (anchorClass) {
-						case KANJILINK_CLASS:
-							// TODO : info panel goes here
-							log.info("Clickety {}", href);
-							break;
-						case USERLINK_CLASS:
-							getPrivateMessageDialog(href).setVisible(true);
-						}
-					} catch (RuntimeException ex) {
-						log.warn("Document structure is borked - could not process hyperlink event.");
+					switch (anchorClass) {
+					case KANJILINK_CLASS:
+						// TODO : info panel goes here
+						log.info("Clickety {}", href);
+						break;
+					case USERLINK_CLASS:
+						getPrivateMessageDialog(href).setVisible(true);
 					}
+				} catch (RuntimeException ex) {
+					log.warn("Document structure is borked - could not process hyperlink event.");
 				}
 			}
 		});
@@ -211,7 +200,7 @@ public class HTMLChatPanel extends JPanel implements ChatInterface {
 
 	private static String clickableKanji(String input) {
 		// locate kanji
-		List<Integer> locations = new ArrayList<Integer>();
+		List<Integer> locations = new ArrayList<>();
 		locations.add(-1);
 		for (int i = 0; i < input.length(); i++) {
 			if (UnicodeBlock.of(input.charAt(i)) == UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS) {

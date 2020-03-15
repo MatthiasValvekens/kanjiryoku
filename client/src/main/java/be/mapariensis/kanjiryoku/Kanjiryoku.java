@@ -20,7 +20,7 @@ import be.mapariensis.kanjiryoku.gui.InitWindow;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 
 public class Kanjiryoku {
-	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);;
+	private static final Logger log = LoggerFactory.getLogger(Kanjiryoku.class);
 	private static final String CONFIG_FILE_NAME = "kanjiclient.cfg";
 	public static final String ICON_FILE = "icon.png";
 	public static final Image ICON;
@@ -32,6 +32,8 @@ public class Kanjiryoku {
 		Image thing = null;
 		try (InputStream is = Kanjiryoku.class.getClassLoader()
 				.getResourceAsStream(ICON_FILE)) {
+			if(is == null)
+				throw new IOException("Failed to read icon file");
 			thing = ImageIO.read(is);
 		} catch (IOException | IllegalArgumentException e) {
 			log.warn("Failed to read icon file", e);
@@ -82,7 +84,6 @@ public class Kanjiryoku {
 			InitWindow.show(new ConfigManager(configFile));
 		} catch (BadConfigurationException | IOException e) {
 			log.error("Failed to process configuration.", e);
-			return;
 		}
 	}
 }

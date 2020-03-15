@@ -2,7 +2,6 @@ package be.mapariensis.kanjiryoku;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +12,6 @@ import be.mapariensis.kanjiryoku.gui.UIBridge;
 import be.mapariensis.kanjiryoku.net.client.ServerResponseHandler;
 import be.mapariensis.kanjiryoku.net.client.ServerUplink;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
-import be.mapariensis.kanjiryoku.net.exceptions.ClientException;
 import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
@@ -57,7 +55,7 @@ public class AdminConsole implements UIBridge, ChatInterface {
 	@Override
 	public void displayGameMessage(long timestamp, String message) {
 		displaySystemMessage("We shouldn't be receiving game messages. Logged");
-		log.warn("Game message received. This shouldn't happen.", message);
+		log.warn("Game message received. This shouldn't happen. {}", message);
 	}
 
 	@Override
@@ -98,7 +96,7 @@ public class AdminConsole implements UIBridge, ChatInterface {
 		return new ServerResponseHandler() {
 
 			@Override
-			public void handle(NetworkMessage msg) throws ClientException {
+			public void handle(NetworkMessage msg) {
 				printMessage("Response", msg.toString());
 			}
 		};
@@ -108,8 +106,7 @@ public class AdminConsole implements UIBridge, ChatInterface {
 		uplink.start();
 	}
 
-	public static void main(String[] args) throws UnknownHostException,
-			IOException {
+	public static void main(String[] args) throws IOException {
 		// Placeholder
 		AdminConsole console = new AdminConsole(
 				InetAddress.getByName("127.0.0.1"), 9630, "admin"

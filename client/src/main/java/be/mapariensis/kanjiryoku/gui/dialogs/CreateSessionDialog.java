@@ -4,8 +4,6 @@ import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,11 +38,10 @@ public class CreateSessionDialog extends NetworkedDialog {
 		}
 	}
 
-	private final DefaultListModel<StringPair> gameListModel = new DefaultListModel<StringPair>();
-	private final DefaultListModel<String> userListModel = new DefaultListModel<String>();
-	private final JList<StringPair> gameList = new JList<StringPair>(
+	private final DefaultListModel<StringPair> gameListModel = new DefaultListModel<>();
+	private final DefaultListModel<String> userListModel = new DefaultListModel<>();
+	private final JList<StringPair> gameList = new JList<>(
 			gameListModel);
-	private final JList<String> userList = new JList<String>(userListModel);
 
 	public CreateSessionDialog(Frame parent, ServerUplink serv) {
 		super(parent, "Create session", "Create a new session", serv);
@@ -79,6 +76,7 @@ public class CreateSessionDialog extends NetworkedDialog {
 				listBodyConstraints);
 
 		// user selector
+		JList<String> userList = new JList<>(userListModel);
 		userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		userList.setLayoutOrientation(JList.VERTICAL);
 		userList.setVisibleRowCount(3);
@@ -96,14 +94,9 @@ public class CreateSessionDialog extends NetworkedDialog {
 		final JTextField inviteField = new JTextField(
 				dummyElement.humanName.length());
 		panel.add(inviteField, listBodyConstraints);
-		inviteField.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				userListModel.addElement(inviteField.getText());
-				inviteField.setText("");
-			}
-
+		inviteField.addActionListener(e -> {
+			userListModel.addElement(inviteField.getText());
+			inviteField.setText("");
 		});
 
 	}
@@ -116,7 +109,7 @@ public class CreateSessionDialog extends NetworkedDialog {
 	@Override
 	protected NetworkMessage constructMessage() {
 		StringPair thing = gameList.getSelectedValue();
-		List<Object> args = new ArrayList<Object>(userListModel.getSize() + 2);
+		List<Object> args = new ArrayList<>(userListModel.getSize() + 2);
 		args.add(ServerCommandList.STARTSESSION);
 		args.add(thing.name);
 		for (int i = 0; i < userListModel.getSize(); i++) {

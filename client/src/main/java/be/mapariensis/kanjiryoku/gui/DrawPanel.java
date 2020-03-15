@@ -28,7 +28,7 @@ import be.mapariensis.kanjiryoku.net.input.InputComponent;
 public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 	private static final Logger log = LoggerFactory.getLogger(DrawPanel.class);
 
-	private final List<List<Dot>> strokes = new LinkedList<List<Dot>>();
+	private final List<List<Dot>> strokes = new LinkedList<>();
 	private List<Dot> currentStroke;
 	private static final int BRUSH_RADIUS = 10;
 	private static final Stroke BRUSH_STROKE = new BasicStroke(BRUSH_RADIUS,
@@ -99,7 +99,7 @@ public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 	@Override
 	public void clearStrokes() {
 		strokes.clear();
-		currentStroke = new LinkedList<Dot>();
+		currentStroke = new LinkedList<>();
 		// add first stroke to list
 		strokes.add(currentStroke);
 		repaint();
@@ -135,7 +135,7 @@ public class DrawPanel extends InputComponent implements DrawingPanelInterface {
 						currentStroke);
 				ih.sendStroke(currentStroke);
 
-				currentStroke = new LinkedList<Dot>();
+				currentStroke = new LinkedList<>();
 				strokes.add(currentStroke);
 				repaint();
 			}

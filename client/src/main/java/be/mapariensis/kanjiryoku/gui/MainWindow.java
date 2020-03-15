@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import javax.net.ssl.SSLContext;
 import javax.swing.AbstractAction;
@@ -50,8 +50,10 @@ public class MainWindow extends JFrame implements GUIBridge {
 		String css;
 		try (InputStream in = MainWindow.class.getClassLoader()
 				.getResourceAsStream(CSS_FILE)) {
+		    if(in == null)
+		        throw new IOException("Failed to get CSS resource.");
 			BufferedReader r = new BufferedReader(new InputStreamReader(in,
-					Charset.forName("UTF-8")));
+					StandardCharsets.UTF_8));
 			StringBuilder sb = new StringBuilder();
 			String line;
 			while ((line = r.readLine()) != null)

@@ -7,11 +7,6 @@ import be.mapariensis.kanjiryoku.model.YomiProblem;
 public class YomiRenderer extends YomiKakiRenderer {
 
 	@Override
-	public Class<YomiProblem> getProblemClass() {
-		return YomiProblem.class;
-	}
-
-	@Override
 	protected MistakeMarker getMistakeMarker() {
 		return MistakeMarker.FURIGANA;
 	}

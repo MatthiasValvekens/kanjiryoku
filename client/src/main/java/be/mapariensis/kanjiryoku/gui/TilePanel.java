@@ -150,24 +150,19 @@ public class TilePanel extends InputComponent implements
 
 	@Override
 	public void setOptions(final List<String> tiles) {
-		SwingUtilities.invokeLater(new Runnable() {
-
-			@Override
-			public void run() {
-				removeAll();
-				rowcount = (int) Math.ceil(Math.sqrt(tiles.size()));
-				GridLayout layout = new GridLayout(rowcount, rowcount, 0, 0);
-				setLayout(layout);
-				TilePanel.this.tiles = new ArrayList<Tile>(tiles.size());
-				for (int i = 0; i < tiles.size(); i++) {
-					Tile t = new Tile(tiles.get(i), i);
-					add(t);
-					TilePanel.this.tiles.add(t);
-				}
-				revalidate();
-				repaint();
+		SwingUtilities.invokeLater(() -> {
+			removeAll();
+			rowcount = (int) Math.ceil(Math.sqrt(tiles.size()));
+			GridLayout layout = new GridLayout(rowcount, rowcount, 0, 0);
+			setLayout(layout);
+			TilePanel.this.tiles = new ArrayList<>(tiles.size());
+			for (int i = 0; i < tiles.size(); i++) {
+				Tile t = new Tile(tiles.get(i), i);
+				add(t);
+				TilePanel.this.tiles.add(t);
 			}
-
+			revalidate();
+			repaint();
 		});
 
 	}
@@ -186,10 +181,4 @@ public class TilePanel extends InputComponent implements
 	public void setLock(boolean locked) {
 		this.locked = locked;
 	}
-
-	@Override
-	public String optionContent(int i) {
-		return tiles.get(i).content;
-	}
-
 }

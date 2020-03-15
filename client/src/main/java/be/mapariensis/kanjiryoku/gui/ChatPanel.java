@@ -3,7 +3,6 @@ package be.mapariensis.kanjiryoku.gui;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 
 import javax.swing.AbstractAction;
@@ -45,57 +44,53 @@ public class ChatPanel extends JPanel {
 		input = new JTextField(20);
 		controls.add(input);
 
-		input.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				String msg = input.getText();
-				history.add(msg);
-				if (msg.isEmpty())
-					return;
-				if (msg.charAt(0) == commandChar && msg.length() > 1) {
-					if (!firstManualCommandSent) {
-						bridge.getChat()
-								.displaySystemMessage(
-										String.format(
-												"Lines starting with %s are interpreted as server commands.",
-												commandChar));
-						firstManualCommandSent = true;
-					}
-					// interpret the rest as a command
-					bridge.getUplink().enqueueMessage(
-							NetworkMessage.buildArgs(msg.substring(1)));
-					input.setText("");
-				} else if (msg.charAt(0) == macroChar && msg.length() > 1) {
-					// execute user macro
-					NetworkMessage nmsg = NetworkMessage.buildArgs(msg
-							.substring(1));
-					String macro = nmsg.get(0).toUpperCase();
-					try {
-						UserMacro.valueOf(macro).execute(nmsg,
-								(GUIBridge) bridge);
-					} catch (IllegalArgumentException ex) {
-						bridge.getChat().displayErrorMessage(
-								ClientServerException.ERROR_UI,
-								String.format("Macro \"%s\" does not exist",
-										macro));
-					} catch (ClassCastException ex) {
-						bridge.getChat().displayErrorMessage(
-								ClientServerException.ERROR_UI,
-								"Bridge is not a GUIBridge.");
-					} catch (MacroException ex) {
-						bridge.getChat().displayErrorMessage(ex);
-					}
-				} else {
-					// normal chat message
-					NetworkMessage nmsg = new NetworkMessage(
-							ServerCommandList.SESSIONMESSAGE, msg);
-					bridge.getChat().displayUserMessage(nmsg.timestamp,
-							bridge.getUplink().getUsername(), msg, true);
-					bridge.getUplink().enqueueMessage(nmsg);
+		input.addActionListener(e -> {
+			String msg = input.getText();
+			history.add(msg);
+			if (msg.isEmpty())
+				return;
+			if (msg.charAt(0) == commandChar && msg.length() > 1) {
+				if (!firstManualCommandSent) {
+					bridge.getChat()
+							.displaySystemMessage(
+									String.format(
+											"Lines starting with %s are interpreted as server commands.",
+											commandChar));
+					firstManualCommandSent = true;
 				}
+				// interpret the rest as a command
+				bridge.getUplink().enqueueMessage(
+						NetworkMessage.buildArgs(msg.substring(1)));
 				input.setText("");
+			} else if (msg.charAt(0) == macroChar && msg.length() > 1) {
+				// execute user macro
+				NetworkMessage nmsg = NetworkMessage.buildArgs(msg
+						.substring(1));
+				String macro = nmsg.get(0).toUpperCase();
+				try {
+					UserMacro.valueOf(macro).execute(nmsg,
+							(GUIBridge) bridge);
+				} catch (IllegalArgumentException ex) {
+					bridge.getChat().displayErrorMessage(
+							ClientServerException.ERROR_UI,
+							String.format("Macro \"%s\" does not exist",
+									macro));
+				} catch (ClassCastException ex) {
+					bridge.getChat().displayErrorMessage(
+							ClientServerException.ERROR_UI,
+							"Bridge is not a GUIBridge.");
+				} catch (MacroException ex) {
+					bridge.getChat().displayErrorMessage(ex);
+				}
+			} else {
+				// normal chat message
+				NetworkMessage nmsg = new NetworkMessage(
+						ServerCommandList.SESSIONMESSAGE, msg);
+				bridge.getChat().displayUserMessage(nmsg.timestamp,
+						bridge.getUplink().getUsername(), msg, true);
+				bridge.getUplink().enqueueMessage(nmsg);
 			}
+			input.setText("");
 		});
 		input.getActionMap().put(HISTORY_BACK,
 				new AbstractAction(HISTORY_BACK) {

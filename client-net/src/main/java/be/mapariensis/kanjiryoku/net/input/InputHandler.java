@@ -6,16 +6,16 @@ import be.mapariensis.kanjiryoku.net.exceptions.ServerCommunicationException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public interface InputHandler {
-	public void receiveMessage(String user, NetworkMessage msg)
+	void receiveMessage(String user, NetworkMessage msg)
 			throws ServerCommunicationException;
 
-	public void broadcastClearInput();
+	void broadcastClearInput();
 
-	public void clearLocalInput();
+	void clearLocalInput();
 
-	public InputMethod inputType();
+	InputMethod inputType();
 
-	public void submit();
+	void submit();
 
-	public void prepareProblemPosition(Problem p, int position);
+	void prepareProblemPosition(Problem p, int position);
 }

@@ -48,7 +48,7 @@ public class FadingOverlay {
 			while (timer != null && timer.isRunning()) {
 				try {
 					Thread.sleep(2 * INTERVAL);
-				} catch (InterruptedException e) {
+				} catch (InterruptedException ignored) {
 				}
 			}
 		}

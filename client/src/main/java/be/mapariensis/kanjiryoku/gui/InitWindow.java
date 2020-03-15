@@ -100,7 +100,7 @@ public class InitWindow {
 		gbc.gridwidth = 2;
 		gbc.insets = new Insets(0, 10, 10, 10);
 		gbc.gridy++;
-		final JList<String> profileList = new JList<String>(profiles);
+		final JList<String> profileList = new JList<>(profiles);
 		profileList.setPrototypeCellValue("AAAAAAAAAAAAAAAAAAAAAAA");
 		profileList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		frame.add(new JScrollPane(profileList), gbc);
@@ -192,15 +192,11 @@ public class InitWindow {
 		editButton.setEnabled(false);
 		deleteButton.setEnabled(false);
 		connectButton.setEnabled(false);
-		profileList.addListSelectionListener(new ListSelectionListener() {
-
-			@Override
-			public void valueChanged(ListSelectionEvent e) {
-				if (profileList.getSelectedValue() != null) {
-					editButton.setEnabled(true);
-					deleteButton.setEnabled(true);
-					connectButton.setEnabled(true);
-				}
+		profileList.addListSelectionListener(e -> {
+			if (profileList.getSelectedValue() != null) {
+				editButton.setEnabled(true);
+				deleteButton.setEnabled(true);
+				connectButton.setEnabled(true);
 			}
 		});
 

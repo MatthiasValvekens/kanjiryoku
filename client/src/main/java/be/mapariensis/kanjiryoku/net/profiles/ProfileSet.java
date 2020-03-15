@@ -31,8 +31,8 @@ public class ProfileSet extends AbstractListModel<String> {
 		}
 	}
 
-	private final Map<String, Profile> profiles = new HashMap<String, Profile>();
-	private final List<String> profileNames = new TreeList<String>();
+	private final Map<String, Profile> profiles = new HashMap<>();
+	private final List<String> profileNames = new TreeList<>();
 
 	public ProfileSet() {
 

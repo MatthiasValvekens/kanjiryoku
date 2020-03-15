@@ -74,7 +74,7 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		if (correct) {
 			char added = problemPanel.addCorrectCharacter();
 			if (inputChar != added) {
-				log.warn("Added char differs from input char! %s <> %s", added,
+				log.warn("Added char differs from input char! {} <> {}", added,
 						inputChar);
 			}
 			if (++inputCounter == problemPanel.getSolution().length()) {
@@ -94,17 +94,9 @@ public class GamePanel extends JPanel implements GameClientInterface {
 		inputContainer.clearLocalInput();
 		problemPanel.setProblem(p);
 		try {
-			SwingUtilities.invokeAndWait(new Runnable() {
-
-				@Override
-				public void run() {
-					inputContainer.setInputMethod(p != null ? p
-							.getInputMethod() : null);
-				}
-			});
-		} catch (InvocationTargetException e) {
-			log.warn(e.getMessage(), e);
-		} catch (InterruptedException e) {
+			SwingUtilities.invokeAndWait(() -> inputContainer.setInputMethod(p != null ? p
+					.getInputMethod() : null));
+		} catch (InvocationTargetException | InterruptedException e) {
 			log.warn(e.getMessage(), e);
 		}
 		inputContainer.prepareProblemPosition(p, 0);

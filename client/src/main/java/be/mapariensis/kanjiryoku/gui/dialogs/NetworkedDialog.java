@@ -1,6 +1,5 @@
 package be.mapariensis.kanjiryoku.gui.dialogs;
 
-import java.awt.Component;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -25,7 +24,6 @@ public abstract class NetworkedDialog extends JDialog {
 	private static final String setupString = "Setting up...";
 	private static final String teardownString = "Cleaning up...";
 	private static final String errorString = "Communication error";
-	private final JButton submitButton;
 	private final JPanel contentPanel = new JPanel();
 	private final ServerUplink serv;
 	private final JLabel statusLabel = new JLabel("");
@@ -86,7 +84,7 @@ public abstract class NetworkedDialog extends JDialog {
 				setVisible(false);
 			}
 		};
-		submitButton = new JButton(submitAction);
+		JButton submitButton = new JButton(submitAction);
 		c = new GridBagConstraints();
 		c.anchor = GridBagConstraints.CENTER;
 		c.gridx = 1;
@@ -131,10 +129,6 @@ public abstract class NetworkedDialog extends JDialog {
 		return contentPanel;
 	}
 
-	public final void removeItem(Component c) {
-		contentPanel.remove(c);
-	}
-
 	protected abstract boolean verifyInput();
 
 	protected abstract NetworkMessage constructMessage();
@@ -143,6 +137,7 @@ public abstract class NetworkedDialog extends JDialog {
 	 * Called on WINDOW_OPEN. Do communication with server here.
 	 * 
 	 * @throws ClientException
+     *   Thrown if communication with server fails.
 	 */
 	protected void setUp() throws ClientException {
 
@@ -151,7 +146,6 @@ public abstract class NetworkedDialog extends JDialog {
 	/**
 	 * Called after the message constructed by constructMessage() has been sent.
 	 * 
-	 * @throws ClientException
 	 */
 	protected void tearDown() throws ClientException {
 

@@ -244,8 +244,12 @@ public class ServerUplink extends Thread implements Closeable {
 				try {
 					bridge.getChat().displayErrorMessage(
 							ClientServerException.parseErrorCode(cmdstring),
-							msg.get(1));// TODO better exception handling
+							msg.get(1));
 				} catch (ParseException e) {
+					log.error("Unparsable server error code: {}.", cmdstring, e);
+					bridge.getChat().displayErrorMessage(
+							ClientServerException.ERROR_SERVER_COMM,
+							msg.get(1));
 				}
 				return;
 			}
@@ -297,7 +301,7 @@ public class ServerUplink extends Thread implements Closeable {
 				&& (timeout <= 0 || (System.currentTimeMillis() - startTime) <= timeout)) {
 			try {
 				Thread.sleep(BLOCK_SLEEP_DELAY);
-			} catch (InterruptedException e) {
+			} catch (InterruptedException ignored) {
 			}
 		}
 		return result;
@@ -326,18 +330,13 @@ public class ServerUplink extends Thread implements Closeable {
 		return username;
 	}
 
-	void stopListening() {
-		log.info("Received listener shutdown request.");
-		keepOn = false;
-	}
-
-	private final List<ServerResponseHandler> activeResponseHandlers = new LinkedList<ServerResponseHandler>();
+	private final List<ServerResponseHandler> activeResponseHandlers = new LinkedList<>();
 
 	public void consumeActiveResponseHandler(NetworkMessage msg)
 			throws ClientException {
 		int passedId;
 		try {
-			passedId = Integer.valueOf(msg.get(1));
+			passedId = Integer.parseInt(msg.get(1));
 		} catch (IndexOutOfBoundsException ex) {
 			// the servercommand class should check this, but an extra safety
 			// measure never hurts
