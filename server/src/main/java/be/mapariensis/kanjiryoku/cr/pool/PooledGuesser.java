@@ -1,6 +1,5 @@
 package be.mapariensis.kanjiryoku.cr.pool;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,7 +30,7 @@ public class PooledGuesser implements KanjiGuesser {
 		@SuppressWarnings("unchecked")
 		@Override
 		public KanjiGuesser getGuesser(IProperties config)
-				throws BadConfigurationException, IOException {
+				throws BadConfigurationException {
 			String bfcn = config.getRequired(ConfigFields.BACKEND_FACTORY,
 					String.class);
 			Class<? extends KanjiGuesserFactory> kgfc;
@@ -43,9 +42,9 @@ public class PooledGuesser implements KanjiGuesser {
 			}
 			KanjiGuesserFactory kgf;
 			try {
-				kgf = kgfc.newInstance();
-			} catch (InstantiationException | IllegalAccessException e) {
-				throw new BadConfigurationException(e);
+				kgf = kgfc.getDeclaredConstructor().newInstance();
+			} catch (Exception ex) {
+				throw new BadConfigurationException(ex);
 			}
 			IProperties backendConfig = config.getRequired(
 					ConfigFields.BACKEND_CONFIG, IProperties.class);
@@ -54,13 +53,12 @@ public class PooledGuesser implements KanjiGuesser {
 
 	}
 
-	private final PooledObjectFactory<KanjiGuesser> pof;
 	private final GenericObjectPool<KanjiGuesser> guesserPool;
 
 	public PooledGuesser(KanjiGuesserFactory backendFactory,
 			IProperties factoryConfiguration, IProperties poolConfiguration)
 			throws BadConfigurationException {
-		this.pof = new KanjiGuesserFactoryWrapper(backendFactory,
+		PooledObjectFactory<KanjiGuesser> pof = new KanjiGuesserFactoryWrapper(backendFactory,
 				factoryConfiguration);
 		GenericObjectPoolConfig config = new GenericObjectPoolConfig();
 		int maxidle = poolConfiguration.getTyped(ConfigFields.MAX_IDLE,
@@ -76,7 +74,7 @@ public class PooledGuesser implements KanjiGuesser {
 		config.setMaxIdle(maxidle);
 		config.setMinIdle(minidle);
 		config.setMaxTotal(maxtotal);
-		this.guesserPool = new GenericObjectPool<KanjiGuesser>(pof, config);
+		this.guesserPool = new GenericObjectPool<>(pof, config);
 	}
 
 	@Override

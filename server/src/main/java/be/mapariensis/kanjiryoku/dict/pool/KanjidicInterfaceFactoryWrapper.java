@@ -19,8 +19,7 @@ public class KanjidicInterfaceFactoryWrapper implements
 	}
 
 	@Override
-	public void activateObject(PooledObject<KanjidicInterface> arg0)
-			throws Exception {
+	public void activateObject(PooledObject<KanjidicInterface> arg0) {
 
 	}
 
@@ -32,13 +31,11 @@ public class KanjidicInterfaceFactoryWrapper implements
 
 	@Override
 	public PooledObject<KanjidicInterface> makeObject() throws Exception {
-		return new DefaultPooledObject<KanjidicInterface>(
-				backend.setUp(backendConfig));
+		return new DefaultPooledObject<>(backend.setUp(backendConfig));
 	}
 
 	@Override
-	public void passivateObject(PooledObject<KanjidicInterface> arg0)
-			throws Exception {
+	public void passivateObject(PooledObject<KanjidicInterface> arg0) {
 
 	}
 

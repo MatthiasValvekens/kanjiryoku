@@ -140,7 +140,7 @@ public class CommandReceiverFactory {
 						} else {
 							log.info(
 									"Handle {} does not match principal name {}.",
-									p.getName());
+									handle, p.getName());
 						}
 					} catch (SSLPeerUnverifiedException ex) {
 						// peer is not verified
@@ -213,7 +213,7 @@ public class CommandReceiverFactory {
 		public void run() {
 			ServerAuthEngine eng = ((ConnectionContext) cr.ch.keyFor(selector)
 					.attachment()).getAuthEngine();
-			NetworkMessage reply = null;
+			NetworkMessage reply;
 			try {
 				reply = eng.submit(cr.msg);
 			} catch (AuthenticationFailedException e) {

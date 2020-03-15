@@ -114,7 +114,7 @@ public class SqliteInterface implements KanjidicInterface {
 		try (NamedPreparedStatement ps = setUpQuery(query)) {
 			ps.setString(paramName, param);
 			try (ResultSet res = ps.executeQuery()) {
-				Set<String> results = new HashSet<String>();
+				Set<String> results = new HashSet<>();
 				while (res.next()) {
 					results.add(res.getString(1));
 				}
@@ -128,7 +128,7 @@ public class SqliteInterface implements KanjidicInterface {
 	protected Set<Character> queryCharSet(StatementIndexer query,
 			String paramName, String param) throws DictionaryAccessException {
 		Set<String> asStrings = queryStringSet(query, paramName, param);
-		Set<Character> res = new HashSet<Character>();
+		Set<Character> res = new HashSet<>();
 		for (String s : asStrings) {
 			if (s.length() > 1)
 				throw new DictionaryAccessException(
@@ -192,7 +192,7 @@ public class SqliteInterface implements KanjidicInterface {
 	public Set<Character> randomKanji() throws DictionaryAccessException {
 		try (NamedPreparedStatement ps = setUpQuery(selectRandom)) {
 			try (ResultSet res = ps.executeQuery()) {
-				Set<Character> results = new HashSet<Character>();
+				Set<Character> results = new HashSet<>();
 				while (res.next()) {
 					String s = res.getString(1);
 					if (s.length() > 1)

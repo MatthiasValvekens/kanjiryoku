@@ -5,12 +5,10 @@ import be.mapariensis.kanjiryoku.net.model.UserData;
 
 public interface AuthHandler {
 
-	public String getSalt() throws ServerBackendException;
+	String getSalt() throws ServerBackendException;
 
-	public UserData getUserData() throws ServerBackendException;
+	UserData getUserData() throws ServerBackendException;
 
-	public boolean authenticate(String hash, String clientSalt)
+	boolean authenticate(String hash, String clientSalt)
 			throws ServerBackendException;
-
-	public String getHash() throws ServerBackendException;
 }

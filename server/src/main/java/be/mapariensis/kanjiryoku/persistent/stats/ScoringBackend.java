@@ -10,14 +10,14 @@ import be.mapariensis.kanjiryoku.util.IProperties;
 
 public interface ScoringBackend {
 
-	public interface Factory {
-		public ScoringBackend setUp(ServerConfig serverConfig,
+	interface Factory {
+		ScoringBackend setUp(ServerConfig serverConfig,
 				IProperties scoringConfig) throws BadConfigurationException;
 	}
 
-	public void updateScores(Game game, GameStatistics statistics)
+	void updateScores(Game game, GameStatistics statistics)
 			throws PersistenceException;
 
-	public GameStatistics aggregateScores(Game game, User user)
+	GameStatistics aggregateScores(Game game, User user)
 			throws PersistenceException;
 }

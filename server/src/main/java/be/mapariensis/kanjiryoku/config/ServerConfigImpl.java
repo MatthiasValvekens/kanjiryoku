@@ -136,7 +136,7 @@ public class ServerConfigImpl implements ServerConfig {
 		try {
 			log.info("Loading guesser factory {}", className);
 			factory = (KanjiGuesserFactory) ConnectionMonitor.class
-					.getClassLoader().loadClass(className).newInstance();
+					.getClassLoader().loadClass(className).getDeclaredConstructor().newInstance();
 		} catch (Exception ex) {
 			throw new BadConfigurationException(
 					"Failed to instantiate guesser factory.", ex);
@@ -187,7 +187,7 @@ public class ServerConfigImpl implements ServerConfig {
 			try {
 				log.info("Loading data source factory {}", className);
 				dsp = (DataSourceProvider) ConnectionMonitor.class
-						.getClassLoader().loadClass(className).newInstance();
+						.getClassLoader().loadClass(className).getDeclaredConstructor().newInstance();
 			} catch (Exception ex) {
 				throw new BadConfigurationException(
 						"Failed to data source factory.", ex);

@@ -58,7 +58,7 @@ public class ConnectionMonitor extends Thread implements UserManager, Closeable 
 	private final ServerSocketChannel ssc;
 	private final Selector selector;
 	private final UserStore store = new UserStore();
-	private final SessionManagerImpl sessman;
+	private final SessionManager sessman;
 	private final ServerConfig config;
 	// SSL-related stuff
 	private final SSLContext sslContext;

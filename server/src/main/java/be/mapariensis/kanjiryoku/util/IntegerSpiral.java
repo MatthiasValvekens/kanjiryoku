@@ -15,9 +15,9 @@ public class IntegerSpiral implements Iterator<Integer> {
 		this.min = min;
 		this.max = max;
 		this.prev = center;
-		if (min > max || center > max || center < min) {
+		if (center > max || center < min) {
 			throw new IllegalArgumentException(String.format(
-					"Invalid center, min, max: %i,%i,%i", center, min, max));
+					"Invalid center, min, max: %d,%d,%d", center, min, max));
 		}
 	}
 
@@ -66,8 +66,6 @@ public class IntegerSpiral implements Iterator<Integer> {
 	}
 
 	@Override
-	public void remove() {
-		return;
-	}
+	public void remove() { }
 
 }

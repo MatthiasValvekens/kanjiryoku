@@ -1,6 +1,5 @@
 package be.mapariensis.kanjiryoku.dict.pool;
 
-import java.io.IOException;
 import java.util.Set;
 
 import org.apache.commons.pool2.PooledObjectFactory;
@@ -23,8 +22,7 @@ public class PooledDictionary implements KanjidicInterface {
 
 		@SuppressWarnings("unchecked")
 		@Override
-		public KanjidicInterface setUp(IProperties config)
-				throws DictionaryAccessException, BadConfigurationException {
+		public KanjidicInterface setUp(IProperties config) throws BadConfigurationException {
 			String bfcn = config.getRequired(ConfigFields.BACKEND_FACTORY,
 					String.class);
 			Class<? extends KanjidicInterface.Factory> factoryClass;
@@ -36,9 +34,9 @@ public class PooledDictionary implements KanjidicInterface {
 			}
 			KanjidicInterface.Factory kdif;
 			try {
-				kdif = factoryClass.newInstance();
-			} catch (InstantiationException | IllegalAccessException e) {
-				throw new BadConfigurationException(e);
+				kdif = factoryClass.getDeclaredConstructor().newInstance();
+			} catch (Exception ex) {
+				throw new BadConfigurationException(ex);
 			}
 			IProperties backendConfig = config.getRequired(
 					ConfigFields.BACKEND_CONFIG, IProperties.class);
@@ -47,13 +45,12 @@ public class PooledDictionary implements KanjidicInterface {
 
 	}
 
-	private final PooledObjectFactory<KanjidicInterface> pof;
 	private final GenericObjectPool<KanjidicInterface> kdiPool;
 
 	public PooledDictionary(KanjidicInterface.Factory backendFactory,
 			IProperties factoryConfiguration, IProperties poolConfiguration)
 			throws BadConfigurationException {
-		this.pof = new KanjidicInterfaceFactoryWrapper(backendFactory,
+		PooledObjectFactory<KanjidicInterface> pof = new KanjidicInterfaceFactoryWrapper(backendFactory,
 				factoryConfiguration);
 		GenericObjectPoolConfig config = new GenericObjectPoolConfig();
 		int maxidle = poolConfiguration.getTyped(ConfigFields.MAX_IDLE,
@@ -69,7 +66,7 @@ public class PooledDictionary implements KanjidicInterface {
 		config.setMaxIdle(maxidle);
 		config.setMinIdle(minidle);
 		config.setMaxTotal(maxtotal);
-		this.kdiPool = new GenericObjectPool<KanjidicInterface>(pof, config);
+		this.kdiPool = new GenericObjectPool<>(pof, config);
 	}
 
 	@Override
@@ -178,7 +175,7 @@ public class PooledDictionary implements KanjidicInterface {
 	}
 
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		kdiPool.close();
 	}
 

@@ -10,8 +10,8 @@ import java.util.regex.Pattern;
 
 public class StatementIndexer {
 	private static final Pattern varPattern = Pattern
-			.compile("\\$\\{([a-z0-9-]+)\\}");
-	private final Map<String, Integer> index = new HashMap<String, Integer>();
+			.compile("\\$\\{([a-z0-9-]+)}");
+	private final Map<String, Integer> index = new HashMap<>();
 	private final String cleanedSql;
 
 	public StatementIndexer(String sql) {

@@ -110,7 +110,6 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 		@Override
 		public boolean authenticate(String hash, String clientSalt)
 				throws ServerBackendException {
-			boolean ok = false;
 			// sha bcrypt pwhash from database with client salt
 			String finalResult;
 			try {
@@ -118,7 +117,7 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 			} catch (NoSuchAlgorithmException e1) {
 				throw new ServerBackendException(e1);
 			}
-			ok = hash.equals(finalResult);
+			boolean ok = hash.equals(finalResult);
 			if (ok) {
 				// update last login in database
 				try (Connection conn = ds.getConnection();
@@ -132,12 +131,6 @@ public class PostgresAuthProvider implements AuthBackendProvider {
 			}
 			return ok;
 		}
-
-		@Override
-		public String getHash() {
-			return pwHash;
-		}
-
 	}
 
 	private static final String UNIQUE_VIOLATED_STATE = "23505";

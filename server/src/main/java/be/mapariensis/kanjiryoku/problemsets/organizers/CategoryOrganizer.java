@@ -27,7 +27,7 @@ public class CategoryOrganizer implements ProblemOrganizer {
 	public CategoryOrganizer(Map<String, RatedProblemList> cats,
 			int perCategory, Random rng, boolean resetDifficulty,
 			int minDifficulty, int maxDifficulty) {
-		this.cats = new ArrayList<SingleCategoryOrganizer>(cats.size());
+		this.cats = new ArrayList<>(cats.size());
 		for (Map.Entry<String, RatedProblemList> entry : cats.entrySet()) {
 			this.cats
 					.add(new SingleCategoryOrganizer(entry.getKey(), entry
@@ -42,7 +42,7 @@ public class CategoryOrganizer implements ProblemOrganizer {
 
 	@Override
 	public boolean hasNext() {
-		if (hasMore == false)
+		if (!hasMore)
 			return false;
 
 		if (cats.get(curCatIx).hasNext())

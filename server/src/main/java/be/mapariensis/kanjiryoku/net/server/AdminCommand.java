@@ -14,6 +14,7 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.server.handlers.UserPasswordResponseHandler;
 
+@SuppressWarnings("unused")
 public enum AdminCommand {
 
 	BROADCAST {
@@ -49,7 +50,6 @@ public enum AdminCommand {
 				mon.deregister(toBeKicked);
 			} catch (UserManagementException e) {
 				log.warn("User {} could not be deregistered, aborting.", username, e);
-				return;
 			}
 		}
 
@@ -74,10 +74,9 @@ public enum AdminCommand {
 		}
 	},
 	SHUTDOWN {
-
 		@Override
 		public void execute(User issuer, final ConnectionMonitor mon,
-				NetworkMessage command) throws ProtocolSyntaxException {
+				NetworkMessage command) {
 			mon.shutdown();
 		}
 
@@ -132,7 +131,7 @@ public enum AdminCommand {
 				log.error("Exception while attempting to delete user {}",
 						username, e);
 				mon.humanMessage(issuer,
-						String.format("Failed to delete user {}.", username));
+						String.format("Failed to delete user %s.", username));
 			}
 		}
 

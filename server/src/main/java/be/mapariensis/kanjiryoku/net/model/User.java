@@ -6,9 +6,6 @@ import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
@@ -20,13 +17,12 @@ import be.mapariensis.kanjiryoku.net.server.ClientResponseHandler;
 import be.mapariensis.kanjiryoku.net.server.Session;
 
 public class User {
-	private static final Logger log = LoggerFactory.getLogger(User.class);
 	public final String handle;
 	public final SocketChannel channel;
 	public final UserData data;
 	protected final IMessageHandler outbox;
 	private Session session;
-	private final List<ClientResponseHandler> activeResponseHandlers = new LinkedList<ClientResponseHandler>();
+	private final List<ClientResponseHandler> activeResponseHandlers = new LinkedList<>();
 	private final Object sessionLock = new Object();
 
 	public User(String handle, SocketChannel channel, IMessageHandler outbox,
@@ -43,7 +39,7 @@ public class User {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((handle == null) ? 0 : handle.hashCode());
+		result = prime * result + handle.hashCode();
 		return result;
 	}
 
@@ -56,12 +52,7 @@ public class User {
 		if (getClass() != obj.getClass())
 			return false;
 		User other = (User) obj;
-		if (handle == null) {
-			if (other.handle != null)
-				return false;
-		} else if (!handle.equals(other.handle))
-			return false;
-		return true;
+		return handle.equals(other.handle);
 	}
 
 	public Session getSession() {
@@ -88,7 +79,7 @@ public class User {
 	public void leaveSession() {
 		try {
 			outbox.send(new NetworkMessage(ClientCommandList.RESETUI));
-		} catch (CancelledKeyException | IOException e) {
+		} catch (CancelledKeyException | IOException ignored) {
 		}
 		synchronized (sessionLock) {
 			session = null;
@@ -112,7 +103,7 @@ public class User {
 			throws ServerException {
 		int passedId;
 		try {
-			passedId = Integer.valueOf(msg.get(1));
+			passedId = Integer.parseInt(msg.get(1));
 		} catch (IndexOutOfBoundsException ex) {
 			// the servercommand class should check this, but an extra safety
 			// measure never hurts
@@ -137,25 +128,12 @@ public class User {
 			}
 		}
 		throw new CommandQueueingException(String.format(
-				"No response handler with id %i", passedId));
+				"No response handler with id %d", passedId));
 	}
 
 	public void purgeResponseHandlers() {
 		synchronized (activeResponseHandlers) {
 			activeResponseHandlers.clear();
-		}
-	}
-
-	@Override
-	public void finalize() {
-		if (channel.isOpen()) {
-			log.warn(
-					"User {} is being garbage collected, but channel is still open!",
-					handle);
-			try {
-				channel.close();
-			} catch (Exception e) {
-			}
 		}
 	}
 

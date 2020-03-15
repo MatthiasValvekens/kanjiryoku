@@ -98,7 +98,7 @@ public class ZinniaGuesser implements KanjiGuesser {
 		}
 
 		// process Zinnia result
-		List<Character> chars = new ArrayList<Character>(tolerance);
+		List<Character> chars = new ArrayList<>(tolerance);
 		for (int i = 0; i < tolerance; i++) {
 			String value = res.value(i);
 			float score = res.score(i);

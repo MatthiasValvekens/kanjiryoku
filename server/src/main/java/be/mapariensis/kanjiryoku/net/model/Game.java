@@ -19,7 +19,7 @@ public enum Game {
 		@Override
 		public GameServerInterface getServer(IProperties config,
 				KanjiGuesser guesser, ProblemSetManager psets)
-				throws UnsupportedGameException, BadConfigurationException {
+				throws BadConfigurationException {
 			int seed = (int) (System.currentTimeMillis() % 10000);
 			log.info("Starting game with seed {}", seed);
 			@SuppressWarnings("unchecked")
@@ -28,7 +28,7 @@ public enum Game {
 					Boolean.class, ENABLE_BATON_PASS_DEFAULT);
 			return new TakingTurnsServer(psets.getProblemSets(seed, names),
 					guesser, batonPass);
-		};
+		}
 
 		@Override
 		public String toString() {

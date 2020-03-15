@@ -52,7 +52,7 @@ public class ConfigFileWatcher extends Thread {
 			WatchKey key = null;
 			try {
 				key = watcher.take();
-			} catch (InterruptedException e) {
+			} catch (InterruptedException ignored) {
 			}
 			if (key == null)
 				continue;
@@ -78,7 +78,7 @@ public class ConfigFileWatcher extends Thread {
 														// because readAllBytes
 														// doesn't like being
 														// invoked immediately
-					} catch (InterruptedException e) {
+					} catch (InterruptedException ignored) {
 
 					}
 					updateTask.run();

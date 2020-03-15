@@ -57,9 +57,9 @@ public class KanjiryokuYojiWrapper implements ProblemParser {
 		// TODO : pick options that actually make sense for the "wrong"
 		// suggestions
 
-		List<List<String>> options = new ArrayList<List<String>>(4);
+		List<List<String>> options = new ArrayList<>(4);
 		for (int i = 0; i < 4; i++) {
-			List<String> myoptions = new ArrayList<String>(optiontotal);
+			List<String> myoptions = new ArrayList<>(optiontotal);
 			int correctPosition = rng.nextInt(optiontotal);
 			char correctChar = w.main.charAt(i);
 			// query similar characters from the dictionary
@@ -115,7 +115,7 @@ public class KanjiryokuYojiWrapper implements ProblemParser {
 			KanjidicInterface.Factory kif;
 			try {
 				kif = (KanjidicInterface.Factory) ConnectionMonitor.class
-						.getClassLoader().loadClass(factory).newInstance();
+						.getClassLoader().loadClass(factory).getDeclaredConstructor().newInstance();
 			} catch (Exception e) {
 				log.error(
 						"Failed to instantiate dictionary interface factory.",

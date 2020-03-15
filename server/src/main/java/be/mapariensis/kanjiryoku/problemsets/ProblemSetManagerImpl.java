@@ -48,7 +48,7 @@ public class ProblemSetManagerImpl implements ProblemSetManager {
 		this.enc = enc;
 	}
 
-	private final Map<String, RatedProblemList> psets = new HashMap<String, RatedProblemList>();
+	private final Map<String, RatedProblemList> psets = new HashMap<>();
 	private final Object LOCK = new Object();
 
 	@Override
@@ -74,6 +74,7 @@ public class ProblemSetManagerImpl implements ProblemSetManager {
 			try {
 				ppf = (ProblemParserFactory) ConnectionMonitor.class
 						.getClassLoader().loadClass(parserFactory)
+						.getDeclaredConstructor()
 						.newInstance();
 			} catch (Exception e) {
 				log.error("Failed to instantiate problem parser factory {}",
@@ -101,14 +102,13 @@ public class ProblemSetManagerImpl implements ProblemSetManager {
 	public ProblemOrganizer getProblemSets(int seed, List<String> names)
 			throws BadConfigurationException {
 		// seed and build organizer (allows for resource sharing)
-		Map<String, RatedProblemList> sets = new HashMap<String, RatedProblemList>(
+		Map<String, RatedProblemList> sets = new HashMap<>(
 				names.size());
 		for (String name : names) {
 			RatedProblemList rpl = psets.get(name);
 			if (rpl == null)
-				throw new BadConfigurationException(new StringBuilder(
-						"Problem set ").append(name).append(" does not exist.")
-						.toString());
+				throw new BadConfigurationException(
+						String.format("Problem set %s does not exist.", name));
 			sets.put(name, rpl);
 		}
 		return new CategoryOrganizer(sets, problemsPerCategory,

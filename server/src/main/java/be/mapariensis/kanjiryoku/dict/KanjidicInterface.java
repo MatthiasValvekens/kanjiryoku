@@ -22,7 +22,7 @@ public interface KanjidicInterface extends AutoCloseable {
 	 *             Thrown on failure to access the dictionary.
 	 * @return The set of kun readings for this kanji.
 	 */
-	public Set<String> getOn(char kanji) throws DictionaryAccessException;
+	Set<String> getOn(char kanji) throws DictionaryAccessException;
 
 	/**
 	 * Retrieve the kun reading of a kanji from the dictionary.
@@ -33,7 +33,7 @@ public interface KanjidicInterface extends AutoCloseable {
 	 *             Thrown on failure to access the dictionary.
 	 * @return The set of kun readings for this kanji.
 	 */
-	public Set<String> getKun(char kanji) throws DictionaryAccessException;
+	Set<String> getKun(char kanji) throws DictionaryAccessException;
 
 	/**
 	 * Retrieve a number of kanji by on reading.
@@ -46,13 +46,13 @@ public interface KanjidicInterface extends AutoCloseable {
 	 * @throws DictionaryAccessException
 	 *             Thrown on failure to access the dictionary.
 	 */
-	public Set<Character> getKanjiByOn(String on)
+	Set<Character> getKanjiByOn(String on)
 			throws DictionaryAccessException;
 
 	/**
 	 * Retrieve a number of kanji by on reading.
 	 * 
-	 * @param on
+	 * @param kun
 	 *            The kun reading of a kanji. The convention used is left up to
 	 *            the implementation. (options: kana, nihonshiki, kunreishiki)
 	 * @return A set of kanji with the given kun reading. The number of kanji
@@ -60,7 +60,7 @@ public interface KanjidicInterface extends AutoCloseable {
 	 * @throws DictionaryAccessException
 	 *             Thrown on failure to access the dictionary.
 	 */
-	public Set<Character> getKanjiByKun(String kun)
+	Set<Character> getKanjiByKun(String kun)
 			throws DictionaryAccessException;
 
 	/**
@@ -74,7 +74,7 @@ public interface KanjidicInterface extends AutoCloseable {
 	 * @throws DictionaryAccessException
 	 *             Thrown on failure to access the dictionary.
 	 */
-	public Set<Character> getSimilar(char kanji)
+	Set<Character> getSimilar(char kanji)
 			throws DictionaryAccessException;
 
 	/**
@@ -85,7 +85,7 @@ public interface KanjidicInterface extends AutoCloseable {
 	 * @throws DictionaryAccessException
 	 *             Thrown on failure to access the dictionary.
 	 */
-	public Set<Character> randomKanji() throws DictionaryAccessException;
+	Set<Character> randomKanji() throws DictionaryAccessException;
 
 	/**
 	 * Factory interface for KanjidicInterface. Implementations should provide a
@@ -94,8 +94,8 @@ public interface KanjidicInterface extends AutoCloseable {
 	 * @author Matthias Valvekens
 	 * @version 1.0
 	 */
-	public static interface Factory {
-		public KanjidicInterface setUp(IProperties conf)
+	interface Factory {
+		KanjidicInterface setUp(IProperties conf)
 				throws DictionaryAccessException, BadConfigurationException;
 	}
 
@@ -103,10 +103,10 @@ public interface KanjidicInterface extends AutoCloseable {
 	 * Close the handle on the dictionary.
 	 */
 	@Override
-	public void close() throws IOException;
+	void close() throws IOException;
 
 	/**
 	 * Check whether the dictionary handle is still open.
 	 */
-	public boolean isOpen();
+	boolean isOpen();
 }

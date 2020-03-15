@@ -6,15 +6,16 @@ public interface KanjiGuesser extends AutoCloseable {
 	/**
 	 * This method should return a number of candidates given an (ordered) list
 	 * of strokes.
-	 * 
+	 *
+     * @param width
+	 * 	Canvas width
+	 * @param height
+	 *  Canvas height
 	 * @param strokes
-	 * @param numCandidates
-	 * @return
+	 *  strokes
+	 * @return A list of character guesses.
 	 */
-	public List<Character> guess(int width, int height, List<List<Dot>> strokes);
+	List<Character> guess(int width, int height, List<List<Dot>> strokes);
 
-	@Override
-	public void close();
-
-	public boolean isOpen();
+	boolean isOpen();
 }

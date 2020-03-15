@@ -15,7 +15,7 @@ public interface UserManager {
 	 *             The user already exists, or could not be registered for some
 	 *             other reason, such as a network error.
 	 */
-	public void register(User user) throws UserManagementException;
+	void register(User user) throws UserManagementException;
 
 	/**
 	 * Deregister a user and free all associated resources.
@@ -25,7 +25,7 @@ public interface UserManager {
 	 * @throws UserManagementException
 	 *             User does not exist.
 	 */
-	public void deregister(User user) throws UserManagementException;
+	void deregister(User user) throws UserManagementException;
 
 	/**
 	 * Get the user associated with a given handle.
@@ -35,31 +35,33 @@ public interface UserManager {
 	 * @throws UserManagementException
 	 *             User does not exist.
 	 */
-	public User getUser(String handle) throws UserManagementException;
+	User getUser(String handle) throws UserManagementException;
 
 	/**
 	 * Non-blockingly queue a message to send to a user. The string will be sent
 	 * as soon as the monitor thread detects a writable socket.
+	 * This method does not guarantee that the message will actually arrive.
 	 * 
 	 * @param user
+     * 	Message recipient
 	 * @param message
-	 * @throws UserManagementException
+	 * 	Message content
 	 */
-	public void messageUser(User user, NetworkMessage message);
+	void messageUser(User user, NetworkMessage message);
 
-	public void messageUser(User user, NetworkMessage message,
+	void messageUser(User user, NetworkMessage message,
 			ClientResponseHandler handler);
 
-	public void humanMessage(User user, String message);
+	void humanMessage(User user, String message);
 
-	public void lobbyBroadcast(User user, NetworkMessage message);
+	void lobbyBroadcast(User user, NetworkMessage message);
 
-	public void adminCommand(User issuer, NetworkMessage commandMessage)
+	void adminCommand(User issuer, NetworkMessage commandMessage)
 			throws UserManagementException, ProtocolSyntaxException;
 
-	public AuthBackendProvider getAuthBackend();
+	AuthBackendProvider getAuthBackend();
 
-	public UserStore getStore();
+	UserStore getStore();
 
-	public void delegate(Runnable run);
+	void delegate(Runnable run);
 }

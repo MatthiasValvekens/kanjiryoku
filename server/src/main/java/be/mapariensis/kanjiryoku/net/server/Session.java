@@ -39,7 +39,7 @@ public class Session {
 		if (game == null)
 			throw new UnsupportedGameException("null");
 		this.id = id;
-		this.users = new HashSet<User>();
+		this.users = new HashSet<>();
 		users.add(master);
 		this.master = master;
 		this.manager = manager;
@@ -76,7 +76,6 @@ public class Session {
 			broadcastHumanMessage(u,
 					String.format("User %s has joined the session.", u.handle));
 			uman.humanMessage(u, "Joined session.");
-			return;
 		}
 	}
 
@@ -92,7 +91,7 @@ public class Session {
 	void purgeMembers() {
 		broadcastHumanMessage(null, "Session end");
 		synchronized (LOCK) {
-			for (User u : new LinkedList<User>(users)) {
+			for (User u : new LinkedList<>(users)) {
 				users.remove(u);
 				if (u.getSession() != null)
 					u.leaveSession();
@@ -223,15 +222,8 @@ public class Session {
 		if (id != other.id)
 			return false;
 		if (manager == null) {
-			if (other.manager != null)
-				return false;
-		} else if (!manager.equals(other.manager))
-			return false;
-		return true;
-	}
-
-	public boolean isDestroyed() {
-		return destroyed;
+			return other.manager == null;
+		} else return manager.equals(other.manager);
 	}
 
 	private void checkDestroyed() throws SessionException {

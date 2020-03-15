@@ -14,7 +14,7 @@ import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.server.games.GameStatistics;
-import be.mapariensis.kanjiryoku.net.server.games.GameStatistics.Score;
+import be.mapariensis.kanjiryoku.net.server.games.Score;
 import be.mapariensis.kanjiryoku.persistent.PersistenceException;
 import be.mapariensis.kanjiryoku.persistent.PostgresProvider;
 import be.mapariensis.kanjiryoku.persistent.util.NamedPreparedStatement;
@@ -63,7 +63,7 @@ public class PostgresScoringBackend implements ScoringBackend {
 			int uid = statistics.getUser().data.getId();
 			int gameid = getGameType(game);
 			conn.setAutoCommit(false);
-			for (Map.Entry<String, Score> entry : statistics.entrySet()) {
+			for (Map.Entry<String, Score> entry : statistics.getScores().entrySet()) {
 				ps.setInt("userid", uid);
 				ps.setInt("game", gameid);
 				ps.setString("category", entry.getKey());
@@ -95,7 +95,7 @@ public class PostgresScoringBackend implements ScoringBackend {
 						.prepareStatement(conn)) {
 			ps.setInt("userid", uid);
 			ps.setInt("game", gameid);
-			Map<String, Score> data = new HashMap<String, Score>();
+			Map<String, Score> data = new HashMap<>();
 			try (ResultSet res = ps.executeQuery()) {
 				while (res.next()) {
 					String cat = res.getString("category");

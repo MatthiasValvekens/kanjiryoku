@@ -1,11 +1,6 @@
 package be.mapariensis.kanjiryoku.net.server.games;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,8 +43,8 @@ public class TakingTurnsServer implements GameServerInterface {
 		private final List<GameStatistics> stats;
 
 		public TurnIterator(Collection<User> players) {
-			this.players = new LinkedList<User>(players);
-			this.stats = new ArrayList<GameStatistics>(players.size());
+			this.players = new LinkedList<>(players);
+			this.stats = new ArrayList<>(players.size());
 			for (User u : players)
 				stats.add(new GameStatistics(u));
 		}
@@ -70,7 +65,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		final boolean answer;
 
 		NextTurnHandler(User submitter, boolean answer) {
-			super(Arrays.asList(submitter));
+			super(Collections.singletonList(submitter));
 			this.answer = answer;
 		}
 
@@ -93,7 +88,7 @@ public class TakingTurnsServer implements GameServerInterface {
 	private class BatonPassHandler extends AnswerFeedbackHandler {
 
 		public BatonPassHandler(User submitter) {
-			super(Arrays.asList(submitter));
+			super(Collections.singletonList(submitter));
 		}
 
 		@Override
@@ -130,7 +125,7 @@ public class TakingTurnsServer implements GameServerInterface {
 		return Game.TAKINGTURNS;
 	}
 
-	private final List<List<Dot>> strokes = new LinkedList<List<Dot>>();
+	private final List<List<Dot>> strokes = new LinkedList<>();
 
 	@Override
 	public void submit(NetworkMessage msg, User source)
@@ -186,10 +181,14 @@ public class TakingTurnsServer implements GameServerInterface {
 	}
 
 	@Override
-	public void close() {
+	public void close() throws ServerBackendException {
 		gameRunning = false;
 		currentPlayer = null;
-		guess.close();
+		try {
+			guess.close();
+		} catch (Exception e) {
+		    throw new ServerBackendException(e);
+		}
 	}
 
 	private void nextProblem(Problem nextProblem) throws ServerBackendException {
@@ -251,7 +250,7 @@ public class TakingTurnsServer implements GameServerInterface {
 
 	private List<GameStatistics> stats() {
 		int playercount = ti.players.size();
-		List<GameStatistics> res = new ArrayList<GameStatistics>(playercount);
+		List<GameStatistics> res = new ArrayList<>(playercount);
 		for (int i = 0; i < playercount; i++) {
 			GameStatistics stats = ti.stats.get(i);
 			res.add(stats);
@@ -355,7 +354,7 @@ public class TakingTurnsServer implements GameServerInterface {
 			char c = multiProblemOptions.get(multiProblemChoice).charAt(0);
 			// FIXME remove the charAt 0 once I properly generalize the
 			// solution model
-			checkAnswer(Arrays.asList(c), source);
+			checkAnswer(Collections.singletonList(c), source);
 			clearInput(null);
 		} else
 			throw new ArgumentCountException(Type.UNEQUAL, ServerCommand.SUBMIT);

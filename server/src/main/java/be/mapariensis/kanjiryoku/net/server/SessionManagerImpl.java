@@ -13,7 +13,6 @@ import be.mapariensis.kanjiryoku.cr.KanjiGuesserFactory;
 import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
 import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
-import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.persistent.stats.ScoringBackend;
@@ -22,7 +21,7 @@ import be.mapariensis.kanjiryoku.util.IProperties;
 public class SessionManagerImpl implements SessionManager {
 	private static final Logger log = LoggerFactory
 			.getLogger(SessionManagerImpl.class);
-	private final List<Session> sessions = new ArrayList<Session>();
+	private final List<Session> sessions = new ArrayList<>();
 	private final UserManager uman;
 	private final Object LOCK = new Object();
 	private final ServerConfig config;
@@ -91,7 +90,7 @@ public class SessionManagerImpl implements SessionManager {
 	}
 
 	@Override
-	public User removeUser(User u) throws SessionException {
+	public User removeUser(User u) {
 		synchronized (LOCK) {
 			Session sess = u.getSession();
 			if (sess == null)

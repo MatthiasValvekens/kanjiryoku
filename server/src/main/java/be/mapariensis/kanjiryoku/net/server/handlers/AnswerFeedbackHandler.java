@@ -29,7 +29,7 @@ public abstract class AnswerFeedbackHandler extends ClientResponseHandler {
 		log.debug("Setting up answer feedback handler for {} with id {}",
 				allUsers, id);
 		this.allUsers = allUsers;
-		this.seen = new HashSet<User>();
+		this.seen = new HashSet<>();
 	}
 
 	// TODO make this more robust

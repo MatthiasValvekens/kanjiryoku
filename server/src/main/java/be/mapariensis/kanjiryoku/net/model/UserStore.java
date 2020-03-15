@@ -9,8 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 
 public final class UserStore implements Iterable<User> {
-	private final Map<SocketChannel, User> userConnMap = new ConcurrentHashMap<SocketChannel, User>();
-	private final Map<String, User> userNameMap = new ConcurrentHashMap<String, User>();
+	private final Map<SocketChannel, User> userConnMap = new ConcurrentHashMap<>();
+	private final Map<String, User> userNameMap = new ConcurrentHashMap<>();
 	private final Object LOCK = new Object();
 
 	public void addUser(User u) throws UserManagementException {
@@ -45,13 +45,6 @@ public final class UserStore implements Iterable<User> {
 		return u;
 	}
 
-	public User requireUser(SocketChannel peer) throws UserManagementException {
-		User u = getUser(peer);
-		if (u == null)
-			throw new UserManagementException("No user bound to this peer.");
-		return u;
-	}
-
 	public User getUser(String name) {
 		return userNameMap.get(name);
 	}
@@ -60,25 +53,12 @@ public final class UserStore implements Iterable<User> {
 		return userConnMap.get(peer);
 	}
 
-	public IMessageHandler getOutbox(SocketChannel channel) {
-		User u = userConnMap.get(channel);
-		return u == null ? null : u.outbox;
-	}
-
-	public IMessageHandler requireOutbox(SocketChannel channel)
-			throws UserManagementException {
-		IMessageHandler h = userConnMap.get(channel).outbox;
-		if (h == null)
-			throw new UserManagementException("No user bound to this peer.");
-		else
-			return h;
-	}
 
 	@Override
 	public Iterator<User> iterator() {
-		LinkedList<User> list = new LinkedList<User>();
+		LinkedList<User> list;
 		synchronized (LOCK) {
-			list.addAll(userNameMap.values());
+			list = new LinkedList<>(userNameMap.values());
 		}
 		return list.iterator();
 	}

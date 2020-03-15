@@ -1,8 +1,15 @@
 package be.mapariensis.kanjiryoku.net.server;
 
 import java.util.ArrayList;
-import java.util.List;
 
+import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
+import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
+import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerBackendException;
+import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
+import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
+import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
+import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -10,14 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
-import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException;
 import be.mapariensis.kanjiryoku.net.exceptions.ArgumentCountException.Type;
-import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
-import be.mapariensis.kanjiryoku.net.exceptions.ProtocolSyntaxException;
-import be.mapariensis.kanjiryoku.net.exceptions.ServerException;
-import be.mapariensis.kanjiryoku.net.exceptions.SessionException;
-import be.mapariensis.kanjiryoku.net.exceptions.UnsupportedGameException;
-import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.net.model.Game;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.ResponseHandler;
@@ -25,6 +25,7 @@ import be.mapariensis.kanjiryoku.net.model.User;
 import be.mapariensis.kanjiryoku.net.server.handlers.SessionInvitationHandler;
 import be.mapariensis.kanjiryoku.net.server.handlers.UserPasswordResponseHandler;
 
+@SuppressWarnings("unused")
 public enum ServerCommand {
 
 	BYE {
@@ -39,8 +40,7 @@ public enum ServerCommand {
 
 		@Override
 		public void execute(NetworkMessage message, User client,
-				UserManager userman, SessionManager sessman)
-				throws ServerException {
+				UserManager userman, SessionManager sessman) {
 			throw new UnsupportedOperationException();
 			// Register is a special case
 		}
@@ -50,9 +50,9 @@ public enum ServerCommand {
 
 		@Override
 		public void execute(NetworkMessage message, User client,
-				UserManager userman, SessionManager sessman)
-				throws ServerException, BadConfigurationException {
+				UserManager userman, SessionManager sessman) throws ServerBackendException {
 			// Auth is a special case
+			throw new ServerBackendException("AUTH should not be invoked directly");
 		}
 
 	},
@@ -130,8 +130,6 @@ public enum ServerCommand {
 			userman.humanMessage(client,
 					String.format("Started session of %s.", game.toString()));
 
-			List<User> users = new ArrayList<User>(message.argCount());
-			users.add(client);
 			dispatchInvites(message.truncate(2), userman, client, sess);
 		}
 	},
@@ -177,7 +175,6 @@ public enum ServerCommand {
 						sess.kickUser(client, u);
 					} catch (UserManagementException | SessionException e) {
 						userman.messageUser(client, e.protocolMessage);
-						continue;
 					}
 				}
 			}
@@ -210,7 +207,7 @@ public enum ServerCommand {
 				message = message
 						.concatenate(ResponseHandler.DEFAULT_HANDLER_ID);
 			}
-			ArrayList<String> args = new ArrayList<String>(4);
+			ArrayList<String> args = new ArrayList<>(4);
 			args.add(message.get(1)); // we don't really care what the ID is, as
 										// long as it is passed back to the
 										// client
@@ -399,8 +396,7 @@ public enum ServerCommand {
 
 		@Override
 		public void execute(NetworkMessage message, User client,
-				UserManager userman, SessionManager sessman)
-				throws ServerException, BadConfigurationException {
+				UserManager userman, SessionManager sessman) {
 			// dummy command to initiate connection
 		}
 
@@ -432,7 +428,6 @@ public enum ServerCommand {
 				userman.messageUser(u, invite, rh);
 			} catch (UserManagementException e) {
 				userman.messageUser(client, e.protocolMessage);
-				continue;
 			}
 		}
 	}

@@ -53,7 +53,10 @@ public class RatedProblemList implements List<RatedProblem> {
 
 	@Override
 	public boolean equals(Object o) {
-		return backend.equals(o);
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		RatedProblemList that = (RatedProblemList) o;
+		return backend.equals(that.backend);
 	}
 
 	@Override
@@ -136,6 +139,7 @@ public class RatedProblemList implements List<RatedProblem> {
 		return backend.toArray();
 	}
 
+	@SuppressWarnings("SuspiciousToArrayCall")
 	@Override
 	public <T> T[] toArray(T[] a) {
 		return backend.toArray(a);

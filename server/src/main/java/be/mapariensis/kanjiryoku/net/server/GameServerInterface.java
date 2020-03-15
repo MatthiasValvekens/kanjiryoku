@@ -11,25 +11,25 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.net.model.User;
 
 public interface GameServerInterface extends AutoCloseable {
-	public Game getGame();
+	Game getGame();
 
-	public void submit(NetworkMessage msg, User user) throws GameFlowException,
+	void submit(NetworkMessage msg, User user) throws GameFlowException,
 			ProtocolSyntaxException;
 
-	public void update(NetworkMessage msg, User user) throws GameFlowException,
+	void update(NetworkMessage msg, User user) throws GameFlowException,
 			ProtocolSyntaxException;
 
-	public boolean canPlay(User u);
+	boolean canPlay(User u);
 
-	public boolean running();
+	boolean running();
 
-	public void startGame(Session sess, Set<User> participants)
+	void startGame(Session sess, Set<User> participants)
 			throws GameFlowException, ServerBackendException;
 
 	@Override
-	public void close() throws ServerException;
+	void close() throws ServerException;
 
-	public void clearInput(User submitter) throws GameFlowException;
+	void clearInput(User submitter) throws GameFlowException;
 
-	public void skipProblem(User submitter) throws GameFlowException;
+	void skipProblem(User submitter) throws GameFlowException;
 }

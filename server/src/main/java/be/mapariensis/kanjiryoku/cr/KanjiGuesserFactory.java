@@ -6,6 +6,6 @@ import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public interface KanjiGuesserFactory {
-	public KanjiGuesser getGuesser(IProperties config)
+	KanjiGuesser getGuesser(IProperties config)
 			throws BadConfigurationException, IOException;
 }

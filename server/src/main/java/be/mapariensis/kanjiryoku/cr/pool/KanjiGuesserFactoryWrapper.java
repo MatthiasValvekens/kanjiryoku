@@ -20,8 +20,7 @@ public class KanjiGuesserFactoryWrapper implements
 	}
 
 	@Override
-	public void activateObject(PooledObject<KanjiGuesser> arg0)
-			throws Exception {
+	public void activateObject(PooledObject<KanjiGuesser> arg0) {
 
 	}
 
@@ -32,13 +31,12 @@ public class KanjiGuesserFactoryWrapper implements
 
 	@Override
 	public PooledObject<KanjiGuesser> makeObject() throws Exception {
-		return new DefaultPooledObject<KanjiGuesser>(
+		return new DefaultPooledObject<>(
 				backend.getGuesser(backendConfig));
 	}
 
 	@Override
-	public void passivateObject(PooledObject<KanjiGuesser> arg0)
-			throws Exception {
+	public void passivateObject(PooledObject<KanjiGuesser> arg0) {
 
 	}
 

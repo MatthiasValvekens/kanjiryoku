@@ -30,6 +30,7 @@ import java.util.Map;
  * 
  * @author Matthias Valvekens
  */
+@SuppressWarnings("unused")
 public class NamedPreparedStatement implements Statement, AutoCloseable {
 	private final PreparedStatement backend;
 	private final Map<String, Integer> index;
@@ -513,8 +514,7 @@ public class NamedPreparedStatement implements Statement, AutoCloseable {
 			throw new SQLException(String.format(
 					"Unknown variable: %s. Indexed: %s", varName, index
 							.keySet().toString()));
-		else
-			return i.intValue();
+		else return i;
 	}
 
 }
