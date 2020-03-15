@@ -38,12 +38,13 @@ public class SSLMessageHandler extends MessageHandler {
 			ExecutorService delegatedTaskPool, int plaintextBufsize) {
 		super(key);
 		int netbufsize = engine.getSession().getPacketBufferSize();
+		plaintextBufsize = Math.max(plaintextBufsize, engine.getSession().getApplicationBufferSize());
 		log.trace("Buffers initialised to: net: {}, app: {}", netbufsize,
 				plaintextBufsize);
 		this.netIn = ByteBuffer.allocate(netbufsize);
-		this.appIn = ByteBuffer.allocate(plaintextBufsize + 256);
-		this.appOut = ByteBuffer.allocate(plaintextBufsize);
 		this.netOut = ByteBuffer.allocate(netbufsize);
+		this.appIn = ByteBuffer.allocate(plaintextBufsize);
+		this.appOut = ByteBuffer.allocate(plaintextBufsize);
 		this.engine = engine;
 		this.delegatedTaskPool = delegatedTaskPool;
 	}
