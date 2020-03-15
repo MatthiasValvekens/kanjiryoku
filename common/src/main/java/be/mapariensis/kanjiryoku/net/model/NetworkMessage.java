@@ -12,13 +12,12 @@ public class NetworkMessage implements Iterable<String>,
 	public static final char DELIMITER = ' ';
 	public static final char ESCAPE_CHAR = '\\';
 	public static final byte EOM = (byte) 0x01;
-	public static final String EOMSTR = new String(new byte[] { EOM });
 
 	private final List<?> args;
 	public final long timestamp;
 
 	public NetworkMessage(Object obj, List<String> args) {
-		ArrayList<Object> objs = new ArrayList<Object>();
+		ArrayList<Object> objs = new ArrayList<>();
 		objs.add(obj);
 		objs.addAll(args);
 		this.args = objs;
@@ -62,7 +61,7 @@ public class NetworkMessage implements Iterable<String>,
 		int i;
 		for (i = beginIndex; i < endIndex - 1; i++) {
 			sb.append(escapedAtom(get(i)));
-			sb.append(String.valueOf(DELIMITER));
+			sb.append(DELIMITER);
 		}
 		sb.append(escapedAtom(get(i)));
 		return sb.toString();
@@ -74,7 +73,7 @@ public class NetworkMessage implements Iterable<String>,
 
 	// TODO unit tests
 	public static NetworkMessage buildArgs(CharBuffer in) {
-		List<String> result = new ArrayList<String>();
+		List<String> result = new ArrayList<>();
 		boolean ignoreDelims = false, escape = false;
 		StringBuilder sb = new StringBuilder(in.length());
 		while (in.position() < in.limit()) {
@@ -106,7 +105,7 @@ public class NetworkMessage implements Iterable<String>,
 
 	@Override
 	public Iterator<String> iterator() {
-		return new Iterator<String>() {
+		return new Iterator<>() {
 			Iterator<?> backend = args.iterator();
 
 			@Override
@@ -135,8 +134,7 @@ public class NetworkMessage implements Iterable<String>,
 		return args.isEmpty();
 	}
 
-	private static final String escapedAtomizer = new StringBuilder()
-			.append(ESCAPE_CHAR).append(ATOMIZER).toString();
+	private static final String escapedAtomizer = String.valueOf(ESCAPE_CHAR) + ATOMIZER;
 
 	public static String escapeSpecial(String string) { // does not escape
 														// delimiters
@@ -144,13 +142,11 @@ public class NetworkMessage implements Iterable<String>,
 				.replace(String.valueOf(ATOMIZER), escapedAtomizer);
 	}
 
-	private static final String escapedEscape = new StringBuilder()
-			.append(ESCAPE_CHAR).append(ESCAPE_CHAR).toString();
+	private static final String escapedEscape = String.valueOf(ESCAPE_CHAR) + ESCAPE_CHAR;
 
 	private static String atomize(String string) {
 		if (string.indexOf(DELIMITER) != -1) {
-			return new StringBuilder().append(ATOMIZER).append(string)
-					.append(ATOMIZER).toString();
+			return ATOMIZER + string + ATOMIZER;
 		} else
 			return string;
 	}
@@ -164,7 +160,7 @@ public class NetworkMessage implements Iterable<String>,
 	}
 
 	public NetworkMessage concatenate(List<?> args) {
-		ArrayList<Object> newargs = new ArrayList<Object>(this.args);
+		ArrayList<Object> newargs = new ArrayList<>(this.args);
 		newargs.addAll(args);
 		return new NetworkMessage(newargs);
 	}

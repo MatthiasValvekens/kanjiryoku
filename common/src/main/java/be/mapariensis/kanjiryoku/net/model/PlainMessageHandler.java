@@ -3,12 +3,8 @@ package be.mapariensis.kanjiryoku.net.model;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
-import java.nio.charset.CharsetDecoder;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -18,8 +14,8 @@ import org.slf4j.LoggerFactory;
 import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 
-public class PlainMessageHandler implements IMessageHandler {
-	public static enum Status {
+public class PlainMessageHandler extends MessageHandler {
+	public enum Status {
 		/**
 		 * Initial state.
 		 */
@@ -40,12 +36,10 @@ public class PlainMessageHandler implements IMessageHandler {
 	private final Object APPOUT_LOCK = new Object();
 	private final SelectionKey key;
 	private final ByteBuffer appIn, appOut;
-	private volatile boolean disposed = false;
 	private Status status;
 
 	public PlainMessageHandler(SelectionKey key, int bufsize) {
-		if (key == null)
-			throw new IllegalArgumentException();
+		super(key);
 		this.key = key;
 		this.appIn = ByteBuffer.allocate(bufsize);
 		this.appOut = ByteBuffer.allocate(bufsize);
@@ -56,6 +50,7 @@ public class PlainMessageHandler implements IMessageHandler {
 	 * Enqueue a message without flushing the message buffer
 	 * 
 	 * @param message
+	 *   Message to put in the queue.
 	 */
 	@Override
 	public void enqueue(NetworkMessage message) {
@@ -80,7 +75,9 @@ public class PlainMessageHandler implements IMessageHandler {
 	 * handler's application output buffer.
 	 * 
 	 * @param message
+	 *   Message to send.
 	 * @throws IOException
+	 *   Thrown if the underlying {@link java.nio.ByteBuffer#put(byte[]) put} method fails.
 	 */
 	@Override
 	public void send(NetworkMessage message) throws IOException {
@@ -106,10 +103,18 @@ public class PlainMessageHandler implements IMessageHandler {
 		flush();
 	}
 
-	private final CharsetDecoder decoder = Constants.ENCODING.newDecoder();
+	@Override
+	protected ByteBuffer getNetworkOutputBuffer() {
+		return appOut;
+	}
 
 	@Override
-	public List<NetworkMessage> readRaw() throws IOException, EOFException {
+	protected ByteBuffer getApplicationInputBuffer() {
+		return appIn;
+	}
+
+	@Override
+	public List<NetworkMessage> readRaw() throws IOException {
 		int bytesRead;
 		ReadableByteChannel ch = (ReadableByteChannel) key.channel();
 		bytesRead = ch.read(appIn);
@@ -118,45 +123,7 @@ public class PlainMessageHandler implements IMessageHandler {
 		if (bytesRead == 0)
 			return Collections.emptyList();
 
-		int finalPosition = appIn.position();
-		appIn.limit(finalPosition);
-		// search backwards until we find the first EOM
-		int lastEom;
-		for (lastEom = appIn.limit() - 1; lastEom >= 0; lastEom--) {
-			appIn.position(lastEom);
-			if (appIn.get() == NetworkMessage.EOM)
-				break;
-		}
-		// no full message received
-		// the position is now at 0
-		if (lastEom == -1) {
-			appIn.compact();
-			return Collections.emptyList();
-		}
-		// the position is one byte after the last EOM
-		// so we can flip, and compact in the end
-		appIn.flip();
-
-		// decode the input into network messages
-		CharBuffer decodedInput = CharBuffer.allocate(appIn.limit());
-		// there should not be any incomplete characters,
-		// after all, we cut off at the last EOM
-		decoder.decode(appIn, decodedInput, true);
-		decoder.flush(decodedInput);
-		// prepare appIn buffer for next read
-		appIn.limit(finalPosition);
-		appIn.compact();
-
-		decodedInput.flip();
-		List<NetworkMessage> result = new ArrayList<NetworkMessage>();
-
-		while (decodedInput.position() < decodedInput.limit()) {
-			// buildArgs stops when the limit is reached, or when it
-			// reaches EOM
-			result.add(NetworkMessage.buildArgs(decodedInput));
-		}
-		decoder.reset();
-		return result;
+		return super.readRaw();
 	}
 
 	@Override
@@ -164,45 +131,6 @@ public class PlainMessageHandler implements IMessageHandler {
 		key.channel().close();
 		key.cancel();
 	}
-
-	private void flush() throws IOException {
-		if (appOut.position() == 0) {
-			log.trace("Nothing to flush");
-			synchronized (key) {
-				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-			}
-			return;
-		}
-		SocketChannel ch = (SocketChannel) key.channel();
-		log.trace("Will attempt to write {} bytes to {}. Writability {}.",
-				appOut.position() - 1, ch.socket().getRemoteSocketAddress(),
-				key.isWritable());
-		if (!key.isWritable()) {
-			synchronized (key) {
-				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-			}
-			return;
-		}
-		appOut.flip();
-		ch.write(appOut);
-		appOut.compact();
-		if (appOut.position() > 0) {
-			// short write
-			log.trace("Short write! {} bytes left.", appOut.position());
-			synchronized (key) {
-				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-			}
-		} else {
-			log.trace("Write completed successfully.");
-			synchronized (key) {
-				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-			}
-			if (disposed) {
-				close();
-			}
-		}
-	}
-
 	@Override
 	public boolean needSend() {
 		return appOut.position() > 0;

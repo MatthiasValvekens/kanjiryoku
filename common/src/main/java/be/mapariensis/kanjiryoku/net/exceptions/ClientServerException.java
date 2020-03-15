@@ -48,7 +48,7 @@ public class ClientServerException extends Exception {
 
 	public static int parseErrorCode(String in) throws ParseException {
 		try {
-			return Integer.valueOf(in.substring(1));
+			return Integer.parseInt(in.substring(1));
 		} catch (NumberFormatException ex) {
 			throw new ParseException("Invalid error code", 1);
 		}

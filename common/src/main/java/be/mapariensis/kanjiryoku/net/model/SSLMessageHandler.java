@@ -6,12 +6,9 @@ import java.net.SocketException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.CharsetDecoder;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -27,23 +24,19 @@ import be.mapariensis.kanjiryoku.net.Constants;
 import be.mapariensis.kanjiryoku.net.commands.ClientCommandList;
 
 // The SSL support draws heavily upon Chapter 8 of "Fundamental Networking in Java"
-public class SSLMessageHandler implements IMessageHandler {
+public class SSLMessageHandler extends MessageHandler {
 	private static final Logger log = LoggerFactory
 			.getLogger(SSLMessageHandler.class);
 	private volatile boolean requestedTaskExecution = false;
 	private final Object APPOUT_LOCK = new Object();
-	private final SelectionKey key;
 	private final ByteBuffer netIn, appIn, appOut, netOut;
 	private final SSLEngine engine;
 	private final ExecutorService delegatedTaskPool;
 	private SSLEngineResult sslres = null;
-	private volatile boolean disposed = false;
 
 	public SSLMessageHandler(SelectionKey key, SSLEngine engine,
 			ExecutorService delegatedTaskPool, int plaintextBufsize) {
-		if (key == null)
-			throw new IllegalArgumentException();
-		this.key = key;
+		super(key);
 		int netbufsize = engine.getSession().getPacketBufferSize();
 		log.trace("Buffers initialised to: net: {}, app: {}", netbufsize,
 				plaintextBufsize);
@@ -59,6 +52,7 @@ public class SSLMessageHandler implements IMessageHandler {
 	 * Enqueue a message without flushing the message buffer
 	 * 
 	 * @param message
+	 *   Message to put in the queue.
 	 */
 	@Override
 	public void enqueue(NetworkMessage message) {
@@ -81,9 +75,11 @@ public class SSLMessageHandler implements IMessageHandler {
 	/**
 	 * Buffer a message and flush the buffer while holding the lock on this
 	 * handler's application output buffer.
-	 * 
+	 *
 	 * @param message
+	 *   Message to send.
 	 * @throws IOException
+	 *   Thrown if the underlying {@link java.nio.ByteBuffer#put(byte[]) put} method fails.
 	 */
 	@Override
 	public void send(NetworkMessage message) throws IOException {
@@ -122,16 +118,23 @@ public class SSLMessageHandler implements IMessageHandler {
 					key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 				}
 			}
-			return;
 		} catch (BufferOverflowException | BufferUnderflowException e) {
 			throw new IOException(e);
 		}
 	}
 
-	private final CharsetDecoder decoder = Constants.ENCODING.newDecoder();
+	@Override
+	protected ByteBuffer getNetworkOutputBuffer() {
+		return netOut;
+	}
 
 	@Override
-	public List<NetworkMessage> readRaw() throws IOException, EOFException {
+	protected ByteBuffer getApplicationInputBuffer() {
+		return appIn;
+	}
+
+	@Override
+	public List<NetworkMessage> readRaw() throws IOException {
 		if (engine.isInboundDone())
 			throw new EOFException();
 		// read encrypted data
@@ -139,48 +142,8 @@ public class SSLMessageHandler implements IMessageHandler {
 		// was found
 		if (!sslRead())
 			return Collections.emptyList();
-
-		// process decrypted data
-		// need to remember this for later
-		int finalPosition = appIn.position();
-		appIn.limit(finalPosition);
-		// search backwards until we find the first EOM
-		int lastEom;
-		for (lastEom = appIn.limit() - 1; lastEom >= 0; lastEom--) {
-			appIn.position(lastEom);
-			if (appIn.get() == NetworkMessage.EOM)
-				break;
-		}
-		// no full message received
-		// the position is now at 0
-		if (lastEom == -1) {
-			appIn.compact();
-			return Collections.emptyList();
-		}
-		// the position is one byte after the last EOM
-		// so we can flip, and compact in the end
-		appIn.flip();
-
-		// decode the input into network messages
-		CharBuffer decodedInput = CharBuffer.allocate(appIn.limit());
-		// there should not be any incomplete characters,
-		// after all, we cut off at the last EOM
-		decoder.decode(appIn, decodedInput, true);
-		decoder.flush(decodedInput);
-		// prepare netIn buffer for next read
-		appIn.limit(finalPosition);
-		appIn.compact();
-
-		decodedInput.flip();
-		List<NetworkMessage> result = new ArrayList<NetworkMessage>();
-
-		while (decodedInput.position() < decodedInput.limit()) {
-			// buildArgs stops when the limit is reached, or when it
-			// reaches EOM
-			result.add(NetworkMessage.buildArgs(decodedInput));
-		}
-		decoder.reset();
-		return result;
+		// appIn is now prepared for a read
+		return super.readRaw();
 	}
 
 	@Override
@@ -189,8 +152,8 @@ public class SSLMessageHandler implements IMessageHandler {
 			// negotiate end of SSL connection
 			if (!engine.isOutboundDone()) {
 				engine.closeOutbound();
-				while (handshake())
-					;
+				//noinspection StatementWithEmptyBody
+				while (handshake());
 			} else if (!engine.isInboundDone()) {
 				engine.closeInbound();
 				handshake();
@@ -226,50 +189,13 @@ public class SSLMessageHandler implements IMessageHandler {
 			break;
 		}
 
-		while (handshake())
-			;
+		//noinspection StatementWithEmptyBody
+		while (handshake());
 
 		// EOF conditions
-		if (bytesRead == -1)
-			engine.closeInbound();
-		if (engine.isInboundDone())
-			return false;
-		return true;
+		return !engine.isInboundDone();
 	}
 
-	private void flush() throws IOException {
-		if (netOut.position() == 0) {
-			log.trace("Nothing to flush");
-			return;
-		}
-		SocketChannel ch = (SocketChannel) key.channel();
-		log.trace("Will attempt to write {} bytes to {}. Writability {}.",
-				netOut.position() - 1, ch.socket().getRemoteSocketAddress(),
-				key.isWritable());
-		if (!key.isWritable()) {
-			synchronized (key) {
-				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-			}
-			return;
-		}
-		netOut.flip();
-		ch.write(netOut);
-		netOut.compact();
-		if (netOut.position() > 0) {
-			// short write
-			log.trace("Short write! {} bytes left.", netOut.position());
-			synchronized (key) {
-				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-			}
-		} else {
-			synchronized (key) {
-				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-			}
-			if (disposed) {
-				close();
-			}
-		}
-	}
 
 	private void sslWrite() throws IOException {
 		appOut.flip();
@@ -287,8 +213,8 @@ public class SSLMessageHandler implements IMessageHandler {
 			break;
 		}
 
-		while (handshake())
-			;
+		//noinspection StatementWithEmptyBody
+		while (handshake());
 		flush();
 	}
 

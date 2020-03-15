@@ -40,11 +40,8 @@ public class Word {
 		} else if (!furigana.equals(other.furigana))
 			return false;
 		if (main == null) {
-			if (other.main != null)
-				return false;
-		} else if (!main.equals(other.main))
-			return false;
-		return true;
+			return other.main == null;
+		} else return main.equals(other.main);
 	}
 
 	@Override

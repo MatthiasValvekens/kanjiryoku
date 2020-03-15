@@ -27,11 +27,7 @@ public class Dot {
 		if (getClass() != obj.getClass())
 			return false;
 		Dot other = (Dot) obj;
-		if (x != other.x)
-			return false;
-		if (y != other.y)
-			return false;
-		return true;
+		return x == other.x && y == other.y;
 	}
 
 	@Override

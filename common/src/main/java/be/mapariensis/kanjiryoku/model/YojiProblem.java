@@ -2,6 +2,7 @@ package be.mapariensis.kanjiryoku.model;
 
 import java.text.ParseException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.json.JSONException;
@@ -18,7 +19,7 @@ public class YojiProblem extends KakiProblem implements MultipleChoiceOptions {
 	private final List<List<String>> options;
 
 	public YojiProblem(Word yoji, List<List<String>> options) {
-		super(Arrays.asList(yoji), 0);
+		super(Collections.singletonList(yoji), 0);
 		this.options = options;
 		if (yoji.main.length() != 4)
 			throw new IllegalArgumentException(
