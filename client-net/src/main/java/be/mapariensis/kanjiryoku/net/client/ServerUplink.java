@@ -172,10 +172,9 @@ public class ServerUplink extends Thread implements Closeable {
 				final List<NetworkMessage> msgs;
 				try {
 					msgs = messageHandler.readRaw();
-				} catch (IOException ex) { // FIXME : figure out a way to deal
-											// with forcefully closed
-											// connections, and then downgrade
-											// this to EOFException
+				} catch (IOException ex) {
+					// FIXME : figure out a way to deal with forcefully closed connections,
+					//  and then downgrade this to EOFException
 					suppress(messageHandler);
 					try {
 						log.info("Peer {} shut down.",
@@ -190,10 +189,9 @@ public class ServerUplink extends Thread implements Closeable {
 					}
 				}
 				for (final NetworkMessage msg : msgs) {
+					// schedule command interpretation
 					if (!msg.isEmpty())
-						threadPool.execute(new CommandReceiver(msg)); // schedule
-																		// command
-																		// interpretation
+						threadPool.execute(new CommandReceiver(msg));
 				}
 			}
 

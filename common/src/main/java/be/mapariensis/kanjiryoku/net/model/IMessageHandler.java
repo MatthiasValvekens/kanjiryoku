@@ -18,7 +18,7 @@ public interface IMessageHandler extends Closeable {
 	 */
 	void send(NetworkMessage message) throws IOException;
 
-	void flushMessageQueue() throws IOException;
+	int flushMessageQueue() throws IOException;
 
 	List<NetworkMessage> readRaw() throws IOException;
 

@@ -33,79 +33,89 @@ public abstract class MessageHandler implements IMessageHandler {
         ByteBuffer appIn = getApplicationInputBuffer();
         // process unencrypted data
         // need to remember this for later
-        int finalPosition = appIn.position();
+        final int finalPosition = appIn.position();
         appIn.limit(finalPosition);
         // search backwards until we find the first EOM
         int lastEom;
-        for (lastEom = appIn.limit() - 1; lastEom >= 0; lastEom--) {
+        for (lastEom = finalPosition - 1; lastEom >= 0; lastEom--) {
             appIn.position(lastEom);
             if (appIn.get() == NetworkMessage.EOM)
                 break;
         }
-        // no full message received
-        // the position is now at 0
-        if (lastEom == -1) {
-            appIn.compact();
-            return Collections.emptyList();
-        }
-        // the position is one byte after the last EOM
-        // so we can flip, and compact in the end
-        appIn.flip();
+        // short read?
+        // only re-register OP_READ when we're done with the data from the buffer
+        final int bytesLeft = finalPosition - 1 - lastEom;
 
-        // decode the input into network messages
-        CharBuffer decodedInput = CharBuffer.allocate(appIn.limit());
-        // there should not be any incomplete characters,
-        // after all, we cut off at the last EOM
-        decoder.decode(appIn, decodedInput, true);
-        decoder.flush(decodedInput);
-        // prepare netIn buffer for next read
-        appIn.limit(finalPosition);
+        final List<NetworkMessage> result;
+        // This means that at least one full message was received
+        //  (which could in principle have a length of 1, only the EOM)
+        if(lastEom >= 0) {
+            // the position is one byte after the last EOM
+            // so we can flip, and compact in the end
+            appIn.flip();
+
+            // decode the input into network messages
+            CharBuffer decodedInput = CharBuffer.allocate(appIn.limit());
+            // there should not be any incomplete characters,
+            // after all, we cut off at the last EOM
+            decoder.decode(appIn, decodedInput, true);
+            decoder.flush(decodedInput);
+            // prepare appIn buffer for next read
+            appIn.limit(finalPosition);
+
+            decodedInput.flip();
+            result = new ArrayList<>();
+
+            while (decodedInput.position() < decodedInput.limit()) {
+                // buildArgs stops when the limit is reached, or when it
+                // reaches EOM
+                result.add(NetworkMessage.buildArgs(decodedInput));
+            }
+            decoder.reset();
+        } else {
+            // no full message received
+            // the position is now at 0, so the compact() call will
+            // still do the right thing
+            result = Collections.emptyList();
+        }
+
+        // compact buffer and re-register OP_READ as necessary
         appIn.compact();
-
-        decodedInput.flip();
-        List<NetworkMessage> result = new ArrayList<>();
-
-        while (decodedInput.position() < decodedInput.limit()) {
-            // buildArgs stops when the limit is reached, or when it
-            // reaches EOM
-            result.add(NetworkMessage.buildArgs(decodedInput));
+        if (bytesLeft > 0) {
+            log.trace("Short read! {} bytes left.", bytesLeft);
+            key.interestOps(key.interestOps() | SelectionKey.OP_READ);
         }
-        decoder.reset();
+        log.trace("Read message(s) {}", result);
         return result;
     }
 
-    protected final void flush() throws IOException {
+    protected final int flush() throws IOException {
         ByteBuffer netOut = getNetworkOutputBuffer();
         if (netOut.position() == 0) {
             log.trace("Nothing to flush");
-            return;
+            return 0;
         }
         SocketChannel ch = (SocketChannel) key.channel();
         log.trace("Will attempt to write {} bytes to {}. Writability {}.",
                 netOut.position() - 1, ch.socket().getRemoteSocketAddress(),
                 key.isWritable());
         if (!key.isWritable()) {
-            synchronized (key) {
-                key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-            }
-            return;
+            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+            return 0;
         }
         netOut.flip();
-        ch.write(netOut);
+        int bytesWritten = ch.write(netOut);
         netOut.compact();
         if (netOut.position() > 0) {
             // short write
             log.trace("Short write! {} bytes left.", netOut.position());
-            synchronized (key) {
-                key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-            }
+            key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
         } else {
-            synchronized (key) {
-                key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-            }
+            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
             if (disposed) {
                 close();
             }
         }
+        return bytesWritten;
     }
 }

@@ -99,8 +99,8 @@ public class PlainMessageHandler extends MessageHandler {
 	}
 
 	@Override
-	public void flushMessageQueue() throws IOException {
-		flush();
+	public int flushMessageQueue() throws IOException {
+		return flush();
 	}
 
 	@Override

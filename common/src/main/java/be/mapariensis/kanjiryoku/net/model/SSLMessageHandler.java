@@ -6,7 +6,6 @@ import java.net.SocketException;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Collections;
@@ -32,7 +31,8 @@ public class SSLMessageHandler extends MessageHandler {
 	private final ByteBuffer netIn, appIn, appOut, netOut;
 	private final SSLEngine engine;
 	private final ExecutorService delegatedTaskPool;
-	private SSLEngineResult sslres = null;
+	// This needs to be shared to simplify the handshake() state operations
+	private SSLEngineResult sslRes = null;
 
 	public SSLMessageHandler(SelectionKey key, SSLEngine engine,
 			ExecutorService delegatedTaskPool, int plaintextBufsize) {
@@ -86,6 +86,7 @@ public class SSLMessageHandler extends MessageHandler {
 	public void send(NetworkMessage message) throws IOException {
 		if (message == null || message.isEmpty())
 			return;
+		log.trace("About to send {}", message);
 		send(message.toString().getBytes(Constants.ENCODING));
 	}
 
@@ -106,19 +107,18 @@ public class SSLMessageHandler extends MessageHandler {
 	}
 
 	@Override
-	public void flushMessageQueue() throws IOException {
+	public int flushMessageQueue() throws IOException {
 		try {
 			flush();
-			sslWrite();
+			int bytesWritten = sslWrite();
 			log.trace("After write: ops: {} netOut pos: {} appOut pos: {}",
 					key.interestOps(), netOut.position(), appOut.position());
 			// unset OP_WRITE in case the handshake() method
 			// registered for it after noticing no handshaking was being done.
 			if (!needSend()) {
-				synchronized (key) {
-					key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-				}
+				key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
 			}
+			return bytesWritten;
 		} catch (BufferOverflowException | BufferUnderflowException e) {
 			throw new IOException(e);
 		}
@@ -141,8 +141,12 @@ public class SSLMessageHandler extends MessageHandler {
 		// read encrypted data
 		// and return the empty list if nothing particularly interesting
 		// was found
-		if (!sslRead())
+        int bytesRead = sslRead();
+        if (bytesRead == -1)
+			throw new EOFException();
+		if (bytesRead == 0) {
 			return Collections.emptyList();
+		}
 		// appIn is now prepared for a read
 		return super.readRaw();
 	}
@@ -165,45 +169,65 @@ public class SSLMessageHandler extends MessageHandler {
 		}
 	}
 
-	private boolean sslRead() throws IOException {
+	private int sslRead() throws IOException {
+		if(engine.isInboundDone())
+			return -1;
+
+		int initialPosition = appIn.position();
 		int bytesRead;
-		ReadableByteChannel ch = (ReadableByteChannel) key.channel();
+		SocketChannel ch = (SocketChannel) key.channel();
 		bytesRead = ch.read(netIn);
-		if (bytesRead == -1)
-			throw new EOFException();
-		if (bytesRead == 0)
-			return false;
 
 		// decrypt data
 		netIn.flip();
-		sslres = engine.unwrap(netIn, appIn);
-		netIn.compact(); // safeguard against partial reads
-		switch (sslres.getStatus()) {
-		case BUFFER_UNDERFLOW:
-			return false;
-		case BUFFER_OVERFLOW:
-			throw new BufferOverflowException();
-		case CLOSED:
-			((SocketChannel) key.channel()).socket().shutdownInput();
-			break;
-		case OK:
-			break;
+		boolean keepReading = true;
+		while (keepReading) {
+			keepReading = false;
+			sslRes = engine.unwrap(netIn, appIn);
+			switch (sslRes.getStatus()) {
+				case BUFFER_UNDERFLOW:
+					return 0;
+				case BUFFER_OVERFLOW:
+				    // partial read safeguard?
+					// TODO is this necessary?
+					netIn.compact();
+					throw new BufferOverflowException();
+				case CLOSED:
+					ch.socket().shutdownInput();
+					break;
+				case OK:
+				    keepReading = netIn.hasRemaining();
+					break;
+			}
+			// unwrap only decrypts one packet at a time, so
+			// we need to keep on keeping on until the buffer
+			// is empty (and we're not eating the engine's data / partial packets)
+            keepReading &= sslRes.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING;
 		}
+		netIn.compact();
 
+		log.trace("Post-read handshake handling...");
 		//noinspection StatementWithEmptyBody
 		while (handshake());
 
 		// EOF conditions
-		return !engine.isInboundDone();
+		if (bytesRead == -1) {
+		    engine.closeInbound();
+		}
+		if(engine.isInboundDone())
+			return -1;
+		// return bytes of application data read
+		return appIn.position() - initialPosition;
 	}
 
 
-	private void sslWrite() throws IOException {
+	private int sslWrite() throws IOException {
+		int initialPosition = appOut.position();
 		appOut.flip();
-		sslres = engine.wrap(appOut, netOut);
+		sslRes = engine.wrap(appOut, netOut);
 		appOut.compact();
 
-		switch (sslres.getStatus()) {
+		switch (sslRes.getStatus()) {
 		case BUFFER_UNDERFLOW:
 			throw new BufferUnderflowException();
 		case BUFFER_OVERFLOW:
@@ -214,9 +238,11 @@ public class SSLMessageHandler extends MessageHandler {
 			break;
 		}
 
+		log.trace("Post-write handshake handling...");
 		//noinspection StatementWithEmptyBody
 		while (handshake());
 		flush();
+		return appOut.position() - initialPosition;
 	}
 
 	private boolean handshake() throws IOException {
@@ -224,9 +250,18 @@ public class SSLMessageHandler extends MessageHandler {
 		log.trace("HS: {}", engine.getHandshakeStatus());
 		switch (engine.getHandshakeStatus()) {
 		case NEED_TASK:
+		    // Using AtomicBoolean here is not necessary, since the message handlers
+			//  are supposed to be called by the server/client monitor thread only.
+            // If requestedTaskExecution is false going into this branch, the comparison
+			//  will therefore not be executed by any other thread.
 			if (!requestedTaskExecution) {
-				delegatedTaskPool.execute(new DelegatedTaskWorker());
 				requestedTaskExecution = true;
+				//int ops = key.interestOps();
+				// prevent reads and writes while we wait for
+				//  the delegated task to complete.
+				// The worker will restore the ops when it's done
+				key.interestOps(0);
+				delegatedTaskPool.execute(new DelegatedTaskWorker(SelectionKey.OP_READ | SelectionKey.OP_WRITE));
 			}
 			return false;
 		case NEED_UNWRAP:
@@ -235,7 +270,7 @@ public class SSLMessageHandler extends MessageHandler {
 			}
 			netIn.flip();
 			log.trace("Unwrapping...");
-			sslres = engine.unwrap(netIn, appIn);
+			sslRes = engine.unwrap(netIn, appIn);
 			log.trace("Unwrapping done.");
 			netIn.compact();
 			break;
@@ -243,10 +278,10 @@ public class SSLMessageHandler extends MessageHandler {
 			appOut.flip();
 			flush();
 			log.trace("Wrapping...");
-			sslres = engine.wrap(appOut, netOut);
+			sslRes = engine.wrap(appOut, netOut);
 			log.trace("Wrapping done.");
 			appOut.compact();
-			if (sslres.getStatus() == SSLEngineResult.Status.CLOSED) {
+			if (sslRes.getStatus() == SSLEngineResult.Status.CLOSED) {
 				try {
 					flush();
 				} catch (SocketException ex) {
@@ -271,16 +306,13 @@ public class SSLMessageHandler extends MessageHandler {
 
 			// Should the client not have anything to write, the next call to
 			// flushMessageQueue() will set this straight
-			synchronized (key) {
-				key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-			}
+			key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
 			return false;
 		}
 
-		log.trace("SR: {}", sslres.getStatus());
-		switch (sslres.getStatus()) {
+		log.trace("SR: {}", sslRes.getStatus());
+		switch (sslRes.getStatus()) {
 		case BUFFER_UNDERFLOW:
-			key.interestOps(SelectionKey.OP_READ);
 		case BUFFER_OVERFLOW:
 			return false;
 		case CLOSED:
@@ -300,12 +332,15 @@ public class SSLMessageHandler extends MessageHandler {
 	}
 
 	private class DelegatedTaskWorker implements Runnable {
+		final int originalOps;
+
+		DelegatedTaskWorker(int originalOps) {
+			this.originalOps = originalOps;
+		}
+
 		@Override
 		public void run() {
 			log.trace("Running delegated task...");
-			// set interestOps to clear read and write
-			key.interestOps(0);
-
 			Runnable task;
 			while ((task = engine.getDelegatedTask()) != null) {
 				task.run();
@@ -314,9 +349,7 @@ public class SSLMessageHandler extends MessageHandler {
 			// restore ops, the SSL engine might want to read/write something
 			// after this.
 			// Calling the handshake method from this thread would be dangerous.
-			synchronized (key) {
-				key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-			}
+			key.interestOps(originalOps);
 			requestedTaskExecution = false;
 			log.trace("Task finished");
 		}
