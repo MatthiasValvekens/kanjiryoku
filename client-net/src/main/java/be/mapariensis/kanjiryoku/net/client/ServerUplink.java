@@ -299,8 +299,10 @@ public class ServerUplink extends Thread implements Closeable {
 		enqueueMessage(msg, wrh);
 		NetworkMessage result;
 		long startTime = System.currentTimeMillis();
-		while ((result = wrh.getMessage()) == null
-				&& (timeout <= 0 || (System.currentTimeMillis() - startTime) <= timeout)) {
+		while ((result = wrh.getMessage()) == null) {
+		    if(timeout > 0 && (System.currentTimeMillis() - startTime) > timeout) {
+				throw new ServerSubmissionException("Server response timed out");
+			}
 			try {
 				Thread.sleep(BLOCK_SLEEP_DELAY);
 			} catch (InterruptedException ignored) {
