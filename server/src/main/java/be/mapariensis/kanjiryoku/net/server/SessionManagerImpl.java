@@ -96,8 +96,13 @@ public class SessionManagerImpl implements SessionManager {
 			if (sess == null)
 				return null;
 			if (sess.getGame().running()) {
-				destroySession(sess); // FIXME : Add support for leaving/joining
-										// running games
+				// FIXME: if a user destroys the session by leaving
+				//  during a running game, an AsynchronousCloseException reaches the logger
+				//  because said user is no longer connected when the session close message
+				//  is broadcasted. We should be able to avoid that
+				// FIXME : Add support for leaving/joining running games
+
+				destroySession(sess);
 				return null;
 			}
 			User ret = sess.removeMember(u);
