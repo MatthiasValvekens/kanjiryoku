@@ -15,30 +15,30 @@ import be.mapariensis.kanjiryoku.problemsets.ProblemSetManager;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public enum Game {
-	TAKINGTURNS {
-		@Override
-		public GameServerInterface getServer(IProperties config,
-				KanjiGuesser guesser, ProblemSetManager psets)
-				throws BadConfigurationException {
-			int seed = (int) (System.currentTimeMillis() % 10000);
-			log.info("Starting game with seed {}", seed);
-			@SuppressWarnings("unchecked")
-			List<String> names = config.getRequired(CATEGORY_LIST, List.class);
-			boolean batonPass = config.getSafely(ENABLE_BATON_PASS,
-					Boolean.class, ENABLE_BATON_PASS_DEFAULT);
-			return new TakingTurnsServer(psets.getProblemSets(seed, names),
-					guesser, batonPass);
-		}
+    TAKINGTURNS {
+        @Override
+        public GameServerInterface getServer(IProperties config,
+                KanjiGuesser guesser, ProblemSetManager psets)
+                throws BadConfigurationException {
+            int seed = (int) (System.currentTimeMillis() % 10000);
+            log.info("Starting game with seed {}", seed);
+            @SuppressWarnings("unchecked")
+            List<String> names = config.getRequired(CATEGORY_LIST, List.class);
+            boolean batonPass = config.getSafely(ENABLE_BATON_PASS,
+                    Boolean.class, ENABLE_BATON_PASS_DEFAULT);
+            return new TakingTurnsServer(psets.getProblemSets(seed, names),
+                    guesser, batonPass);
+        }
 
-		@Override
-		public String toString() {
-			return "Turn-based Guessing";
-		}
-	};
-	private static final Logger log = LoggerFactory.getLogger(Game.class);
+        @Override
+        public String toString() {
+            return "Turn-based Guessing";
+        }
+    };
+    private static final Logger log = LoggerFactory.getLogger(Game.class);
 
-	public abstract GameServerInterface getServer(IProperties config,
-			KanjiGuesser guesser, ProblemSetManager psets)
-			throws UnsupportedGameException, ServerBackendException,
-			BadConfigurationException;
+    public abstract GameServerInterface getServer(IProperties config,
+            KanjiGuesser guesser, ProblemSetManager psets)
+            throws UnsupportedGameException, ServerBackendException,
+            BadConfigurationException;
 }

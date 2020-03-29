@@ -7,18 +7,18 @@ import be.mapariensis.kanjiryoku.model.Word;
 
 public class KakiRenderer extends YomiKakiRenderer {
 
-	@Override
-	protected MistakeMarker getMistakeMarker() {
-		return MistakeMarker.MAIN;
-	}
+    @Override
+    protected MistakeMarker getMistakeMarker() {
+        return MistakeMarker.MAIN;
+    }
 
-	@Override
-	protected String getBlankRuby(String sequenced, Word w) {
-		return w.furigana;
-	}
+    @Override
+    protected String getBlankRuby(String sequenced, Word w) {
+        return w.furigana;
+    }
 
-	@Override
-	protected String getBlankMain(String sequenced, Word w) {
-		return sequenced;
-	}
+    @Override
+    protected String getBlankMain(String sequenced, Word w) {
+        return sequenced;
+    }
 }

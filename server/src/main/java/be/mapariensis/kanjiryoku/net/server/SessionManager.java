@@ -17,41 +17,41 @@ import be.mapariensis.kanjiryoku.net.model.User;
  */
 public interface SessionManager {
 
-	void destroySession(Session sess);
+    void destroySession(Session sess);
 
-	/**
-	 * Remove a user from its session. If the session master was removed and
-	 * there are other users left in the pool, assign a new master.
-	 * 
-	 * @param u
-	 *            User to be removed.
-	 * @return The new session master, or null if the last user was removed.
-	 * @implSpec When all users are removed from a session, the session manager
-	 *       should destroy the session.
-	 * @throws SessionException
-	 *             The user to be removed is not a member.
-	 */
-	User removeUser(User u) throws SessionException;
+    /**
+     * Remove a user from its session. If the session master was removed and
+     * there are other users left in the pool, assign a new master.
+     * 
+     * @param u
+     *            User to be removed.
+     * @return The new session master, or null if the last user was removed.
+     * @implSpec When all users are removed from a session, the session manager
+     *       should destroy the session.
+     * @throws SessionException
+     *             The user to be removed is not a member.
+     */
+    User removeUser(User u) throws SessionException;
 
-	Session getSession(int id);
+    Session getSession(int id);
 
-	/**
-	 * Register a session with the given session leader.
-	 * 
-	 * @param master
-	 *        The session master
-	 * @param game
-	 * 		  The game to be played
-	 * @return A Session object
-	 * @throws SessionException
-	 *             When a selected user is already in a session, or if an ID
-	 *             could not be obtained.
-	 * @throws ServerException
-	 * 	Error in server execution flow.
-	 * @throws BadConfigurationException
+    /**
+     * Register a session with the given session leader.
+     * 
+     * @param master
+     *        The session master
+     * @param game
+     * 		  The game to be played
+     * @return A Session object
+     * @throws SessionException
+     *             When a selected user is already in a session, or if an ID
+     *             could not be obtained.
+     * @throws ServerException
+     * 	Error in server execution flow.
+     * @throws BadConfigurationException
      * 	Problem reading game settings from configuration.
-	 */
+     */
 
-	Session startSession(User master, Game game) throws ServerException,
-			BadConfigurationException;
+    Session startSession(User master, Game game) throws ServerException,
+            BadConfigurationException;
 }

@@ -7,9 +7,9 @@ import be.mapariensis.kanjiryoku.problemsets.ProblemSetManager;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public interface ServerConfig extends IProperties {
-	ProblemSetManager getProblemSetManager();
+    ProblemSetManager getProblemSetManager();
 
-	KanjiGuesserFactory getKanjiGuesserFactory();
+    KanjiGuesserFactory getKanjiGuesserFactory();
 
-	DataSource getDbConnection();
+    DataSource getDbConnection();
 }

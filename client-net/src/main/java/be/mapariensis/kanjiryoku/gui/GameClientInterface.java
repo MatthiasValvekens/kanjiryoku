@@ -4,15 +4,15 @@ import be.mapariensis.kanjiryoku.model.Problem;
 import be.mapariensis.kanjiryoku.net.input.InputHandler;
 
 public interface GameClientInterface {
-	String getUsername();
+    String getUsername();
 
-	void setLock(boolean locked);
+    void setLock(boolean locked);
 
-	void deliverAnswer(boolean correct, char displayChar);
+    void deliverAnswer(boolean correct, char displayChar);
 
-	void setProblem(Problem p);
+    void setProblem(Problem p);
 
-	Problem getProblem();
+    Problem getProblem();
 
-	InputHandler getInputHandler();
+    InputHandler getInputHandler();
 }

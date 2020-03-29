@@ -26,93 +26,93 @@ import be.mapariensis.kanjiryoku.providers.ProblemParserFactory;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class ProblemSetManagerImpl implements ProblemSetManager {
-	private static final Logger log = LoggerFactory
-			.getLogger(ProblemSetManagerImpl.class);
-	private final int problemsPerCategory;
-	private final boolean resetDifficulty;
-	private final String fileNameFormat;
-	private final String digitFormat;
-	private final int minDiff;
-	private final int maxDiff;
-	private final String enc;
+    private static final Logger log = LoggerFactory
+            .getLogger(ProblemSetManagerImpl.class);
+    private final int problemsPerCategory;
+    private final boolean resetDifficulty;
+    private final String fileNameFormat;
+    private final String digitFormat;
+    private final int minDiff;
+    private final int maxDiff;
+    private final String enc;
 
-	public ProblemSetManagerImpl(String fileNameFormat, String digitFormat,
-			int problemsPerCategory, boolean resetDifficulty, int minDiff,
-			int maxDiff, String enc) {
-		this.problemsPerCategory = problemsPerCategory;
-		this.resetDifficulty = resetDifficulty;
-		this.minDiff = minDiff;
-		this.maxDiff = maxDiff;
-		this.fileNameFormat = fileNameFormat;
-		this.digitFormat = digitFormat;
-		this.enc = enc;
-	}
+    public ProblemSetManagerImpl(String fileNameFormat, String digitFormat,
+            int problemsPerCategory, boolean resetDifficulty, int minDiff,
+            int maxDiff, String enc) {
+        this.problemsPerCategory = problemsPerCategory;
+        this.resetDifficulty = resetDifficulty;
+        this.minDiff = minDiff;
+        this.maxDiff = maxDiff;
+        this.fileNameFormat = fileNameFormat;
+        this.digitFormat = digitFormat;
+        this.enc = enc;
+    }
 
-	private final Map<String, RatedProblemList> psets = new HashMap<>();
-	private final Object LOCK = new Object();
+    private final Map<String, RatedProblemList> psets = new HashMap<>();
+    private final Object LOCK = new Object();
 
-	@Override
-	public void loadNewConfig(String name, IProperties config)
-			throws BadConfigurationException {
-		synchronized (LOCK) {
+    @Override
+    public void loadNewConfig(String name, IProperties config)
+            throws BadConfigurationException {
+        synchronized (LOCK) {
 
-			// allow for overrides for most configuration
-			String digitFormat = config.getTyped(FILE_NAME_DIFFICULTY_FORMAT,
-					String.class, this.digitFormat);
-			int minDiff = config.getTyped(MIN_DIFFICULTY, Integer.class,
-					this.minDiff);
-			int maxDiff = config.getTyped(MAX_DIFFICULTY, Integer.class,
-					this.maxDiff);
-			String enc = config.getTyped(FILE_ENCODING, String.class, this.enc);
-			String fileNameFormat = config.getTyped(FILE_NAME_FORMAT,
-					String.class, this.fileNameFormat);
+            // allow for overrides for most configuration
+            String digitFormat = config.getTyped(FILE_NAME_DIFFICULTY_FORMAT,
+                    String.class, this.digitFormat);
+            int minDiff = config.getTyped(MIN_DIFFICULTY, Integer.class,
+                    this.minDiff);
+            int maxDiff = config.getTyped(MAX_DIFFICULTY, Integer.class,
+                    this.maxDiff);
+            String enc = config.getTyped(FILE_ENCODING, String.class, this.enc);
+            String fileNameFormat = config.getTyped(FILE_NAME_FORMAT,
+                    String.class, this.fileNameFormat);
 
-			// load problem parser factory
-			String parserFactory = config.getRequired(PARSER_FACTORY_CLASS,
-					String.class);
-			ProblemParserFactory ppf;
-			try {
-				ppf = (ProblemParserFactory) ConnectionMonitor.class
-						.getClassLoader().loadClass(parserFactory)
-						.getDeclaredConstructor()
-						.newInstance();
-			} catch (Exception e) {
-				log.error("Failed to instantiate problem parser factory {}",
-						parserFactory);
-				throw new BadConfigurationException(e);
-			}
+            // load problem parser factory
+            String parserFactory = config.getRequired(PARSER_FACTORY_CLASS,
+                    String.class);
+            ProblemParserFactory ppf;
+            try {
+                ppf = (ProblemParserFactory) ConnectionMonitor.class
+                        .getClassLoader().loadClass(parserFactory)
+                        .getDeclaredConstructor()
+                        .newInstance();
+            } catch (Exception e) {
+                log.error("Failed to instantiate problem parser factory {}",
+                        parserFactory);
+                throw new BadConfigurationException(e);
+            }
 
-			// This parameter isn't required, but some parser factories may fail
-			// when not supplied with parameters
-			IProperties ppfConfig = config.getTyped(PARSER_FACTORY_SETTINGS,
-					IProperties.class);
-			RatedProblemList problems;
-			try {
-				problems = readRatedProblems(ppf.getParser(ppfConfig),
-						fileNameFormat, name, digitFormat, minDiff, maxDiff,
-						Charset.forName(enc));
-			} catch (ParseException e) {
-				throw new BadConfigurationException(e);
-			}
-			psets.put(name, problems);
-		}
-	}
+            // This parameter isn't required, but some parser factories may fail
+            // when not supplied with parameters
+            IProperties ppfConfig = config.getTyped(PARSER_FACTORY_SETTINGS,
+                    IProperties.class);
+            RatedProblemList problems;
+            try {
+                problems = readRatedProblems(ppf.getParser(ppfConfig),
+                        fileNameFormat, name, digitFormat, minDiff, maxDiff,
+                        Charset.forName(enc));
+            } catch (ParseException e) {
+                throw new BadConfigurationException(e);
+            }
+            psets.put(name, problems);
+        }
+    }
 
-	@Override
-	public ProblemOrganizer getProblemSets(int seed, List<String> names)
-			throws BadConfigurationException {
-		// seed and build organizer (allows for resource sharing)
-		Map<String, RatedProblemList> sets = new HashMap<>(
-				names.size());
-		for (String name : names) {
-			RatedProblemList rpl = psets.get(name);
-			if (rpl == null)
-				throw new BadConfigurationException(
-						String.format("Problem set %s does not exist.", name));
-			sets.put(name, rpl);
-		}
-		return new CategoryOrganizer(sets, problemsPerCategory,
-				new Random(seed), resetDifficulty, minDiff, maxDiff);
-	}
+    @Override
+    public ProblemOrganizer getProblemSets(int seed, List<String> names)
+            throws BadConfigurationException {
+        // seed and build organizer (allows for resource sharing)
+        Map<String, RatedProblemList> sets = new HashMap<>(
+                names.size());
+        for (String name : names) {
+            RatedProblemList rpl = psets.get(name);
+            if (rpl == null)
+                throw new BadConfigurationException(
+                        String.format("Problem set %s does not exist.", name));
+            sets.put(name, rpl);
+        }
+        return new CategoryOrganizer(sets, problemsPerCategory,
+                new Random(seed), resetDifficulty, minDiff, maxDiff);
+    }
 
 }

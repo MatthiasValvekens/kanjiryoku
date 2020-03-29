@@ -9,40 +9,40 @@ import be.mapariensis.kanjiryoku.cr.KanjiGuesserFactory;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public class KanjiGuesserFactoryWrapper implements
-		PooledObjectFactory<KanjiGuesser> {
-	private final KanjiGuesserFactory backend;
-	private final IProperties backendConfig;
+        PooledObjectFactory<KanjiGuesser> {
+    private final KanjiGuesserFactory backend;
+    private final IProperties backendConfig;
 
-	public KanjiGuesserFactoryWrapper(KanjiGuesserFactory backend,
-			IProperties backendConfig) {
-		this.backend = backend;
-		this.backendConfig = backendConfig;
-	}
+    public KanjiGuesserFactoryWrapper(KanjiGuesserFactory backend,
+            IProperties backendConfig) {
+        this.backend = backend;
+        this.backendConfig = backendConfig;
+    }
 
-	@Override
-	public void activateObject(PooledObject<KanjiGuesser> arg0) {
+    @Override
+    public void activateObject(PooledObject<KanjiGuesser> arg0) {
 
-	}
+    }
 
-	@Override
-	public void destroyObject(PooledObject<KanjiGuesser> arg0) throws Exception {
-		arg0.getObject().close();
-	}
+    @Override
+    public void destroyObject(PooledObject<KanjiGuesser> arg0) throws Exception {
+        arg0.getObject().close();
+    }
 
-	@Override
-	public PooledObject<KanjiGuesser> makeObject() throws Exception {
-		return new DefaultPooledObject<>(
-				backend.getGuesser(backendConfig));
-	}
+    @Override
+    public PooledObject<KanjiGuesser> makeObject() throws Exception {
+        return new DefaultPooledObject<>(
+                backend.getGuesser(backendConfig));
+    }
 
-	@Override
-	public void passivateObject(PooledObject<KanjiGuesser> arg0) {
+    @Override
+    public void passivateObject(PooledObject<KanjiGuesser> arg0) {
 
-	}
+    }
 
-	@Override
-	public boolean validateObject(PooledObject<KanjiGuesser> arg0) {
-		return arg0.getObject().isOpen();
-	}
+    @Override
+    public boolean validateObject(PooledObject<KanjiGuesser> arg0) {
+        return arg0.getObject().isOpen();
+    }
 
 }

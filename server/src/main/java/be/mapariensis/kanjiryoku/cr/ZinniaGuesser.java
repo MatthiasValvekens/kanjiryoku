@@ -20,105 +20,105 @@ import be.mapariensis.kanjiryoku.util.IProperties;
  * @version 1.0
  */
 public class ZinniaGuesser implements KanjiGuesser {
-	private static final Logger log = LoggerFactory
-			.getLogger(ZinniaGuesser.class);
-	private final Recognizer eng;
-	private final int tolerance;
+    private static final Logger log = LoggerFactory
+            .getLogger(ZinniaGuesser.class);
+    private final Recognizer eng;
+    private final int tolerance;
 
-	public static class Factory implements KanjiGuesserFactory {
-		static {
-			loadLibraries();
-		}
-		private Recognizer eng;
+    public static class Factory implements KanjiGuesserFactory {
+        static {
+            loadLibraries();
+        }
+        private Recognizer eng;
 
-		@Override
-		public KanjiGuesser getGuesser(IProperties config)
-				throws BadConfigurationException, IOException {
-			int tolerance = config.getTyped(ConfigFields.CR_TOLERANCE,
-					Integer.class, ConfigFields.CR_TOLERANCE_DEFAULT);
-			if (eng == null) {
-				String modelfile = config.getRequired(ConfigFields.MODEL_FILE,
-						String.class);
-				Recognizer r = new Recognizer();
-				// FIXME: This exception will not propagate to the user
-				// even though it is pretty much fatal
-				// look into the docs of apache's pooling code
-				if (!r.open(modelfile))
-					throw new IOException("Failed to read model file.");
-				eng = r; // avoid invalid state if open throws an exception
-			}
-			return new ZinniaGuesser(eng, tolerance);
-		}
+        @Override
+        public KanjiGuesser getGuesser(IProperties config)
+                throws BadConfigurationException, IOException {
+            int tolerance = config.getTyped(ConfigFields.CR_TOLERANCE,
+                    Integer.class, ConfigFields.CR_TOLERANCE_DEFAULT);
+            if (eng == null) {
+                String modelfile = config.getRequired(ConfigFields.MODEL_FILE,
+                        String.class);
+                Recognizer r = new Recognizer();
+                // FIXME: This exception will not propagate to the user
+                // even though it is pretty much fatal
+                // look into the docs of apache's pooling code
+                if (!r.open(modelfile))
+                    throw new IOException("Failed to read model file.");
+                eng = r; // avoid invalid state if open throws an exception
+            }
+            return new ZinniaGuesser(eng, tolerance);
+        }
 
-	}
+    }
 
-	private static void loadLibraries() {
-		try {
-			System.loadLibrary("jzinnia-0.06-JAVA");
-		} catch (UnsatisfiedLinkError err) {
-			log.error("Failed to load Zinnia library.", err);
-		}
-	}
+    private static void loadLibraries() {
+        try {
+            System.loadLibrary("jzinnia-0.06-JAVA");
+        } catch (UnsatisfiedLinkError err) {
+            log.error("Failed to load Zinnia library.", err);
+        }
+    }
 
-	private ZinniaGuesser(Recognizer eng, int tolerance) {
-		if (eng == null)
-			throw new IllegalArgumentException();
-		this.eng = eng;
-		this.tolerance = tolerance;
-	}
+    private ZinniaGuesser(Recognizer eng, int tolerance) {
+        if (eng == null)
+            throw new IllegalArgumentException();
+        this.eng = eng;
+        this.tolerance = tolerance;
+    }
 
-	public ZinniaGuesser(String modelfile, int tolerance) throws IOException {
-		this.eng = new Recognizer();
-		this.tolerance = tolerance;
-		if (!eng.open(modelfile))
-			throw new IOException("Failed to read model file.");
-	}
+    public ZinniaGuesser(String modelfile, int tolerance) throws IOException {
+        this.eng = new Recognizer();
+        this.tolerance = tolerance;
+        if (!eng.open(modelfile))
+            throw new IOException("Failed to read model file.");
+    }
 
-	@Override
-	public List<Character> guess(int width, int height, List<List<Dot>> strokes) {
-		if (strokes.isEmpty())
-			throw new IllegalArgumentException();
-		// Zinnia character model
-		org.chasen.crfpp.Character charmodel = new org.chasen.crfpp.Character();
-		charmodel.set_width(width);
-		charmodel.set_height(height);
-		// add strokes
-		final int strokeCount = strokes.size();
-		for (int i = 0; i < strokeCount; i++) {
-			List<Dot> stroke = strokes.get(i);
-			for (Dot d : stroke) {
-				charmodel.add(i, d.x, d.y);
-			}
-		}
-		Result res;
-		// synchronize on the recognizer, just to be safe TODO: determine
-		// whether this is necessary
-		synchronized (eng) {
-			res = eng.classify(charmodel, tolerance);
-		}
+    @Override
+    public List<Character> guess(int width, int height, List<List<Dot>> strokes) {
+        if (strokes.isEmpty())
+            throw new IllegalArgumentException();
+        // Zinnia character model
+        org.chasen.crfpp.Character charmodel = new org.chasen.crfpp.Character();
+        charmodel.set_width(width);
+        charmodel.set_height(height);
+        // add strokes
+        final int strokeCount = strokes.size();
+        for (int i = 0; i < strokeCount; i++) {
+            List<Dot> stroke = strokes.get(i);
+            for (Dot d : stroke) {
+                charmodel.add(i, d.x, d.y);
+            }
+        }
+        Result res;
+        // synchronize on the recognizer, just to be safe TODO: determine
+        // whether this is necessary
+        synchronized (eng) {
+            res = eng.classify(charmodel, tolerance);
+        }
 
-		// process Zinnia result
-		List<Character> chars = new ArrayList<>(tolerance);
-		for (int i = 0; i < tolerance; i++) {
-			String value = res.value(i);
-			float score = res.score(i);
-			log.trace("Candidate {} is {} with score {}", i + 1, value, score);
-			chars.add(value.charAt(0));
-		}
-		return chars;
-	}
+        // process Zinnia result
+        List<Character> chars = new ArrayList<>(tolerance);
+        for (int i = 0; i < tolerance; i++) {
+            String value = res.value(i);
+            float score = res.score(i);
+            log.trace("Candidate {} is {} with score {}", i + 1, value, score);
+            chars.add(value.charAt(0));
+        }
+        return chars;
+    }
 
-	@Override
-	public String toString() {
-		return "Zinnia engine";
-	}
+    @Override
+    public String toString() {
+        return "Zinnia engine";
+    }
 
-	@Override
-	public void close() {
-	}
+    @Override
+    public void close() {
+    }
 
-	@Override
-	public boolean isOpen() {
-		return true;
-	}
+    @Override
+    public boolean isOpen() {
+        return true;
+    }
 }

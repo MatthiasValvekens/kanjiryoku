@@ -5,11 +5,11 @@ import java.util.List;
 import be.mapariensis.kanjiryoku.cr.Dot;
 
 public interface DrawingPanelInterface {
-	void drawStroke(List<Dot> dots);
+    void drawStroke(List<Dot> dots);
 
-	void clearStrokes();
+    void clearStrokes();
 
-	int getWidth();
+    int getWidth();
 
-	int getHeight();
+    int getHeight();
 }

@@ -3,15 +3,15 @@ package be.mapariensis.kanjiryoku.gui;
 import be.mapariensis.kanjiryoku.net.client.ServerUplink;
 
 public interface UIBridge {
-	ServerUplink getUplink();
+    ServerUplink getUplink();
 
-	GameClientInterface getClient();
+    GameClientInterface getClient();
 
-	ChatInterface getChat();
+    ChatInterface getChat();
 
-	void setUsername(String username);
+    void setUsername(String username);
 
-	String promptPassword();
+    String promptPassword();
 
-	void close();
+    void close();
 }

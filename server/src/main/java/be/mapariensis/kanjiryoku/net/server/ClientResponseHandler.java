@@ -7,7 +7,7 @@ import be.mapariensis.kanjiryoku.net.model.User;
 
 public abstract class ClientResponseHandler extends ResponseHandler {
 
-	public abstract void handle(User user, NetworkMessage msg)
-			throws ServerException;
+    public abstract void handle(User user, NetworkMessage msg)
+            throws ServerException;
 
 }

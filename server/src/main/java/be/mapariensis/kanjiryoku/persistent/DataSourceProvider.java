@@ -6,6 +6,6 @@ import be.mapariensis.kanjiryoku.net.exceptions.BadConfigurationException;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public interface DataSourceProvider {
-	DataSource getDataSource(IProperties config)
-			throws BadConfigurationException;
+    DataSource getDataSource(IProperties config)
+            throws BadConfigurationException;
 }

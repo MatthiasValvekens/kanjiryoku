@@ -20,36 +20,36 @@ import be.mapariensis.kanjiryoku.net.server.ClientResponseHandler;
  * @version 1.0
  */
 public abstract class AnswerFeedbackHandler extends ClientResponseHandler {
-	private static final Logger log = LoggerFactory
-			.getLogger(AnswerFeedbackHandler.class);
-	private final Collection<User> allUsers;
-	private final Set<User> seen;
+    private static final Logger log = LoggerFactory
+            .getLogger(AnswerFeedbackHandler.class);
+    private final Collection<User> allUsers;
+    private final Set<User> seen;
 
-	public AnswerFeedbackHandler(Collection<User> allUsers) {
-		log.debug("Setting up answer feedback handler for {} with id {}",
-				allUsers, id);
-		this.allUsers = allUsers;
-		this.seen = new HashSet<>();
-	}
+    public AnswerFeedbackHandler(Collection<User> allUsers) {
+        log.debug("Setting up answer feedback handler for {} with id {}",
+                allUsers, id);
+        this.allUsers = allUsers;
+        this.seen = new HashSet<>();
+    }
 
-	// TODO make this more robust
-	@Override
-	public final synchronized void handle(User user, NetworkMessage msg)
-			throws ServerException {
-		if (isFinished())
-			return;
-		// record that the user answered
-		seen.add(user);
-		log.debug("User {} checked in.", user);
-		if (seen.containsAll(allUsers)) {
-			finished();
-			afterAnswer();
-		}
-	}
+    // TODO make this more robust
+    @Override
+    public final synchronized void handle(User user, NetworkMessage msg)
+            throws ServerException {
+        if (isFinished())
+            return;
+        // record that the user answered
+        seen.add(user);
+        log.debug("User {} checked in.", user);
+        if (seen.containsAll(allUsers)) {
+            finished();
+            afterAnswer();
+        }
+    }
 
-	/**
-	 * Excecuted when a RESPOND command is received from all users
-	 */
-	protected abstract void afterAnswer() throws ServerException;
+    /**
+     * Excecuted when a RESPOND command is received from all users
+     */
+    protected abstract void afterAnswer() throws ServerException;
 
 }

@@ -7,19 +7,19 @@ import be.mapariensis.kanjiryoku.net.exceptions.UserManagementException;
 import be.mapariensis.kanjiryoku.util.IProperties;
 
 public interface AuthBackendProvider {
-	interface Factory {
-		AuthBackendProvider setUp(ServerConfig serverConfig,
-				IProperties authConfig) throws BadConfigurationException;
-	}
+    interface Factory {
+        AuthBackendProvider setUp(ServerConfig serverConfig,
+                IProperties authConfig) throws BadConfigurationException;
+    }
 
-	AuthHandler createHandler(String username)
-			throws UserManagementException, ServerBackendException;
+    AuthHandler createHandler(String username)
+            throws UserManagementException, ServerBackendException;
 
-	void createUser(String username, String hash, String salt)
-			throws UserManagementException, ServerBackendException;
+    void createUser(String username, String hash, String salt)
+            throws UserManagementException, ServerBackendException;
 
-	void deleteUser(String username) throws ServerBackendException;
+    void deleteUser(String username) throws ServerBackendException;
 
-	void changePassword(String username, String newhash, String newsalt)
-			throws UserManagementException, ServerBackendException;
+    void changePassword(String username, String newhash, String newsalt)
+            throws UserManagementException, ServerBackendException;
 }

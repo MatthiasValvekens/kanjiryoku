@@ -14,58 +14,58 @@ import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 import be.mapariensis.kanjiryoku.util.ParsingUtils;
 
 public class HandwrittenInputHandlerImpl implements HandwrittenInputHandler {
-	private final DrawingPanelInterface dpi;
-	private final UIBridge bridge;
+    private final DrawingPanelInterface dpi;
+    private final UIBridge bridge;
 
-	public HandwrittenInputHandlerImpl(DrawingPanelInterface dpi,
-			UIBridge bridge) {
-		this.dpi = dpi;
-		this.bridge = bridge;
-	}
+    public HandwrittenInputHandlerImpl(DrawingPanelInterface dpi,
+            UIBridge bridge) {
+        this.dpi = dpi;
+        this.bridge = bridge;
+    }
 
-	@Override
-	public void receiveMessage(String user, NetworkMessage msg)
-			throws ServerCommunicationException {
-		List<Dot> stroke;
-		try {
-			stroke = ParsingUtils.parseDots(msg.get(0));
-		} catch (RuntimeException ex) {
-			throw new ServerCommunicationException(msg);
-		}
-		dpi.drawStroke(stroke);
-	}
+    @Override
+    public void receiveMessage(String user, NetworkMessage msg)
+            throws ServerCommunicationException {
+        List<Dot> stroke;
+        try {
+            stroke = ParsingUtils.parseDots(msg.get(0));
+        } catch (RuntimeException ex) {
+            throw new ServerCommunicationException(msg);
+        }
+        dpi.drawStroke(stroke);
+    }
 
-	@Override
-	public void sendStroke(List<Dot> dots) throws ServerSubmissionException {
-		bridge.getUplink().enqueueMessage(
-				new NetworkMessage(ServerCommandList.UPDATE, dots));
-	}
+    @Override
+    public void sendStroke(List<Dot> dots) throws ServerSubmissionException {
+        bridge.getUplink().enqueueMessage(
+                new NetworkMessage(ServerCommandList.UPDATE, dots));
+    }
 
-	@Override
-	public InputMethod inputType() {
-		return InputMethod.HANDWRITTEN;
-	}
+    @Override
+    public InputMethod inputType() {
+        return InputMethod.HANDWRITTEN;
+    }
 
-	@Override
-	public void broadcastClearInput() throws ServerSubmissionException {
-		bridge.getUplink().enqueueMessage(
-				new NetworkMessage(ServerCommandList.CLEAR));
-	}
+    @Override
+    public void broadcastClearInput() throws ServerSubmissionException {
+        bridge.getUplink().enqueueMessage(
+                new NetworkMessage(ServerCommandList.CLEAR));
+    }
 
-	@Override
-	public void clearLocalInput() {
-		dpi.clearStrokes();
-	}
+    @Override
+    public void clearLocalInput() {
+        dpi.clearStrokes();
+    }
 
-	@Override
-	public void submit() throws ServerSubmissionException {
-		bridge.getUplink().enqueueMessage(
-				new NetworkMessage(ServerCommandList.SUBMIT, dpi.getWidth(),
-						dpi.getHeight()));
-	}
+    @Override
+    public void submit() throws ServerSubmissionException {
+        bridge.getUplink().enqueueMessage(
+                new NetworkMessage(ServerCommandList.SUBMIT, dpi.getWidth(),
+                        dpi.getHeight()));
+    }
 
-	@Override
-	public void prepareProblemPosition(Problem p, int position) {
-		// nothing to do
-	}
+    @Override
+    public void prepareProblemPosition(Problem p, int position) {
+        // nothing to do
+    }
 }

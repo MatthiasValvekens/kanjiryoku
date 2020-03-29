@@ -8,34 +8,34 @@ import be.mapariensis.kanjiryoku.net.commands.ServerCommandList;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public class PrivateMessageDialog extends SingleInputDialog {
-	private final String username;
-	private final String me;
-	private final ChatInterface chat;
-	private String message;
-	private long time;
+    private final String username;
+    private final String me;
+    private final ChatInterface chat;
+    private String message;
+    private long time;
 
-	public PrivateMessageDialog(Frame parent, ServerUplink serv,
-			String username, ChatInterface chat) {
-		super(parent, "Send private message",
-				String.format("To %s:", username), serv, true);
-		this.username = username;
-		this.chat = chat;
-		this.me = serv.getUsername();
-	}
+    public PrivateMessageDialog(Frame parent, ServerUplink serv,
+            String username, ChatInterface chat) {
+        super(parent, "Send private message",
+                String.format("To %s:", username), serv, true);
+        this.username = username;
+        this.chat = chat;
+        this.me = serv.getUsername();
+    }
 
-	@Override
-	protected NetworkMessage constructMessage() {
-		message = getInput();
-		NetworkMessage res = new NetworkMessage(ServerCommandList.MESSAGE,
-				username, message);
-		time = res.timestamp;
-		return res;
-	}
+    @Override
+    protected NetworkMessage constructMessage() {
+        message = getInput();
+        NetworkMessage res = new NetworkMessage(ServerCommandList.MESSAGE,
+                username, message);
+        time = res.timestamp;
+        return res;
+    }
 
-	@Override
-	protected void tearDown() {
-		chat.displayUserMessage(time, me,
-				String.format("(To %s) %s", username, message), false);
-	}
+    @Override
+    protected void tearDown() {
+        chat.displayUserMessage(time, me,
+                String.format("(To %s) %s", username, message), false);
+    }
 
 }

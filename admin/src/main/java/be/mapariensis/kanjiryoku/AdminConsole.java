@@ -17,111 +17,111 @@ import be.mapariensis.kanjiryoku.net.exceptions.ClientServerException;
 import be.mapariensis.kanjiryoku.net.model.NetworkMessage;
 
 public class AdminConsole implements UIBridge, ChatInterface {
-	private static final Logger log = LoggerFactory
-			.getLogger(AdminConsole.class);
-	private final ServerUplink uplink;
+    private static final Logger log = LoggerFactory
+            .getLogger(AdminConsole.class);
+    private final ServerUplink uplink;
 
-	public AdminConsole(InetAddress addr, int port, String username)
-			throws IOException {
-		this.uplink = new ServerUplink(addr, port, username, this, null);
-	}
+    public AdminConsole(InetAddress addr, int port, String username)
+            throws IOException {
+        this.uplink = new ServerUplink(addr, port, username, this, null);
+    }
 
-	@Override
-	public ServerUplink getUplink() {
-		return uplink;
-	}
+    @Override
+    public ServerUplink getUplink() {
+        return uplink;
+    }
 
-	@Override
-	public GameClientInterface getClient() {
-		return null;
-	}
+    @Override
+    public GameClientInterface getClient() {
+        return null;
+    }
 
-	@Override
-	public ChatInterface getChat() {
-		return this;
-	}
+    @Override
+    public ChatInterface getChat() {
+        return this;
+    }
 
-	@Override
-	public void setUsername(String username) {
-		displaySystemMessage(String.format("Username set to %s", username));
-		// TODO placeholder
-	}
+    @Override
+    public void setUsername(String username) {
+        displaySystemMessage(String.format("Username set to %s", username));
+        // TODO placeholder
+    }
 
-	@Override
-	public void displayServerMessage(long timestamp, String message) {
-		printMessage(Constants.SERVER_HANDLE, message);
-	}
+    @Override
+    public void displayServerMessage(long timestamp, String message) {
+        printMessage(Constants.SERVER_HANDLE, message);
+    }
 
-	@Override
-	public void displayGameMessage(long timestamp, String message) {
-		displaySystemMessage("We shouldn't be receiving game messages. Logged");
-		log.warn("Game message received. This shouldn't happen. {}", message);
-	}
+    @Override
+    public void displayGameMessage(long timestamp, String message) {
+        displaySystemMessage("We shouldn't be receiving game messages. Logged");
+        log.warn("Game message received. This shouldn't happen. {}", message);
+    }
 
-	@Override
-	public void displayUserMessage(long timestamp, String from, String message,
-			boolean broadcast) {
-		printMessage(String.format("[%s]", from), message);
-	}
+    @Override
+    public void displayUserMessage(long timestamp, String from, String message,
+            boolean broadcast) {
+        printMessage(String.format("[%s]", from), message);
+    }
 
-	@Override
-	public void displayErrorMessage(int errorId, String message) {
-		printMessage(String.format("Error E%03d", errorId), message);
+    @Override
+    public void displayErrorMessage(int errorId, String message) {
+        printMessage(String.format("Error E%03d", errorId), message);
 
-	}
+    }
 
-	@Override
-	public void displayErrorMessage(ClientServerException ex) {
-		displayErrorMessage(ex.errorCode, ex.getMessage());
-	}
+    @Override
+    public void displayErrorMessage(ClientServerException ex) {
+        displayErrorMessage(ex.errorCode, ex.getMessage());
+    }
 
-	@Override
-	public void displaySystemMessage(String message) {
-		printMessage(Constants.SYSTEM_HANDLE, message);
-	}
+    @Override
+    public void displaySystemMessage(String message) {
+        printMessage(Constants.SYSTEM_HANDLE, message);
+    }
 
-	private void printMessage(String origin, String message) {
-		System.out.println(String.format("%s\t%s", origin, message));
-	}
+    private void printMessage(String origin, String message) {
+        System.out.println(String.format("%s\t%s", origin, message));
+    }
 
-	@Override
-	public void yesNoPrompt(String question, NetworkMessage ifYes,
-			NetworkMessage ifNo) throws ServerSubmissionException {
-		// TODO make this an actual prompt, unless in auto task mode
-		uplink.enqueueMessage(ifYes);
-	}
+    @Override
+    public void yesNoPrompt(String question, NetworkMessage ifYes,
+            NetworkMessage ifNo) throws ServerSubmissionException {
+        // TODO make this an actual prompt, unless in auto task mode
+        uplink.enqueueMessage(ifYes);
+    }
 
-	@Override
-	public ServerResponseHandler getDefaultResponseHandler() {
-		return new ServerResponseHandler() {
+    @Override
+    public ServerResponseHandler getDefaultResponseHandler() {
+        return new ServerResponseHandler() {
 
-			@Override
-			public void handle(NetworkMessage msg) {
-				printMessage("Response", msg.toString());
-			}
-		};
-	}
+            @Override
+            public void handle(NetworkMessage msg) {
+                printMessage("Response", msg.toString());
+            }
+        };
+    }
 
-	public void start() {
-		uplink.start();
-	}
+    public void start() {
+        uplink.start();
+    }
 
-	public static void main(String[] args) throws IOException {
-		// Placeholder
-		AdminConsole console = new AdminConsole(
-				InetAddress.getByName("127.0.0.1"), 9630, "admin"
-						+ (System.currentTimeMillis() % 10000));
-		console.start();
-	}
+    public static void main(String[] args) throws IOException {
+        // Placeholder
+        AdminConsole console = new AdminConsole(
+                InetAddress.getByName("127.0.0.1"), 9630, "admin"
+                        + (System.currentTimeMillis() % 10000));
+        console.start();
+    }
 
-	@Override
-	public void close() {
-		displaySystemMessage("Closing connection.");
-		uplink.close();
-	}
+    @Override
+    public void close() {
+        displaySystemMessage("Closing connection.");
+        uplink.close();
+    }
 
-	@Override
-	public String promptPassword() {
-		return new String(System.console().readPassword());
-	}
+    @Override
+    public String promptPassword() {
+        return new String(System.console().readPassword());
+    }
 }

@@ -33,172 +33,172 @@ import be.mapariensis.kanjiryoku.util.IProperties;
 import be.mapariensis.kanjiryoku.util.IPropertiesImpl;
 
 public class ServerConfigImpl implements ServerConfig {
-	private static final Logger log = LoggerFactory
-			.getLogger(ServerConfigImpl.class);
-	private final IPropertiesImpl backend;
-	private KanjiGuesserFactory kgf;
-	private ProblemSetManager psm;
-	private DataSource ds;
-	private final Object LOCK = new Object();
+    private static final Logger log = LoggerFactory
+            .getLogger(ServerConfigImpl.class);
+    private final IPropertiesImpl backend;
+    private KanjiGuesserFactory kgf;
+    private ProblemSetManager psm;
+    private DataSource ds;
+    private final Object LOCK = new Object();
 
-	public ServerConfigImpl(IPropertiesImpl config)
-			throws BadConfigurationException {
-		this.backend = config;
-		loadExtra();
-	}
+    public ServerConfigImpl(IPropertiesImpl config)
+            throws BadConfigurationException {
+        this.backend = config;
+        loadExtra();
+    }
 
-	public void swapBackend(String json) throws BadConfigurationException {
-		synchronized (LOCK) {
-			backend.swapBackend(json);
-			loadExtra();
-		}
-	}
+    public void swapBackend(String json) throws BadConfigurationException {
+        synchronized (LOCK) {
+            backend.swapBackend(json);
+            loadExtra();
+        }
+    }
 
-	public void swapBackend(JSONObject json) throws BadConfigurationException {
-		synchronized (LOCK) {
-			backend.swapBackend(json);
-			loadExtra();
-		}
-	}
+    public void swapBackend(JSONObject json) throws BadConfigurationException {
+        synchronized (LOCK) {
+            backend.swapBackend(json);
+            loadExtra();
+        }
+    }
 
-	@Override
-	public Object get(String key) {
-		return backend.get(key);
-	}
+    @Override
+    public Object get(String key) {
+        return backend.get(key);
+    }
 
-	@Override
-	public Object get(String key, Object defaultVal) {
-		return backend.get(key, defaultVal);
-	}
+    @Override
+    public Object get(String key, Object defaultVal) {
+        return backend.get(key, defaultVal);
+    }
 
-	@Override
-	public <T> T getRequired(String key, Class<T> type)
-			throws BadConfigurationException {
-		return backend.getRequired(key, type);
-	}
+    @Override
+    public <T> T getRequired(String key, Class<T> type)
+            throws BadConfigurationException {
+        return backend.getRequired(key, type);
+    }
 
-	@Override
-	public <T> T getTyped(String key, Class<T> type)
-			throws BadConfigurationException {
-		return backend.getTyped(key, type);
-	}
+    @Override
+    public <T> T getTyped(String key, Class<T> type)
+            throws BadConfigurationException {
+        return backend.getTyped(key, type);
+    }
 
-	@Override
-	public <T> T getTyped(String key, Class<T> type, T defaultVal)
-			throws BadConfigurationException {
-		return backend.getTyped(key, type, defaultVal);
-	}
+    @Override
+    public <T> T getTyped(String key, Class<T> type, T defaultVal)
+            throws BadConfigurationException {
+        return backend.getTyped(key, type, defaultVal);
+    }
 
-	@Override
-	public <T> T getSafely(String key, Class<T> type, T defaultVal) {
-		return backend.getSafely(key, type, defaultVal);
-	}
+    @Override
+    public <T> T getSafely(String key, Class<T> type, T defaultVal) {
+        return backend.getSafely(key, type, defaultVal);
+    }
 
-	@Override
-	public long getTimeMillis(String key, long defaultVal)
-			throws BadConfigurationException {
-		return backend.getTimeMillis(key, defaultVal);
-	}
+    @Override
+    public long getTimeMillis(String key, long defaultVal)
+            throws BadConfigurationException {
+        return backend.getTimeMillis(key, defaultVal);
+    }
 
-	@Override
-	public long getTimeMillis(String key) throws BadConfigurationException {
-		return backend.getTimeMillis(key);
-	}
+    @Override
+    public long getTimeMillis(String key) throws BadConfigurationException {
+        return backend.getTimeMillis(key);
+    }
 
-	@Override
-	public Set<String> keySet() {
-		return backend.keySet();
-	}
+    @Override
+    public Set<String> keySet() {
+        return backend.keySet();
+    }
 
-	@Override
-	public boolean containsKey(String key) {
-		return backend.containsKey(key);
-	}
+    @Override
+    public boolean containsKey(String key) {
+        return backend.containsKey(key);
+    }
 
-	@Override
-	public ProblemSetManager getProblemSetManager() {
-		return psm;
-	}
+    @Override
+    public ProblemSetManager getProblemSetManager() {
+        return psm;
+    }
 
-	@Override
-	public KanjiGuesserFactory getKanjiGuesserFactory() {
-		return kgf;
+    @Override
+    public KanjiGuesserFactory getKanjiGuesserFactory() {
+        return kgf;
 
-	}
+    }
 
-	private void loadExtra() throws BadConfigurationException {
-		// load guesser factory
-		IProperties crSettings = getRequired(ConfigFields.CR_SETTINGS_HEADER,
-				IProperties.class);
-		KanjiGuesserFactory factory;
-		String className = crSettings.getRequired(
-				ConfigFields.GUESSER_FACTORY_CLASS, String.class);
-		try {
-			log.info("Loading guesser factory {}", className);
-			factory = (KanjiGuesserFactory) ConnectionMonitor.class
-					.getClassLoader().loadClass(className).getDeclaredConstructor().newInstance();
-		} catch (Exception ex) {
-			throw new BadConfigurationException(
-					"Failed to instantiate guesser factory.", ex);
-		}
-		kgf = factory;
+    private void loadExtra() throws BadConfigurationException {
+        // load guesser factory
+        IProperties crSettings = getRequired(ConfigFields.CR_SETTINGS_HEADER,
+                IProperties.class);
+        KanjiGuesserFactory factory;
+        String className = crSettings.getRequired(
+                ConfigFields.GUESSER_FACTORY_CLASS, String.class);
+        try {
+            log.info("Loading guesser factory {}", className);
+            factory = (KanjiGuesserFactory) ConnectionMonitor.class
+                    .getClassLoader().loadClass(className).getDeclaredConstructor().newInstance();
+        } catch (Exception ex) {
+            throw new BadConfigurationException(
+                    "Failed to instantiate guesser factory.", ex);
+        }
+        kgf = factory;
 
-		log.info("Reloading problem set manager...");
-		// load problem set manager
-		IProperties psmSettings = getRequired(PSET_SETTINGS_HEADER,
-				IProperties.class);
-		int problemsPerCategory = psmSettings.getSafely(PROBLEMS_PER_CATEGORY,
-				Integer.class, PROBLEMS_PER_CATEGORY_DEFAULT);
-		boolean resetDifficulty = psmSettings.getSafely(
-				RESET_AFTER_CATEGORY_SWITCH, Boolean.class, true);
-		int minDiff = psmSettings.getSafely(MIN_DIFFICULTY, Integer.class,
-				MIN_DIFFICULTY_DEFAULT);
-		int maxDiff = psmSettings.getSafely(MAX_DIFFICULTY, Integer.class,
-				MAX_DIFFICULTY_DEFAULT);
-		String fileNameFormat = psmSettings.getRequired(FILE_NAME_FORMAT,
-				String.class);
-		String digitFormat = psmSettings.getSafely(FILE_NAME_DIFFICULTY_FORMAT,
-				String.class, FILE_NAME_DIFFICULTY_FORMAT_DEFAULT);
-		String enc = psmSettings.getSafely(FILE_ENCODING, String.class,
-				FILE_ENCODING_DEFAULT);
-		psm = new ProblemSetManagerImpl(fileNameFormat, digitFormat,
-				problemsPerCategory, resetDifficulty, minDiff, maxDiff, enc);
+        log.info("Reloading problem set manager...");
+        // load problem set manager
+        IProperties psmSettings = getRequired(PSET_SETTINGS_HEADER,
+                IProperties.class);
+        int problemsPerCategory = psmSettings.getSafely(PROBLEMS_PER_CATEGORY,
+                Integer.class, PROBLEMS_PER_CATEGORY_DEFAULT);
+        boolean resetDifficulty = psmSettings.getSafely(
+                RESET_AFTER_CATEGORY_SWITCH, Boolean.class, true);
+        int minDiff = psmSettings.getSafely(MIN_DIFFICULTY, Integer.class,
+                MIN_DIFFICULTY_DEFAULT);
+        int maxDiff = psmSettings.getSafely(MAX_DIFFICULTY, Integer.class,
+                MAX_DIFFICULTY_DEFAULT);
+        String fileNameFormat = psmSettings.getRequired(FILE_NAME_FORMAT,
+                String.class);
+        String digitFormat = psmSettings.getSafely(FILE_NAME_DIFFICULTY_FORMAT,
+                String.class, FILE_NAME_DIFFICULTY_FORMAT_DEFAULT);
+        String enc = psmSettings.getSafely(FILE_ENCODING, String.class,
+                FILE_ENCODING_DEFAULT);
+        psm = new ProblemSetManagerImpl(fileNameFormat, digitFormat,
+                problemsPerCategory, resetDifficulty, minDiff, maxDiff, enc);
 
-		// load problem sets
+        // load problem sets
 
-		IProperties psconfig = psmSettings.getRequired(CATEGORY_LIST,
-				IProperties.class);
+        IProperties psconfig = psmSettings.getRequired(CATEGORY_LIST,
+                IProperties.class);
 
-		// iterate over the names of all problem sets
-		for (String name : psconfig.keySet()) {
-			psm.loadNewConfig(name,
-					psconfig.getRequired(name, IProperties.class));
-		}
+        // iterate over the names of all problem sets
+        for (String name : psconfig.keySet()) {
+            psm.loadNewConfig(name,
+                    psconfig.getRequired(name, IProperties.class));
+        }
 
-		// set up db
-		IProperties dbConfig = getTyped(ConfigFields.DB_CONFIG,
-				IProperties.class);
-		if (dbConfig == null) {
-			ds = null;
-		} else {
-			DataSourceProvider dsp;
-			className = dbConfig.getRequired(ConfigFields.DATA_SOURCE_PROVIDER,
-					String.class);
-			try {
-				log.info("Loading data source factory {}", className);
-				dsp = (DataSourceProvider) ConnectionMonitor.class
-						.getClassLoader().loadClass(className).getDeclaredConstructor().newInstance();
-			} catch (Exception ex) {
-				throw new BadConfigurationException(
-						"Failed to data source factory.", ex);
-			}
-			ds = dsp.getDataSource(dbConfig);
-		}
-	}
+        // set up db
+        IProperties dbConfig = getTyped(ConfigFields.DB_CONFIG,
+                IProperties.class);
+        if (dbConfig == null) {
+            ds = null;
+        } else {
+            DataSourceProvider dsp;
+            className = dbConfig.getRequired(ConfigFields.DATA_SOURCE_PROVIDER,
+                    String.class);
+            try {
+                log.info("Loading data source factory {}", className);
+                dsp = (DataSourceProvider) ConnectionMonitor.class
+                        .getClassLoader().loadClass(className).getDeclaredConstructor().newInstance();
+            } catch (Exception ex) {
+                throw new BadConfigurationException(
+                        "Failed to data source factory.", ex);
+            }
+            ds = dsp.getDataSource(dbConfig);
+        }
+    }
 
-	@Override
-	public DataSource getDbConnection() {
-		return ds;
-	}
+    @Override
+    public DataSource getDbConnection() {
+        return ds;
+    }
 
 }
