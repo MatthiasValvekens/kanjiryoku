@@ -70,8 +70,7 @@ public class SimpleX509TrustManager implements X509TrustManager {
         TrustManagerFactory tmf = TrustManagerFactory.getInstance("PKIX");
 
         // generate a PKIX trust manager based on the CA chain of trust supplied
-        try {
-            FileInputStream fis = new FileInputStream(fileName);
+        try(FileInputStream fis = new FileInputStream(fileName)) {
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
             Set<TrustAnchor> anchors = cf.generateCertificates(fis).stream()
                     .filter(X509Certificate.class::isInstance)
